@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>[미적분Ⅰ] 실세계 데이터 기반 다항함수 모델링 수행평가 시스템</title>
+  <title>[미적분 Ⅰ] 실세계 데이터 기반 다항함수 모델링 수행평가 시스템</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -26,7 +26,7 @@
       display: none;
     }
 
-    /* 인쇄 및 PDF 저장 (A4 2페이지) 1*/
+    /* 인쇄 및 PDF 저장 (A4 2페이지) */
     @media print {
       body>*:not(#print-area) {
         display: none !important;
@@ -221,12 +221,12 @@
           <div>
             <label class="block text-xs font-semibold text-slate-600 mb-1">데이터 출처 (기관명, 통계명, 기간)</label>
             <input type="text" id="s1-source" oninput="saveStudentData()"
-              placeholder="예: 기상청 기상자료개방포털 ' 서울 월평균기온 평년값(1991~2020)'"
+              placeholder="예: 기상청 기상자료개방포털 '서울 월평균기온 평년값(1991~2020)'"
               class="test-field w-full p-2 border rounded-lg text-sm">
           </div>
           <div>
             <label class="block text-xs font-semibold text-slate-600 mb-1">독립변수 x의 의미 및 단위</label>
-            <input type="text" id="s1-var-x" oninput="saveStudentData()" placeholder="예: 외국인 방한 연도( 년)"
+            <input type="text" id="s1-var-x" oninput="saveStudentData()" placeholder="예: 2018년을 x=0으로 둔 연도"
               class="test-field w-full p-2 border rounded-lg text-sm">
           </div>
           <div>
@@ -302,8 +302,7 @@
               <h3 class="font-bold text-sm text-indigo-900"><i
                   class="fa-solid fa-wand-magic-sparkles text-indigo-600 mr-1.5"></i> 추세선 작도</h3>
               <p class="text-xs text-indigo-700 mt-0.5">데이터 모양에 맞는 차수를 골라 추세선 f(x)를 작도하세요. 두 가지를 모두 눌러 비교해 볼 수 있으며,
-                <strong>마지막으로 작도한 추세선</strong>으로 해석합니다.
-              </p>
+                <strong>마지막으로 작도한 추세선</strong>으로 해석합니다.</p>
             </div>
             <div class="flex space-x-2 shrink-0">
               <button onclick="generateTrendline(3)"
@@ -326,6 +325,7 @@
           </div>
           <div id="r2-compare" class="hidden text-xs text-slate-700 bg-white rounded-lg border p-2.5"></div>
           <div id="key-points" class="hidden bg-white rounded-lg border p-3 space-y-2"></div>
+          <div id="deriv-table" class="hidden bg-white rounded-lg border p-3 space-y-2"></div>
           <div id="trend-reset-notice" class="hidden text-xs text-red-600 font-semibold">
             <i class="fa-solid fa-rotate mr-1"></i> 데이터가 바뀌어 추세선이 초기화되었습니다. 추세선을 다시 작도하세요.
           </div>
@@ -594,6 +594,11 @@
       <div class="flex justify-between items-center border-b pb-3">
         <h3 id="modal-title" class="text-lg font-bold text-slate-900">학생 결과물 상세 검토</h3>
         <div class="flex items-center space-x-2">
+          <button id="btn-reopen" onclick="reopenExam()"
+            class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg"
+            title="제출했거나 시간이 끝난 시험을 다시 열어 이어서 응시하게 함 (답안 유지)">
+            <i class="fa-solid fa-lock-open mr-1"></i>응시 재개
+          </button>
           <button onclick="resetStudentDevice()"
             class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg border"
             title="학생이 다른 기기에서 이어서 응시할 수 있게 함">
@@ -1054,7 +1059,10 @@
           studentInfo: { grade: r.grade, class: r.class_no, num: r.num, name: r.name },
           progress: r.progress, submitted: r.submitted,
           submittedAt: fmtTime(r.submitted_at), updatedAt: fmtTime(r.updated_at), startTime: fmtTime(r.start_time),
-          hasDevice: !!r.token
+          hasDevice: !!r.token,
+          startMs: Date.parse(r.start_time),
+          reopenCount: r.reopen_count || 0,
+          reopenedAt: fmtTime(r.reopened_at)
         };
       });
       sync.innerText = '갱신 ' + new Date().toLocaleTimeString() + ' (15초마다)';
@@ -1136,7 +1144,7 @@
         banner.className = 'p-4 bg-emerald-50 border-2 border-emerald-500 rounded-xl text-emerald-800 flex items-center space-x-3';
         document.getElementById('lock-icon').className = 'fa-solid fa-circle-check text-2xl';
         document.getElementById('lock-title').innerText = '수행평가지 제출이 완료되었습니다';
-        document.getElementById('lock-desc').innerText = '제출 후에는 답안을 수정할 수 없습니다.';
+        document.getElementById('lock-desc').innerText = '제출 후에는 답안을 수정할 수 없습니다. (선생님이 응시 재개를 해 주면 새로고침 후 다시 시작하세요)';
         document.getElementById('timer-banner').classList.add('hidden');
       } else {
         banner.className = 'p-4 bg-red-50 border-2 border-red-500 rounded-xl text-red-700 flex items-center space-x-3';
@@ -1146,7 +1154,7 @@
           document.getElementById('lock-desc').innerText = '선생님께 문의하세요.';
         } else {
           document.getElementById('lock-title').innerText = `시험 시간이 종료되었습니다 (${TEST_MINUTES}분 경과)`;
-          document.getElementById('lock-desc').innerText = '더 이상 문항을 수정할 수 없습니다. 마감 직전까지 작성한 내용은 저장되었습니다.';
+          document.getElementById('lock-desc').innerText = '더 이상 문항을 수정할 수 없습니다. 마감 직전까지 작성한 내용은 저장되었습니다. (선생님이 응시 재개를 해 주면 새로고침 후 다시 시작하세요)';
         }
       }
     }
@@ -1311,9 +1319,11 @@
         box.innerHTML = '<span class="text-sm text-slate-400">[위 버튼을 눌러 추세선을 작도하세요]</span>';
         cmp.classList.add('hidden');
         document.getElementById('key-points').classList.add('hidden');
+        document.getElementById('deriv-table').classList.add('hidden');
         return;
       }
       renderKeyPoints();
+      renderDerivTable();
       const color = trend.degree === 4 ? 'text-emerald-700' : 'text-indigo-900';
       box.innerHTML = `<span class="formula ${color}">${formatPolynomial(trend.coeffs, true)}</span>
         <span class="ml-2 text-xs not-italic font-sans font-bold px-2 py-0.5 rounded ${trend.degree === 4 ? 'bg-emerald-100 text-emerald-700' : 'bg-indigo-100 text-indigo-700'}">${trend.degree}차</span>`;
@@ -1352,6 +1362,64 @@
 
     const r2d = v => { const r = Math.round(v * 100) / 100; return Object.is(r, -0) ? 0 : r; };
     const KP_LABEL = { left: '왼쪽 끝점', right: '오른쪽 끝점', max: '극대', min: '극소' };
+
+    // x, f'(x) 표: 정의역을 7칸으로 (양 끝점 + 극대·극소 반드시 포함)
+    function derivTable(points, t, cols = 7) {
+      const kp = keyPoints(points, t);
+      if (!kp) return null;
+      const d = t.coeffs.slice(1).map((v, k) => v * (k + 1));
+      const fixed = kp.list.map(p => ({ x: p.x, crit: p.type === 'max' || p.type === 'min' }));
+      // 고정점 사이 구간마다 채울 점 개수 정하기
+      const segs = [];
+      for (let i = 0; i < fixed.length - 1; i++) {
+        segs.push({ a: fixed[i].x, b: fixed[i + 1].x, between: fixed[i].crit && fixed[i + 1].crit, fill: 0 });
+      }
+      let remain = Math.max(0, cols - fixed.length);
+      // 1) 두 극값 사이 구간에는 부호 확인용 점을 먼저 하나씩
+      segs.forEach(sg => { if (sg.between && remain > 0) { sg.fill = 1; remain--; } });
+      // 2) 남은 점은 칸 간격이 가장 넓은 구간부터
+      while (remain > 0) {
+        let best = segs[0];
+        segs.forEach(sg => { if ((sg.b - sg.a) / (sg.fill + 1) > (best.b - best.a) / (best.fill + 1)) best = sg; });
+        best.fill++; remain--;
+      }
+      const xs = [{ x: fixed[0].x, crit: fixed[0].crit }];
+      segs.forEach((sg, i) => {
+        for (let j = 1; j <= sg.fill; j++) xs.push({ x: sg.a + (sg.b - sg.a) * j / (sg.fill + 1), crit: false });
+        xs.push(fixed[i + 1]);
+      });
+      return xs.map(p => {
+        const x = r2d(p.x);
+        return { x, d: p.crit ? 0 : r2d(evalPoly(d, x)) };
+      });
+    }
+
+    function renderDerivTable() {
+      const el = document.getElementById('deriv-table');
+      const rows = derivTable(getPoints(), trend);
+      if (!rows) { el.classList.add('hidden'); return; }
+      const td = 'border px-2 py-1.5 text-center formula';
+      el.innerHTML = `
+        <p class="text-xs font-bold text-slate-700"><i class="fa-solid fa-table text-indigo-500 mr-1"></i>
+          x에 따른 도함수 f'(x)의 값 <span class="font-normal text-slate-500">(정의역을 7칸으로 나눔, 소수 둘째 자리까지 반올림)</span></p>
+        <div class="overflow-x-auto">
+          <table class="w-full border-collapse text-sm">
+            <tr><th class="border px-2 py-1.5 bg-slate-100 w-20 formula">x</th>${rows.map(r => `<td class="${td}">${r.x}</td>`).join('')}</tr>
+            <tr><th class="border px-2 py-1.5 bg-slate-100 formula">f ′(x)</th>${rows.map(r => `<td class="${td}">${r.d}</td>`).join('')}</tr>
+          </table>
+        </div>
+        <p class="text-xs text-slate-500">f'(x)의 부호가 어떻게 바뀌는지 살펴보고 문항 2-3, 2-4에 답하시오.</p>`;
+      el.classList.remove('hidden');
+    }
+
+    function derivTableHTML(points, t) {
+      const rows = derivTable(points, t);
+      if (!rows) return '';
+      const c = 'border:1px solid #94a3b8;padding:2px 4px;text-align:center;';
+      return `<table style="width:100%;border-collapse:collapse;font-size:8.8pt;margin:4px 0 6px 0;">
+        <tr><th style="${c}background:#f1f5f9;width:14%">x</th>${rows.map(r => `<td style="${c}">${r.x}</td>`).join('')}</tr>
+        <tr><th style="${c}background:#f1f5f9">f'(x)</th>${rows.map(r => `<td style="${c}">${r.d}</td>`).join('')}</tr></table>`;
+    }
 
     function renderKeyPoints() {
       const el = document.getElementById('key-points');
@@ -1491,9 +1559,7 @@
               <span class="text-xs font-bold text-slate-600">${Number(item.progress) || 0}%</span>
             </div>
           </td>
-          <td class="p-3">${item.submitted
-            ? '<span class="px-2 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800">제출 완료</span>'
-            : '<span class="px-2 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800">작성 중</span>'}</td>
+          <td class="p-3">${statusBadge(item)}${item.reopenCount ? `<span class="ml-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-sky-100 text-sky-700">재개 ${item.reopenCount}회</span>` : ''}</td>
           <td class="p-3 text-center"><button class="px-3 py-1 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 font-bold text-xs rounded-lg">산출물 검토</button></td>`;
         tbody.appendChild(tr);
       });
@@ -1502,6 +1568,43 @@
     }
 
     let inspectStudentKey = null;
+
+    // 응시 상태: 제출 완료 / 시간 종료(미제출) / 작성 중
+    function examState(item) {
+      if (item.submitted) return 'submitted';
+      if (item.startMs && Date.now() > item.startMs + TEST_MINUTES * 60000) return 'timeover';
+      return 'writing';
+    }
+    function statusBadge(item) {
+      return {
+        submitted: '<span class="px-2 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800">제출 완료</span>',
+        timeover: '<span class="px-2 py-1 rounded-full text-xs font-bold bg-red-100 text-red-700">시간 종료</span>',
+        writing: '<span class="px-2 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800">작성 중</span>'
+      }[examState(item)];
+    }
+
+    // 응시 재개: 끝난 시험을 다시 열어 답안을 유지한 채 정한 시간만큼 이어서 응시
+    async function reopenExam() {
+      const item = teacherRows[inspectStudentKey];
+      if (!item) return;
+      const state = examState(item);
+      const name = studentLabel(item.studentInfo || {});
+      if (state === 'writing' && !confirm(`${name} 학생은 아직 응시 중입니다.\n남은 시간을 새로 정해 주려면 계속하세요.`)) return;
+      const input = prompt(`[응시 재개] ${name}\n\n답안은 그대로 유지되고, 지금부터 아래 시간 동안 다시 응시할 수 있습니다.\n추가로 줄 시간(분)을 입력하세요. (1~120)`, '10');
+      if (input === null) return;
+      const minutes = parseInt(input, 10);
+      if (!(minutes >= 1 && minutes <= 120)) { alert('1~120 사이의 숫자(분)를 입력하세요.'); return; }
+      const { data, error } = await sb.rpc('calc_reopen', { p_key: inspectStudentKey, p_minutes: minutes });
+      if (error) {
+        alert(String(error.message).includes('calc_reopen')
+          ? '수파베이스에 응시 재개 기능이 아직 없습니다. add_reopen.sql을 SQL Editor에서 실행하세요.'
+          : '응시 재개 실패: ' + error.message);
+        return;
+      }
+      alert(`응시를 재개했습니다.\n종료 예정: ${new Date(data.ends_at).toLocaleTimeString()} (${minutes}분)\n\n학생에게 [새로고침] 후 같은 정보로 [시험 시작하기]를 누르라고 안내하세요.`);
+      await loadTeacherRows();
+      openDetailModal(inspectStudentKey);
+    }
 
     function dataTableHTML(points, cellStyle) {
       if (!points || !points.length) return '<p>(데이터 없음)</p>';
@@ -1533,7 +1636,8 @@
       const pts = key.keyPoints.map(p => `${KP_LABEL[p.type]} (${p.x}, ${p.y})`).join(' · ');
       const ivs = l => l.length ? l.map(r => `[${r.a}, ${r.b}]`).join(', ') : '(없음)';
       const ivNote = r => r.total || r.wrong ? ` <span class="text-slate-500">(정답 ${r.total}개 중 ${r.matched}개 일치${r.wrong ? `, 틀린 구간 ${r.wrong}개` : ''})</span>` : '';
-      return `<div class="p-3 rounded border border-amber-300 bg-amber-50 text-amber-950 space-y-1">
+      return `<div><p class="font-semibold text-slate-700">학생 화면에 제시된 x, f'(x) 표</p>${derivTableHTML(item.points || [], item.trend)}</div>
+      <div class="p-3 rounded border border-amber-300 bg-amber-50 text-amber-950 space-y-1">
         <p class="font-bold">📋 자동 채점 (학생 추세선 기준, 허용 오차 ±${GRADE_TOL}) — ${gradeSummary(item)}</p>
         <p class="text-slate-600">저장된 주요 점: ${pts}</p>
         <table class="w-full text-left border-collapse mt-1">
@@ -1588,7 +1692,7 @@
           ${row('근거 자료 출처', a['s3-ref-title'])}
           ${box('근거 자료 요약', a['s3-ref-summary'])}
         </div>
-        <p class="text-slate-400 text-right">시작: ${esc(item.startTime || '-')} · 마지막 저장: ${esc(item.updatedAt || '-')} ${item.submittedAt ? ' · 제출: ' + esc(item.submittedAt) : ''}</p>`;
+        <p class="text-slate-400 text-right">${item.reopenCount ? `응시 재개 ${item.reopenCount}회 (최근 ${esc(item.reopenedAt)}) · ` : ''}시작: ${esc(item.startTime || '-')} · 마지막 저장: ${esc(item.updatedAt || '-')} ${item.submittedAt ? ' · 제출: ' + esc(item.submittedAt) : ''}</p>`;
 
       document.getElementById('detail-modal').classList.remove('hidden');
 
@@ -1654,7 +1758,7 @@
             <span style="font-family:'Times New Roman',serif;font-style:italic;font-size:11.5pt;">${t ? formatPolynomial(t.coeffs, true) : '미작도'}</span>
             ${t ? `&nbsp; <span style="font-size:8.5pt;color:#475569;">R² = ${t.r2.toFixed(3)}</span>` : ''}
           </p>
-          ${(() => { const kp = keyPoints(item.points || [], t); return kp ? `<p style="font-size:8.8pt;margin:0 0 6px 0;color:#334155;"><strong>주요 점 (정의역 ${r2d(kp.a)} ≤ x ≤ ${r2d(kp.b)}):</strong> ${kp.list.map(p => `${KP_LABEL[p.type]} (${r2d(p.x)}, ${r2d(p.y)})`).join(' · ')}</p>` : ''; })()}
+          ${(() => { const kp = keyPoints(item.points || [], t); return kp ? `<p style="font-size:8.8pt;margin:0 0 6px 0;color:#334155;"><strong>주요 점 (정의역 ${r2d(kp.a)} ≤ x ≤ ${r2d(kp.b)}):</strong> ${kp.list.map(p => `${KP_LABEL[p.type]} (${r2d(p.x)}, ${r2d(p.y)})`).join(' · ')}</p>${derivTableHTML(item.points || [], t)}` : ''; })()}
           <table style="${tbl}" border="1">
             <tr><th style="${TH}">2-1. 차수 선택 이유</th><td style="${TD}">${pre(a['s2-reason'])}</td></tr>
           </table>
