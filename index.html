@@ -15,6 +15,27 @@
     .formula { font-family: 'Times New Roman', 'Cambria Math', serif; font-style: italic; }
     #print-area { display: none; }
 
+    /* 문항 2-1: f'(x) 부호 선택 상자 — 크게, 눈에 띄게 */
+    .sign-sel {
+      min-width: 4.2rem; height: 2.8rem; padding: 0 0.4rem;
+      font-size: 1.5rem; font-weight: 800; text-align: center; text-align-last: center;
+      border: 3px solid #dc2626; border-radius: 0.6rem;
+      background: #fef2f2; color: #dc2626; cursor: pointer;
+      box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.15);
+      animation: signPulse 1.6s ease-in-out infinite;
+    }
+    .sign-sel:focus { outline: none; box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.35); }
+    .sign-sel.filled {
+      border-color: #1e3a8a; background: #eff6ff; color: #1e3a8a;
+      box-shadow: none; animation: none;
+    }
+    .sign-sel:disabled { cursor: not-allowed; opacity: 0.8; animation: none; }
+    .sign-sel option { font-size: 1.1rem; }
+    @keyframes signPulse {
+      0%, 100% { box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.15); }
+      50%      { box-shadow: 0 0 0 6px rgba(220, 38, 38, 0.30); }
+    }
+
     /* 인쇄 및 PDF 저장 (A4 2페이지) */
     @media print {
       body > *:not(#print-area) { display: none !important; }
@@ -1322,8 +1343,8 @@
       const dots = 'border px-1 py-1.5 text-center text-slate-400 bg-amber-50/60';
       const xRow = tb.rows.map((r, i) => `<td class="${td}">${r.x}</td>` + (i < tb.gaps.length ? `<td class="${dots}">⋯</td>` : '')).join('');
       const dRow = tb.rows.map((r, i) => `<td class="${td}">${r.d}</td>` + (i < tb.gaps.length ? `
-          <td class="border px-1 py-1 text-center bg-amber-50/60">
-            <select class="test-field sign-sel border rounded px-1 py-0.5 text-sm font-bold text-center" onchange="onSignChange(${i}, this.value)">
+          <td class="border px-2 py-2 text-center bg-red-50/50">
+            <select class="test-field sign-sel ${signAnswers.signs[i] ? 'filled' : ''}" onchange="this.classList.toggle('filled', !!this.value); onSignChange(${i}, this.value)">
               <option value="">?</option>
               <option value="+" ${signAnswers.signs[i] === '+' ? 'selected' : ''}>+</option>
               <option value="-" ${signAnswers.signs[i] === '-' ? 'selected' : ''}>−</option>
@@ -1339,7 +1360,7 @@
             <tr><th class="border px-2 py-1.5 bg-slate-100 formula">f(x)</th>${tb.rows.map((r, i) => `<td class="${td}">${r.f}</td>` + (i < tb.gaps.length ? `<td class="${dots}"></td>` : '')).join('')}</tr>
           </table>
         </div>
-        <p class="text-xs text-slate-500"><strong>⋯</strong> 아래 칸에서 그 구간의 f'(x) 부호(+ 또는 −)를 고르시오. 부호가 어떻게 바뀌는지 보고 문항 2-2, 2-3에 답하시오.</p>`;
+        <p class="text-sm text-red-600 font-bold"><i class="fa-solid fa-hand-pointer mr-1"></i>빨간 상자를 눌러 각 ⋯ 구간의 f'(x) 부호(+ 또는 −)를 고르시오. 고르면 파란색으로 바뀝니다.</p><p class="text-xs text-slate-500">부호가 어떻게 바뀌는지 보고 문항 2-2, 2-3에 답하시오.</p>`;
       if (isLocked) el.querySelectorAll('select').forEach(x => x.disabled = true);
       el.classList.remove('hidden');
       document.getElementById('deriv-table-empty').classList.add('hidden');
