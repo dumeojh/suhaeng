@@ -326,7 +326,6 @@
           </div>
           <div id="r2-compare" class="hidden text-xs text-slate-700 bg-white rounded-lg border p-2.5"></div>
           <div id="key-points" class="hidden bg-white rounded-lg border p-3 space-y-2"></div>
-          <div id="deriv-table" class="hidden bg-white rounded-lg border p-3 space-y-2"></div>
           <div id="trend-reset-notice" class="hidden text-xs text-red-600 font-semibold">
             <i class="fa-solid fa-rotate mr-1"></i> 데이터가 바뀌어 추세선이 초기화되었습니다. 추세선을 다시 작도하세요.
           </div>
@@ -338,65 +337,18 @@
           <canvas id="student-chart-step2" class="w-full h-full"></canvas>
         </div>
 
-        <!-- 2-1 -->
+        <!-- 2-1 : x, f'(x), f(x) 표 -->
         <div class="space-y-2">
-          <label class="block text-sm font-semibold text-slate-800">[문항 2-1] 추세선의 차수(3차 또는 4차)를 선택한 이유</label>
-          <textarea id="s2-reason" rows="2" oninput="saveStudentData()"
-            placeholder="데이터 그래프의 모양(증가·감소가 바뀌는 횟수 등)과 결정계수 R²를 근거로 선택한 이유를 서술하시오."
-            class="test-field w-full p-2 border rounded-lg text-sm"></textarea>
+          <label class="block text-sm font-semibold text-slate-800">[문항 2-1] x에 따른 도함수 f'(x)와 함숫값 f(x)의 표에서 ⋯ 구간의 f'(x)의
+            부호(+ 또는 −)를 고르시오.</label>
+          <div id="deriv-table-empty" class="p-3 rounded-lg border border-dashed text-xs text-slate-400 text-center">위에서
+            추세선을 작도하면 표가 나타납니다.</div>
+          <div id="deriv-table" class="hidden bg-white rounded-lg border p-3 space-y-2"></div>
         </div>
 
-        <!-- 2-2 -->
+        <!-- 2-2 (구 2-4) -->
         <div class="space-y-2">
-          <label class="block text-sm font-semibold text-slate-800">[문항 2-2] 추세선의 도함수 f'(x)와 f'(x) = 0인 x의 값</label>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div>
-              <label class="block text-xs font-semibold text-slate-500 mb-1">도함수 f'(x)</label>
-              <input type="text" id="s2-dfx" oninput="saveStudentData()" placeholder="예: f'(x) = 0.537x² - 6.48x + 13.6"
-                class="test-field w-full p-2 border rounded-lg text-sm font-mono">
-            </div>
-            <div>
-              <label class="block text-xs font-semibold text-slate-500 mb-1">f'(x) = 0인 x의 값 (소수 첫째 자리까지)</label>
-              <input type="text" id="s2-crit" oninput="saveStudentData()" placeholder="예: x ≈ 2.7, x ≈ 9.4"
-                class="test-field w-full p-2 border rounded-lg text-sm">
-            </div>
-          </div>
-        </div>
-
-        <!-- 2-3 -->
-        <div class="space-y-2">
-          <label class="block text-sm font-semibold text-slate-800">[문항 2-3] 추세선 f(x)의 증가·감소 구간 및 판단 근거 (정의역
-            안에서)</label>
-          <p class="text-xs text-slate-500">위의 '추세선 주요 점'(양 끝점, 극대·극소)의 <strong>x 좌표</strong>를 보고 구간을 입력하시오. 구간이 여러 개면
-            [+ 구간 추가]를 누르고, 해당 구간이 없으면 비워 두시오.</p>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div class="border rounded-lg p-3 bg-rose-50/40">
-              <div class="flex justify-between items-center mb-2">
-                <span class="text-xs font-bold text-rose-700"><i class="fa-solid fa-arrow-trend-up mr-1"></i>증가
-                  구간</span>
-                <button type="button" onclick="addIntervalRow('inc'); saveStudentData();"
-                  class="test-field text-xs text-indigo-600 font-semibold hover:underline">+ 구간 추가</button>
-              </div>
-              <div id="s2-inc-rows" class="space-y-1.5"></div>
-            </div>
-            <div class="border rounded-lg p-3 bg-sky-50/40">
-              <div class="flex justify-between items-center mb-2">
-                <span class="text-xs font-bold text-sky-700"><i class="fa-solid fa-arrow-trend-down mr-1"></i>감소
-                  구간</span>
-                <button type="button" onclick="addIntervalRow('dec'); saveStudentData();"
-                  class="test-field text-xs text-indigo-600 font-semibold hover:underline">+ 구간 추가</button>
-              </div>
-              <div id="s2-dec-rows" class="space-y-1.5"></div>
-            </div>
-          </div>
-          <textarea id="s2-inc-reason" rows="2" oninput="saveStudentData()"
-            placeholder="f'(x)의 부호(양수/음수)를 이용하여 증가·감소를 판단한 근거를 서술하고, 실제 현상에서 무엇을 의미하는지 해석하시오."
-            class="test-field w-full p-2 border rounded-lg text-sm"></textarea>
-        </div>
-
-        <!-- 2-4 -->
-        <div class="space-y-2">
-          <label class="block text-sm font-semibold text-slate-800">[문항 2-4] 극대/극소가 존재하는가? 존재한다면 극대/극소인 x값을 있는 대로 모두
+          <label class="block text-sm font-semibold text-slate-800">[문항 2-2] 극대/극소가 존재하는가? 존재한다면 극대/극소인 x값을 있는 대로 모두
             작성하고 판단 근거를 설명하시오.</label>
           <div class="flex items-center space-x-5 text-sm">
             <span class="text-xs font-semibold text-slate-500">극대·극소의 존재</span>
@@ -428,10 +380,10 @@
             class="test-field w-full p-2 border rounded-lg text-sm"></textarea>
         </div>
 
-        <!-- 2-5 -->
+        <!-- 2-3 (구 2-5) -->
         <div class="space-y-2">
-          <label class="block text-sm font-semibold text-slate-800">[문항 2-5] 정의역에서 추세선 f(x)의 최댓값과 최솟값</label>
-          <p class="text-xs text-slate-500">위의 '추세선 주요 점'(정의역의 양 끝점, 극대·극소)을 비교하여 구하시오.</p>
+          <label class="block text-sm font-semibold text-slate-800">[문항 2-3] 정의역에서 추세선 f(x)의 최댓값과 최솟값</label>
+          <p class="text-xs text-slate-500">문항 2-1 표와 '추세선 주요 점'(정의역의 양 끝점, 극대·극소)의 함숫값을 비교하여 구하시오.</p>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
               <label class="block text-xs font-semibold text-slate-500 mb-1">최댓값</label>
@@ -849,7 +801,7 @@
         .filter(r => !isNaN(r.a) && !isNaN(r.b));
     }
 
-    // 문항 2-4: 극대·극소인 x 목록
+    // 문항 2-2: 극대·극소인 x 목록
     function addXRow(kind, v = '') {
       const wrap = document.getElementById(`s2-${kind}-rows`);
       const row = document.createElement('div');
@@ -1222,7 +1174,7 @@
 
     // ================= 학생 데이터 저장/불러오기 =================
     const FIELD_IDS = ['s1-topic', 's1-source', 's1-var-x', 's1-var-y',
-      's2-reason', 's2-dfx', 's2-crit', 's2-inc-reason', 's2-ext-reason', 's2-max-val', 's2-min-val',
+      's2-ext-reason', 's2-max-val', 's2-min-val',
       's3-curr-x', 's3-curr-dfx', 's3-essay', 's3-ref-title', 's3-ref-summary'];
 
     function val(id) { return document.getElementById(id).value; }
@@ -1230,9 +1182,8 @@
     function stepChecks(points) {
       return {
         1: [val('s1-topic'), val('s1-source'), val('s1-var-x'), val('s1-var-y'), points.length >= MIN_POINTS],
-        2: [!!trend, val('s2-reason'), val('s2-dfx'), val('s2-crit'),
+        2: [!!trend,
         !!trend && signAnswers.signs.length > 0 && signAnswers.signs.every(Boolean),
-        completeIntervals('inc').length + completeIntervals('dec').length > 0, val('s2-inc-reason'),
         extExist() === 'no' || (extExist() === 'yes' && completeXs('maxx').length + completeXs('minx').length > 0), val('s2-ext-reason'), val('s2-max-val'), val('s2-min-val')],
         3: [val('s3-curr-x'), val('s3-curr-dfx'), val('s3-essay').trim().length > 20,
         val('s3-ref-title'), val('s3-ref-summary')]
@@ -1280,8 +1231,6 @@
       const progress = computeProgress(points);
       const answers = {};
       FIELD_IDS.forEach(id => answers[id] = val(id));
-      answers['s2-inc-list'] = getIntervalRows('inc');
-      answers['s2-dec-list'] = getIntervalRows('dec');
       answers['s2-sign'] = trend ? signAnswers : null;
       answers['s2-ext-exist'] = extExist();
       answers['s2-maxx-list'] = getXRows('maxx');
@@ -1311,7 +1260,7 @@
 
     function loadStudentState(item) {
       ensureColumns(INITIAL_COLUMNS);
-      if (!item || !item.answers) { setIntervalRows('inc'); setIntervalRows('dec'); setXRows('maxx'); setXRows('minx'); renderTrendUI(); renderCharts(); updateStepTabs(); return; }
+      if (!item || !item.answers) { setXRows('maxx'); setXRows('minx'); renderTrendUI(); renderCharts(); updateStepTabs(); return; }
 
       if (item.columns) {
         setColumnCount(Math.max(MIN_POINTS, item.columns.length));
@@ -1319,8 +1268,6 @@
         item.columns.forEach((c, i) => { xs[i].value = c.x; ys[i].value = c.y; });
       }
       if (item.answers) FIELD_IDS.forEach(id => { document.getElementById(id).value = item.answers[id] || ''; });
-      setIntervalRows('inc', item.answers?.['s2-inc-list']);
-      setIntervalRows('dec', item.answers?.['s2-dec-list']);
       signAnswers = item.answers?.['s2-sign'] || { xs: [], signs: [] };
       setExtExist(item.answers?.['s2-ext-exist'] || '');
       setXRows('maxx', item.answers?.['s2-maxx-list']);
@@ -1407,6 +1354,7 @@
         cmp.classList.add('hidden');
         document.getElementById('key-points').classList.add('hidden');
         document.getElementById('deriv-table').classList.add('hidden');
+        document.getElementById('deriv-table-empty').classList.remove('hidden');
         return;
       }
       renderKeyPoints();
@@ -1526,9 +1474,10 @@
             <tr><th class="border px-2 py-1.5 bg-slate-100 formula">f(x)</th>${tb.rows.map((r, i) => `<td class="${td}">${r.f}</td>` + (i < tb.gaps.length ? `<td class="${dots}"></td>` : '')).join('')}</tr>
           </table>
         </div>
-        <p class="text-xs text-slate-500"><strong>⋯</strong> 아래 칸에서 그 구간의 f'(x) 부호(+ 또는 −)를 고르시오. 부호가 어떻게 바뀌는지 보고 문항 2-3, 2-4, 2-5에 답하시오.</p>`;
+        <p class="text-xs text-slate-500"><strong>⋯</strong> 아래 칸에서 그 구간의 f'(x) 부호(+ 또는 −)를 고르시오. 부호가 어떻게 바뀌는지 보고 문항 2-2, 2-3에 답하시오.</p>`;
       if (isLocked) el.querySelectorAll('select').forEach(x => x.disabled = true);
       el.classList.remove('hidden');
+      document.getElementById('deriv-table-empty').classList.add('hidden');
     }
 
     // 교사용·출력용 표: ⋯ 칸에 학생이 고른 부호 (틀리면 빨간색, 괄호 안은 정답)
@@ -1758,8 +1707,8 @@
     function gradeSummary(item) {
       const g = autoGrade(item);
       if (!g) return '';
-      const n = [g.sign.ok, g.inc.ok, g.dec.ok, g.maxX.ok, g.minX.ok, g.max.ok, g.min.ok].filter(Boolean).length;
-      return `${n}/7`;
+      const n = [g.sign.ok, g.maxX.ok, g.minX.ok, g.max.ok, g.min.ok].filter(Boolean).length;
+      return `${n}/5`;
     }
 
     // 교사용 자동 채점: 학생 추세선 기준으로 저장된 정답과 비교
@@ -1775,13 +1724,11 @@
         <p class="text-slate-600">저장된 주요 점: ${pts}</p>
         <table class="w-full text-left border-collapse mt-1">
           <tr class="border-b"><th class="py-1">문항</th><th>정답</th><th>학생 답</th><th>결과</th></tr>
-          <tr class="border-b"><td class="py-1">f'(x) 부호 (⋯ 칸)</td><td>${(key.signTable?.signs || []).map(v => SIGN_TXT[v]).join(' ')}</td><td>${(item.answers?.['s2-sign']?.signs || []).map(v => v ? SIGN_TXT[v] : '?').join(' ') || '-'}</td><td>${mark(g.sign.ok)} <span class="text-slate-500">(${g.sign.total}칸 중 ${g.sign.matched}칸)</span></td></tr>
-          <tr class="border-b"><td class="py-1">2-3 증가 구간</td><td>${ivs(key.inc)}</td><td>${esc(fmtIntervals(item.answers?.['s2-inc-list']))}</td><td>${mark(g.inc.ok)}${ivNote(g.inc)}</td></tr>
-          <tr class="border-b"><td class="py-1">2-3 감소 구간</td><td>${ivs(key.dec)}</td><td>${esc(fmtIntervals(item.answers?.['s2-dec-list']))}</td><td>${mark(g.dec.ok)}${ivNote(g.dec)}</td></tr>
-          <tr class="border-b"><td class="py-1">2-4 극대인 x</td><td>${(key.maxXs || []).join(', ') || '(없음)'}</td><td>${esc(existTxt(item.answers?.['s2-ext-exist']))} ${esc(fmtXs(item.answers?.['s2-maxx-list']))}</td><td>${mark(g.maxX.ok)}</td></tr>
-          <tr class="border-b"><td class="py-1">2-4 극소인 x</td><td>${(key.minXs || []).join(', ') || '(없음)'}</td><td>${esc(existTxt(item.answers?.['s2-ext-exist']))} ${esc(fmtXs(item.answers?.['s2-minx-list']))}</td><td>${mark(g.minX.ok)}</td></tr>
-          <tr class="border-b"><td class="py-1">2-5 최댓값</td><td>${key.maxVal}</td><td>${esc(item.answers?.['s2-max-val'] || '-')}</td><td>${mark(g.max.ok)}</td></tr>
-          <tr><td class="py-1">2-5 최솟값</td><td>${key.minVal}</td><td>${esc(item.answers?.['s2-min-val'] || '-')}</td><td>${mark(g.min.ok)}</td></tr>
+          <tr class="border-b"><td class="py-1">2-1 f'(x) 부호 (⋯ 칸)</td><td>${(key.signTable?.signs || []).map(v => SIGN_TXT[v]).join(' ')}</td><td>${(item.answers?.['s2-sign']?.signs || []).map(v => v ? SIGN_TXT[v] : '?').join(' ') || '-'}</td><td>${mark(g.sign.ok)} <span class="text-slate-500">(${g.sign.total}칸 중 ${g.sign.matched}칸)</span></td></tr>
+          <tr class="border-b"><td class="py-1">2-2 극대인 x</td><td>${(key.maxXs || []).join(', ') || '(없음)'}</td><td>${esc(existTxt(item.answers?.['s2-ext-exist']))} ${esc(fmtXs(item.answers?.['s2-maxx-list']))}</td><td>${mark(g.maxX.ok)}</td></tr>
+          <tr class="border-b"><td class="py-1">2-2 극소인 x</td><td>${(key.minXs || []).join(', ') || '(없음)'}</td><td>${esc(existTxt(item.answers?.['s2-ext-exist']))} ${esc(fmtXs(item.answers?.['s2-minx-list']))}</td><td>${mark(g.minX.ok)}</td></tr>
+          <tr class="border-b"><td class="py-1">2-3 최댓값</td><td>${key.maxVal}</td><td>${esc(item.answers?.['s2-max-val'] || '-')}</td><td>${mark(g.max.ok)}</td></tr>
+          <tr><td class="py-1">2-3 최솟값</td><td>${key.minVal}</td><td>${esc(item.answers?.['s2-min-val'] || '-')}</td><td>${mark(g.min.ok)}</td></tr>
         </table></div>`;
     }
 
@@ -1811,14 +1758,9 @@
         </div>
         <div class="border-t pt-3 space-y-2">
           <h4 class="font-bold text-slate-800">2단계 추세선 해석</h4>
-          ${box('2-1. 차수 선택 이유', a['s2-reason'])}
-          ${row("2-2. 도함수 f'(x)", a['s2-dfx'], 'font-mono')}
-          ${row("f'(x)=0인 x", a['s2-crit'])}
-          <p><strong>2-3. 증가 구간:</strong> ${esc(fmtIntervals(a['s2-inc-list']))} &nbsp;/&nbsp; <strong>감소 구간:</strong> ${esc(fmtIntervals(a['s2-dec-list']))}</p>
-          ${box('증가·감소 판단 근거', a['s2-inc-reason'])}
-          <p><strong>2-4. 극대·극소 존재:</strong> ${esc(existTxt(a['s2-ext-exist']))} &nbsp;/&nbsp; <strong>극대인 x:</strong> ${esc(fmtXs(a['s2-maxx-list']))} &nbsp;/&nbsp; <strong>극소인 x:</strong> ${esc(fmtXs(a['s2-minx-list']))}</p>
+          <p><strong>2-2. 극대·극소 존재:</strong> ${esc(existTxt(a['s2-ext-exist']))} &nbsp;/&nbsp; <strong>극대인 x:</strong> ${esc(fmtXs(a['s2-maxx-list']))} &nbsp;/&nbsp; <strong>극소인 x:</strong> ${esc(fmtXs(a['s2-minx-list']))}</p>
           ${box('극대·극소 판단 근거', a['s2-ext-reason'])}
-          <p><strong>2-5. 최댓값:</strong> ${esc(a['s2-max-val'] || '-')} &nbsp;/&nbsp; <strong>최솟값:</strong> ${esc(a['s2-min-val'] || '-')}</p>
+          <p><strong>2-3. 최댓값:</strong> ${esc(a['s2-max-val'] || '-')} &nbsp;/&nbsp; <strong>최솟값:</strong> ${esc(a['s2-min-val'] || '-')}</p>
           ${kpRefHTML(item)}
         </div>
         <div class="border-t pt-3 space-y-2">
@@ -1894,10 +1836,7 @@
             <span style="font-family:'Times New Roman',serif;font-style:italic;font-size:11.5pt;">${t ? formatPolynomial(t.coeffs, true) : '미작도'}</span>
             ${t ? `&nbsp; <span style="font-size:8.5pt;color:#475569;">R² = ${t.r2.toFixed(3)}</span>` : ''}
           </p>
-          ${(() => { const kp = keyPoints(item.points || [], t); return kp ? `<p style="font-size:8.8pt;margin:0 0 6px 0;color:#334155;"><strong>주요 점 (정의역 ${r2d(kp.a)} ≤ x ≤ ${r2d(kp.b)}):</strong> ${kp.list.map(p => `${KP_LABEL[p.type]} (${r2d(p.x)}, ${r2d(p.y)})`).join(' · ')}</p>${derivTableHTML(item.points || [], t, a['s2-sign'])}` : ''; })()}
-          <table style="${tbl}" border="1">
-            <tr><th style="${TH}">2-1. 차수 선택 이유</th><td style="${TD}">${pre(a['s2-reason'])}</td></tr>
-          </table>
+          ${(() => { const kp = keyPoints(item.points || [], t); return kp ? `<p style="font-size:8.8pt;margin:0 0 6px 0;color:#334155;"><strong>주요 점 (정의역 ${r2d(kp.a)} ≤ x ≤ ${r2d(kp.b)}):</strong> ${kp.list.map(p => `${KP_LABEL[p.type]} (${r2d(p.x)}, ${r2d(p.y)})`).join(' · ')}</p><p style="font-size:9pt;font-weight:bold;margin:4px 0 0 0;">2-1. x, f'(x), f(x) 표 (⋯ 칸: 학생이 고른 부호, 괄호 안은 정답)</p>${derivTableHTML(item.points || [], t, a['s2-sign'])}` : ''; })()}
         </div>
 
         <div class="print-page">
@@ -1906,15 +1845,11 @@
             <span style="font-size:9pt;">${esc(info.grade)}학년 ${esc(info.class)}반 ${esc(info.num)}번 ${esc(info.name)}</span>
           </div>
           <table style="${tbl}" border="1">
-            <tr><th style="${TH}">2-2. 도함수 f'(x)</th><td style="${TD};font-family:monospace">${esc(a['s2-dfx'])}</td></tr>
-            <tr><th style="${TH}">f'(x) = 0인 x</th><td style="${TD}">${esc(a['s2-crit'])}</td></tr>
-            <tr><th style="${TH}">2-3. 증가 / 감소 구간</th><td style="${TD}">증가: ${esc(fmtIntervals(a['s2-inc-list']))} &nbsp;/&nbsp; 감소: ${esc(fmtIntervals(a['s2-dec-list']))}</td></tr>
-            <tr><th style="${TH}">증가·감소 판단 근거</th><td style="${TD}">${pre(a['s2-inc-reason'])}</td></tr>
-            <tr><th style="${TH}">2-4. 극대·극소</th><td style="${TD}">${esc(existTxt(a['s2-ext-exist']))} 극대인 x: ${esc(fmtXs(a['s2-maxx-list']))} &nbsp;/&nbsp; 극소인 x: ${esc(fmtXs(a['s2-minx-list']))}</td></tr>
+            <tr><th style="${TH}">2-2. 극대·극소</th><td style="${TD}">${esc(existTxt(a['s2-ext-exist']))} 극대인 x: ${esc(fmtXs(a['s2-maxx-list']))} &nbsp;/&nbsp; 극소인 x: ${esc(fmtXs(a['s2-minx-list']))}</td></tr>
             <tr><th style="${TH}">극대·극소 판단 근거</th><td style="${TD}">${pre(a['s2-ext-reason'])}</td></tr>
-            <tr><th style="${TH}">2-5. 최댓값 / 최솟값</th><td style="${TD}">최댓값: ${esc(a['s2-max-val'] || '-')} &nbsp;/&nbsp; 최솟값: ${esc(a['s2-min-val'] || '-')}</td></tr>
+            <tr><th style="${TH}">2-3. 최댓값 / 최솟값</th><td style="${TD}">최댓값: ${esc(a['s2-max-val'] || '-')} &nbsp;/&nbsp; 최솟값: ${esc(a['s2-min-val'] || '-')}</td></tr>
           </table>
-          ${(() => { const g = autoGrade(item); return g ? `<p style="font-size:8.8pt;margin:4px 0 0 0;color:#92400e;"><strong>자동 채점:</strong> f'(x) 부호 ${g.sign.matched}/${g.sign.total} · 극대 x ${g.maxX.ok ? '○' : '×'} · 극소 x ${g.minX.ok ? '○' : '×'} · 증가 구간 ${g.inc.ok ? '○' : '×'} · 감소 구간 ${g.dec.ok ? '○' : '×'} · 최댓값 ${g.max.ok ? '○' : '×'} · 최솟값 ${g.min.ok ? '○' : '×'} &nbsp;(정답: 증가 ${item.answerKey.inc.map(r => `[${r.a}, ${r.b}]`).join(', ') || '없음'} / 감소 ${item.answerKey.dec.map(r => `[${r.a}, ${r.b}]`).join(', ') || '없음'} / 최댓값 ${item.answerKey.maxVal} / 최솟값 ${item.answerKey.minVal})</p>` : ''; })()}
+          ${(() => { const g = autoGrade(item); return g ? `<p style="font-size:8.8pt;margin:4px 0 0 0;color:#92400e;"><strong>자동 채점:</strong> 2-1 f'(x) 부호 ${g.sign.matched}/${g.sign.total} · 극대 x ${g.maxX.ok ? '○' : '×'} · 극소 x ${g.minX.ok ? '○' : '×'} · 최댓값 ${g.max.ok ? '○' : '×'} · 최솟값 ${g.min.ok ? '○' : '×'} &nbsp;(정답: 극대 x ${(item.answerKey.maxXs || []).join(', ') || '없음'} / 극소 x ${(item.answerKey.minXs || []).join(', ') || '없음'} / 최댓값 ${item.answerKey.maxVal} / 최솟값 ${item.answerKey.minVal})</p>` : ''; })()}
 
           <h3 style="${H3}">3단계 | 현재 순간변화율 산출 및 미래 예측 (8점)</h3>
           <table style="${tbl}" border="1">
@@ -1965,8 +1900,6 @@
     }
 
     ensureColumns(INITIAL_COLUMNS);
-    setIntervalRows('inc');
-    setIntervalRows('dec');
     setXRows('maxx');
     setXRows('minx');
     if (!sb) document.getElementById('config-warning').classList.remove('hidden');
