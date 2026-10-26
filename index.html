@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ko">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,21 +12,54 @@
   <script src="config.js"></script>
   <style>
     @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
-    body { font-family: 'Pretendard', sans-serif; }
-    .formula { font-family: 'Times New Roman', 'Cambria Math', serif; font-style: italic; }
-    #print-area { display: none; }
 
-    /* 인쇄 및 PDF 저장 (A4 2페이지) */
+    body {
+      font-family: 'Pretendard', sans-serif;
+    }
+
+    .formula {
+      font-family: 'Times New Roman', 'Cambria Math', serif;
+      font-style: italic;
+    }
+
+    #print-area {
+      display: none;
+    }
+
+    /* 인쇄 및 PDF 저장 (A4 2페이지) 1*/
     @media print {
-      body > *:not(#print-area) { display: none !important; }
-      body { background: white !important; }
-      #print-area { display: block; color: black; font-size: 10pt; }
-      .print-page { page-break-after: always; break-after: page; }
-      .print-page:last-child { page-break-after: auto; break-after: auto; }
-      @page { size: A4 portrait; margin: 12mm; }
+      body>*:not(#print-area) {
+        display: none !important;
+      }
+
+      body {
+        background: white !important;
+      }
+
+      #print-area {
+        display: block;
+        color: black;
+        font-size: 10pt;
+      }
+
+      .print-page {
+        page-break-after: always;
+        break-after: page;
+      }
+
+      .print-page:last-child {
+        page-break-after: auto;
+        break-after: auto;
+      }
+
+      @page {
+        size: A4 portrait;
+        margin: 12mm;
+      }
     }
   </style>
 </head>
+
 <body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
 
   <!-- Navigation Header -->
@@ -40,15 +74,18 @@
       </div>
 
       <div class="flex items-center space-x-3">
-        <div id="timer-banner" class="hidden bg-indigo-900/80 px-3 py-1.5 rounded-lg flex items-center space-x-2 text-sm border border-indigo-400/30">
+        <div id="timer-banner"
+          class="hidden bg-indigo-900/80 px-3 py-1.5 rounded-lg flex items-center space-x-2 text-sm border border-indigo-400/30">
           <i class="fa-solid fa-clock text-amber-300 animate-pulse"></i>
           <span class="text-xs text-indigo-200">남은 시간:</span>
           <span id="timer-display" class="font-mono font-bold text-amber-300">45:00</span>
         </div>
-        <button id="btn-student-mode" onclick="switchMode('student')" class="px-3 py-1.5 rounded-lg text-sm font-semibold bg-white text-indigo-700 shadow">
+        <button id="btn-student-mode" onclick="switchMode('student')"
+          class="px-3 py-1.5 rounded-lg text-sm font-semibold bg-white text-indigo-700 shadow">
           <i class="fa-solid fa-user-graduate mr-1"></i> 학생 모드
         </button>
-        <button id="btn-teacher-mode" onclick="switchMode('teacher')" class="px-3 py-1.5 rounded-lg text-sm font-semibold bg-indigo-600 hover:bg-indigo-500 text-white">
+        <button id="btn-teacher-mode" onclick="switchMode('teacher')"
+          class="px-3 py-1.5 rounded-lg text-sm font-semibold bg-indigo-600 hover:bg-indigo-500 text-white">
           <i class="fa-solid fa-chalkboard-user mr-1"></i> 교사 모니터링
         </button>
       </div>
@@ -58,38 +95,47 @@
   <main class="flex-grow max-w-7xl w-full mx-auto p-4 md:p-6">
 
     <!-- ================= STUDENT LOGIN ================= -->
-    <div id="student-login-view" class="max-w-md mx-auto my-12 bg-white p-8 rounded-2xl shadow-lg border border-slate-200 text-center space-y-6">
-      <div class="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mx-auto text-2xl">
+    <div id="student-login-view"
+      class="max-w-md mx-auto my-12 bg-white p-8 rounded-2xl shadow-lg border border-slate-200 text-center space-y-6">
+      <div
+        class="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mx-auto text-2xl">
         <i class="fa-solid fa-id-card"></i>
       </div>
       <div>
         <h2 class="text-xl font-bold text-slate-900">수행평가 인적사항 입력</h2>
-        <p class="text-xs text-slate-500 mt-1">인적사항을 정확히 입력한 후 [시험 시작하기]를 누르세요.<br>시작 즉시 <strong>45분 제한시간</strong>이 시작됩니다.</p>
+        <p class="text-xs text-slate-500 mt-1">인적사항을 정확히 입력한 후 [시험 시작하기]를 누르세요.<br>시작 즉시 <strong>45분 제한시간</strong>이
+          시작됩니다.</p>
       </div>
       <div class="space-y-3 text-left">
         <div class="grid grid-cols-3 gap-2">
           <div>
             <label class="block text-xs font-semibold text-slate-600 mb-1">학년</label>
-            <input type="number" id="login-grade" placeholder="예: 2" class="w-full p-2.5 border rounded-lg text-center font-bold text-sm focus:ring-2 focus:ring-indigo-500">
+            <input type="number" id="login-grade" placeholder="예: 2"
+              class="w-full p-2.5 border rounded-lg text-center font-bold text-sm focus:ring-2 focus:ring-indigo-500">
           </div>
           <div>
             <label class="block text-xs font-semibold text-slate-600 mb-1">반</label>
-            <input type="number" id="login-class" placeholder="예: 3" class="w-full p-2.5 border rounded-lg text-center font-bold text-sm focus:ring-2 focus:ring-indigo-500">
+            <input type="number" id="login-class" placeholder="예: 3"
+              class="w-full p-2.5 border rounded-lg text-center font-bold text-sm focus:ring-2 focus:ring-indigo-500">
           </div>
           <div>
             <label class="block text-xs font-semibold text-slate-600 mb-1">번호</label>
-            <input type="number" id="login-num" placeholder="예: 15" class="w-full p-2.5 border rounded-lg text-center font-bold text-sm focus:ring-2 focus:ring-indigo-500">
+            <input type="number" id="login-num" placeholder="예: 15"
+              class="w-full p-2.5 border rounded-lg text-center font-bold text-sm focus:ring-2 focus:ring-indigo-500">
           </div>
         </div>
         <div>
           <label class="block text-xs font-semibold text-slate-600 mb-1">이름</label>
-          <input type="text" id="login-name" placeholder="성명을 입력하세요" class="w-full p-2.5 border rounded-lg text-center font-bold text-sm focus:ring-2 focus:ring-indigo-500">
+          <input type="text" id="login-name" placeholder="성명을 입력하세요"
+            class="w-full p-2.5 border rounded-lg text-center font-bold text-sm focus:ring-2 focus:ring-indigo-500">
         </div>
       </div>
-      <div id="config-warning" class="hidden p-3 bg-red-50 border border-red-300 rounded-lg text-xs text-red-700 text-left">
+      <div id="config-warning"
+        class="hidden p-3 bg-red-50 border border-red-300 rounded-lg text-xs text-red-700 text-left">
         <i class="fa-solid fa-plug-circle-xmark mr-1"></i> 수파베이스 연결 설정(config.js)이 없습니다. 설치 가이드의 config.js 단계를 확인하세요.
       </div>
-      <button id="btn-start" onclick="startStudentTest()" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md transition-all flex items-center justify-center space-x-2">
+      <button id="btn-start" onclick="startStudentTest()"
+        class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md transition-all flex items-center justify-center space-x-2">
         <i class="fa-solid fa-play"></i>
         <span>시험 시작하기 (45분 카운트다운)</span>
       </button>
@@ -98,10 +144,12 @@
     <!-- ================= STUDENT WORKSHEET ================= -->
     <div id="student-view" class="hidden space-y-6">
 
-      <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-wrap gap-4 items-center justify-between">
+      <div
+        class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-wrap gap-4 items-center justify-between">
         <div class="flex items-center space-x-3">
           <span class="font-bold text-indigo-900 border-l-4 border-indigo-600 pl-2 text-sm">학생 정보:</span>
-          <span id="stu-info-tag" class="px-3 py-1 bg-indigo-50 text-indigo-700 rounded-lg font-bold text-sm border border-indigo-100"></span>
+          <span id="stu-info-tag"
+            class="px-3 py-1 bg-indigo-50 text-indigo-700 rounded-lg font-bold text-sm border border-indigo-100"></span>
         </div>
         <div class="text-xs text-slate-500 flex items-center space-x-2">
           <span>작성 진행률:</span>
@@ -109,13 +157,15 @@
             <div id="student-progress-bar" class="bg-indigo-600 h-2.5 rounded-full" style="width: 0%"></div>
           </div>
           <span id="student-progress-text" class="font-bold text-indigo-600">0%</span>
-          <span id="save-status" class="ml-3 px-2 py-0.5 rounded text-[11px] font-semibold bg-slate-100 text-slate-500">저장 대기</span>
+          <span id="save-status"
+            class="ml-3 px-2 py-0.5 rounded text-[11px] font-semibold bg-slate-100 text-slate-500">저장 대기</span>
         </div>
       </div>
 
       <!-- Step Tabs -->
       <div class="grid grid-cols-3 gap-3" id="step-tabs">
-        <button type="button" data-step="1" onclick="showStep(1)" class="step-tab text-left p-3 rounded-xl border-2 transition-all">
+        <button type="button" data-step="1" onclick="showStep(1)"
+          class="step-tab text-left p-3 rounded-xl border-2 transition-all">
           <div class="flex items-center justify-between">
             <span class="step-num text-xs font-bold">1단계</span>
             <span class="step-badge text-[11px] font-bold"></span>
@@ -123,7 +173,8 @@
           <p class="text-sm font-bold mt-0.5">주제 선정 및 데이터 수집</p>
           <p class="text-[11px] opacity-70">배점 4점</p>
         </button>
-        <button type="button" data-step="2" onclick="showStep(2)" class="step-tab text-left p-3 rounded-xl border-2 transition-all">
+        <button type="button" data-step="2" onclick="showStep(2)"
+          class="step-tab text-left p-3 rounded-xl border-2 transition-all">
           <div class="flex items-center justify-between">
             <span class="step-num text-xs font-bold">2단계</span>
             <span class="step-badge text-[11px] font-bold"></span>
@@ -131,7 +182,8 @@
           <p class="text-sm font-bold mt-0.5">추세선 작도 및 그래프 해석</p>
           <p class="text-[11px] opacity-70">배점 8점</p>
         </button>
-        <button type="button" data-step="3" onclick="showStep(3)" class="step-tab text-left p-3 rounded-xl border-2 transition-all">
+        <button type="button" data-step="3" onclick="showStep(3)"
+          class="step-tab text-left p-3 rounded-xl border-2 transition-all">
           <div class="flex items-center justify-between">
             <span class="step-num text-xs font-bold">3단계</span>
             <span class="step-badge text-[11px] font-bold"></span>
@@ -154,7 +206,8 @@
       <section id="step-1" class="step-section bg-white p-6 rounded-xl shadow-sm border border-slate-200 space-y-4">
         <div class="border-b pb-3">
           <h2 class="text-lg font-bold text-slate-900 flex items-center">
-            <span class="bg-indigo-100 text-indigo-700 w-7 h-7 rounded-full flex items-center justify-center text-sm mr-2">1</span>
+            <span
+              class="bg-indigo-100 text-indigo-700 w-7 h-7 rounded-full flex items-center justify-center text-sm mr-2">1</span>
             1단계 | 주제 선정 및 통계 데이터 수집 (배점: 4점)
           </h2>
         </div>
@@ -162,19 +215,24 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label class="block text-xs font-semibold text-slate-600 mb-1">탐구 주제명</label>
-            <input type="text" id="s1-topic" oninput="saveStudentData()" placeholder="예: 계절에 따른 서울 월평균기온의 변화 분석" class="test-field w-full p-2 border rounded-lg text-sm">
+            <input type="text" id="s1-topic" oninput="saveStudentData()" placeholder="예: 계절에 따른 서울 월평균기온의 변화 분석"
+              class="test-field w-full p-2 border rounded-lg text-sm">
           </div>
           <div>
             <label class="block text-xs font-semibold text-slate-600 mb-1">데이터 출처 (기관명, 통계명, 기간)</label>
-            <input type="text" id="s1-source" oninput="saveStudentData()" placeholder="예: 기상청 기상자료개방포털 '서울 월평균기온 평년값(1991~2020)'" class="test-field w-full p-2 border rounded-lg text-sm">
+            <input type="text" id="s1-source" oninput="saveStudentData()"
+              placeholder="예: 기상청 기상자료개방포털 '서울 월평균기온 평년값(1991~2020)'"
+              class="test-field w-full p-2 border rounded-lg text-sm">
           </div>
           <div>
             <label class="block text-xs font-semibold text-slate-600 mb-1">독립변수 x의 의미 및 단위</label>
-            <input type="text" id="s1-var-x" oninput="saveStudentData()" placeholder="예: 2018년을 x=0으로 둔 연도" class="test-field w-full p-2 border rounded-lg text-sm">
+            <input type="text" id="s1-var-x" oninput="saveStudentData()" placeholder="예: 2018년을 x=0으로 둔 연도"
+              class="test-field w-full p-2 border rounded-lg text-sm">
           </div>
           <div>
             <label class="block text-xs font-semibold text-slate-600 mb-1">종속변수 y의 의미 및 단위</label>
-            <input type="text" id="s1-var-y" oninput="saveStudentData()" placeholder="예: 방한 외래관광객 수 (백만 명)" class="test-field w-full p-2 border rounded-lg text-sm">
+            <input type="text" id="s1-var-y" oninput="saveStudentData()" placeholder="예: 방한 외래관광객 수 (백만 명)"
+              class="test-field w-full p-2 border rounded-lg text-sm">
           </div>
         </div>
 
@@ -182,8 +240,11 @@
           <div class="flex justify-between items-center">
             <label class="text-xs font-semibold text-slate-700">수집한 데이터 (7개 이상 입력)</label>
             <div class="flex items-center space-x-3">
-              <button onclick="removeColumn()" class="test-field text-xs text-red-500 font-semibold hover:underline disabled:text-slate-300 disabled:no-underline" id="btn-remove-col">− 열 삭제</button>
-              <button onclick="addColumn(); onDataChanged();" class="test-field text-xs text-indigo-600 font-semibold hover:underline">+ 열 추가</button>
+              <button onclick="removeColumn()"
+                class="test-field text-xs text-red-500 font-semibold hover:underline disabled:text-slate-300 disabled:no-underline"
+                id="btn-remove-col">− 열 삭제</button>
+              <button onclick="addColumn(); onDataChanged();"
+                class="test-field text-xs text-indigo-600 font-semibold hover:underline">+ 열 추가</button>
             </div>
           </div>
           <div class="p-2.5 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-900">
@@ -192,32 +253,44 @@
           </div>
           <div class="overflow-x-auto">
             <table id="data-table" class="w-full border-collapse border border-slate-200 text-center text-xs">
-              <thead><tr id="dt-head" class="bg-slate-100 text-slate-700"><th class="border p-2 w-16">구분</th></tr></thead>
+              <thead>
+                <tr id="dt-head" class="bg-slate-100 text-slate-700">
+                  <th class="border p-2 w-16">구분</th>
+                </tr>
+              </thead>
               <tbody>
-                <tr id="dt-xrow"><td class="border p-2 font-bold bg-slate-50">x 값</td></tr>
-                <tr id="dt-yrow"><td class="border p-2 font-bold bg-slate-50">y 값</td></tr>
+                <tr id="dt-xrow">
+                  <td class="border p-2 font-bold bg-slate-50">x 값</td>
+                </tr>
+                <tr id="dt-yrow">
+                  <td class="border p-2 font-bold bg-slate-50">y 값</td>
+                </tr>
               </tbody>
             </table>
           </div>
         </div>
 
         <div class="border rounded-xl p-3 bg-white flex flex-col items-center justify-center h-60">
-          <span class="text-xs font-bold text-slate-500 mb-1"><i class="fa-solid fa-chart-line text-indigo-600 mr-1"></i> 수집한 데이터 그래프 (점 연결)</span>
+          <span class="text-xs font-bold text-slate-500 mb-1"><i
+              class="fa-solid fa-chart-line text-indigo-600 mr-1"></i> 수집한 데이터 그래프 (점 연결)</span>
           <canvas id="student-chart-step1" class="w-full h-full"></canvas>
         </div>
 
         <div class="pt-4 border-t flex justify-end">
-          <button type="button" onclick="showStep(2)" class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg shadow-md flex items-center space-x-2">
+          <button type="button" onclick="showStep(2)"
+            class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg shadow-md flex items-center space-x-2">
             <span>다음</span><i class="fa-solid fa-arrow-right"></i>
           </button>
         </div>
       </section>
 
       <!-- ===== Step 2 ===== -->
-      <section id="step-2" class="step-section hidden bg-white p-6 rounded-xl shadow-sm border border-slate-200 space-y-5">
+      <section id="step-2"
+        class="step-section hidden bg-white p-6 rounded-xl shadow-sm border border-slate-200 space-y-5">
         <div class="border-b pb-3">
           <h2 class="text-lg font-bold text-slate-900 flex items-center">
-            <span class="bg-indigo-100 text-indigo-700 w-7 h-7 rounded-full flex items-center justify-center text-sm mr-2">2</span>
+            <span
+              class="bg-indigo-100 text-indigo-700 w-7 h-7 rounded-full flex items-center justify-center text-sm mr-2">2</span>
             2단계 | 추세선 작도 및 도함수를 이용한 그래프 해석 [논술형] (배점: 8점)
           </h2>
         </div>
@@ -226,14 +299,18 @@
         <div class="bg-indigo-50 p-4 rounded-xl border border-indigo-100 space-y-3">
           <div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
             <div>
-              <h3 class="font-bold text-sm text-indigo-900"><i class="fa-solid fa-wand-magic-sparkles text-indigo-600 mr-1.5"></i> 추세선 작도</h3>
-              <p class="text-xs text-indigo-700 mt-0.5">데이터 모양에 맞는 차수를 골라 추세선 f(x)를 작도하세요. 두 가지를 모두 눌러 비교해 볼 수 있으며, <strong>마지막으로 작도한 추세선</strong>으로 해석합니다.</p>
+              <h3 class="font-bold text-sm text-indigo-900"><i
+                  class="fa-solid fa-wand-magic-sparkles text-indigo-600 mr-1.5"></i> 추세선 작도</h3>
+              <p class="text-xs text-indigo-700 mt-0.5">데이터 모양에 맞는 차수를 골라 추세선 f(x)를 작도하세요. 두 가지를 모두 눌러 비교해 볼 수 있으며,
+                <strong>마지막으로 작도한 추세선</strong>으로 해석합니다.</p>
             </div>
             <div class="flex space-x-2 shrink-0">
-              <button onclick="generateTrendline(3)" class="test-field px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow">
+              <button onclick="generateTrendline(3)"
+                class="test-field px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow">
                 <i class="fa-solid fa-chart-line mr-1"></i> 3차 추세선
               </button>
-              <button onclick="generateTrendline(4)" class="test-field px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow">
+              <button onclick="generateTrendline(4)"
+                class="test-field px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow">
                 <i class="fa-solid fa-chart-line mr-1"></i> 4차 추세선
               </button>
             </div>
@@ -241,7 +318,8 @@
 
           <div>
             <label class="block text-xs font-semibold text-slate-600 mb-1">추세선 f(x) (계수는 유효숫자 3자리로 반올림)</label>
-            <div id="s2-fx-box" class="w-full p-3 border rounded-lg bg-white text-center text-lg text-indigo-900 min-h-[3rem]">
+            <div id="s2-fx-box"
+              class="w-full p-3 border rounded-lg bg-white text-center text-lg text-indigo-900 min-h-[3rem]">
               <span class="text-sm text-slate-400 not-italic">[위 버튼을 눌러 추세선을 작도하세요]</span>
             </div>
           </div>
@@ -253,14 +331,17 @@
         </div>
 
         <div class="border rounded-xl p-3 bg-white flex flex-col items-center justify-center h-72">
-          <span class="text-xs font-bold text-slate-500 mb-1"><i class="fa-solid fa-eye text-indigo-600 mr-1"></i> 실측 데이터와 추세선 f(x) 그래프</span>
+          <span class="text-xs font-bold text-slate-500 mb-1"><i class="fa-solid fa-eye text-indigo-600 mr-1"></i> 실측
+            데이터와 추세선 f(x) 그래프</span>
           <canvas id="student-chart-step2" class="w-full h-full"></canvas>
         </div>
 
         <!-- 2-1 -->
         <div class="space-y-2">
           <label class="block text-sm font-semibold text-slate-800">[문항 2-1] 추세선의 차수(3차 또는 4차)를 선택한 이유</label>
-          <textarea id="s2-reason" rows="2" oninput="saveStudentData()" placeholder="데이터 그래프의 모양(증가·감소가 바뀌는 횟수 등)과 결정계수 R²를 근거로 선택한 이유를 서술하시오." class="test-field w-full p-2 border rounded-lg text-sm"></textarea>
+          <textarea id="s2-reason" rows="2" oninput="saveStudentData()"
+            placeholder="데이터 그래프의 모양(증가·감소가 바뀌는 횟수 등)과 결정계수 R²를 근거로 선택한 이유를 서술하시오."
+            class="test-field w-full p-2 border rounded-lg text-sm"></textarea>
         </div>
 
         <!-- 2-2 -->
@@ -269,36 +350,46 @@
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
               <label class="block text-xs font-semibold text-slate-500 mb-1">도함수 f'(x)</label>
-              <input type="text" id="s2-dfx" oninput="saveStudentData()" placeholder="예: f'(x) = 0.537x² - 6.48x + 13.6" class="test-field w-full p-2 border rounded-lg text-sm font-mono">
+              <input type="text" id="s2-dfx" oninput="saveStudentData()" placeholder="예: f'(x) = 0.537x² - 6.48x + 13.6"
+                class="test-field w-full p-2 border rounded-lg text-sm font-mono">
             </div>
             <div>
               <label class="block text-xs font-semibold text-slate-500 mb-1">f'(x) = 0인 x의 값 (소수 첫째 자리까지)</label>
-              <input type="text" id="s2-crit" oninput="saveStudentData()" placeholder="예: x ≈ 2.7, x ≈ 9.4" class="test-field w-full p-2 border rounded-lg text-sm">
+              <input type="text" id="s2-crit" oninput="saveStudentData()" placeholder="예: x ≈ 2.7, x ≈ 9.4"
+                class="test-field w-full p-2 border rounded-lg text-sm">
             </div>
           </div>
         </div>
 
         <!-- 2-3 -->
         <div class="space-y-2">
-          <label class="block text-sm font-semibold text-slate-800">[문항 2-3] 추세선 f(x)의 증가·감소 구간 및 판단 근거 (정의역 안에서)</label>
-          <p class="text-xs text-slate-500">위의 '추세선 주요 점'(양 끝점, 극대·극소)의 <strong>x 좌표</strong>를 보고 구간을 입력하시오. 구간이 여러 개면 [+ 구간 추가]를 누르고, 해당 구간이 없으면 비워 두시오.</p>
+          <label class="block text-sm font-semibold text-slate-800">[문항 2-3] 추세선 f(x)의 증가·감소 구간 및 판단 근거 (정의역
+            안에서)</label>
+          <p class="text-xs text-slate-500">위의 '추세선 주요 점'(양 끝점, 극대·극소)의 <strong>x 좌표</strong>를 보고 구간을 입력하시오. 구간이 여러 개면
+            [+ 구간 추가]를 누르고, 해당 구간이 없으면 비워 두시오.</p>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div class="border rounded-lg p-3 bg-rose-50/40">
               <div class="flex justify-between items-center mb-2">
-                <span class="text-xs font-bold text-rose-700"><i class="fa-solid fa-arrow-trend-up mr-1"></i>증가 구간</span>
-                <button type="button" onclick="addIntervalRow('inc'); saveStudentData();" class="test-field text-xs text-indigo-600 font-semibold hover:underline">+ 구간 추가</button>
+                <span class="text-xs font-bold text-rose-700"><i class="fa-solid fa-arrow-trend-up mr-1"></i>증가
+                  구간</span>
+                <button type="button" onclick="addIntervalRow('inc'); saveStudentData();"
+                  class="test-field text-xs text-indigo-600 font-semibold hover:underline">+ 구간 추가</button>
               </div>
               <div id="s2-inc-rows" class="space-y-1.5"></div>
             </div>
             <div class="border rounded-lg p-3 bg-sky-50/40">
               <div class="flex justify-between items-center mb-2">
-                <span class="text-xs font-bold text-sky-700"><i class="fa-solid fa-arrow-trend-down mr-1"></i>감소 구간</span>
-                <button type="button" onclick="addIntervalRow('dec'); saveStudentData();" class="test-field text-xs text-indigo-600 font-semibold hover:underline">+ 구간 추가</button>
+                <span class="text-xs font-bold text-sky-700"><i class="fa-solid fa-arrow-trend-down mr-1"></i>감소
+                  구간</span>
+                <button type="button" onclick="addIntervalRow('dec'); saveStudentData();"
+                  class="test-field text-xs text-indigo-600 font-semibold hover:underline">+ 구간 추가</button>
               </div>
               <div id="s2-dec-rows" class="space-y-1.5"></div>
             </div>
           </div>
-          <textarea id="s2-inc-reason" rows="2" oninput="saveStudentData()" placeholder="f'(x)의 부호(양수/음수)를 이용하여 증가·감소를 판단한 근거를 서술하고, 실제 현상에서 무엇을 의미하는지 해석하시오." class="test-field w-full p-2 border rounded-lg text-sm"></textarea>
+          <textarea id="s2-inc-reason" rows="2" oninput="saveStudentData()"
+            placeholder="f'(x)의 부호(양수/음수)를 이용하여 증가·감소를 판단한 근거를 서술하고, 실제 현상에서 무엇을 의미하는지 해석하시오."
+            class="test-field w-full p-2 border rounded-lg text-sm"></textarea>
         </div>
 
         <!-- 2-4 -->
@@ -307,14 +398,18 @@
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
               <label class="block text-xs font-semibold text-slate-500 mb-1">극대인 점 (x, f(x))</label>
-              <input type="text" id="s2-max-pt" oninput="saveStudentData()" placeholder="예: (2.7, 26.6)  — 없으면 '없음'" class="test-field w-full p-2 border rounded-lg text-sm">
+              <input type="text" id="s2-max-pt" oninput="saveStudentData()" placeholder="예: (2.7, 26.6)  — 없으면 '없음'"
+                class="test-field w-full p-2 border rounded-lg text-sm">
             </div>
             <div>
               <label class="block text-xs font-semibold text-slate-500 mb-1">극소인 점 (x, f(x))</label>
-              <input type="text" id="s2-min-pt" oninput="saveStudentData()" placeholder="예: (9.4, 0.2)  — 없으면 '없음'" class="test-field w-full p-2 border rounded-lg text-sm">
+              <input type="text" id="s2-min-pt" oninput="saveStudentData()" placeholder="예: (9.4, 0.2)  — 없으면 '없음'"
+                class="test-field w-full p-2 border rounded-lg text-sm">
             </div>
           </div>
-          <textarea id="s2-ext-reason" rows="2" oninput="saveStudentData()" placeholder="f'(x)의 부호 변화(양→음: 극대, 음→양: 극소)로 판단한 근거를 서술하고, 극값이 실제 현상에서 무엇을 의미하는지(실측 데이터와 비교 포함) 해석하시오." class="test-field w-full p-2 border rounded-lg text-sm"></textarea>
+          <textarea id="s2-ext-reason" rows="2" oninput="saveStudentData()"
+            placeholder="f'(x)의 부호 변화(양→음: 극대, 음→양: 극소)로 판단한 근거를 서술하고, 극값이 실제 현상에서 무엇을 의미하는지(실측 데이터와 비교 포함) 해석하시오."
+            class="test-field w-full p-2 border rounded-lg text-sm"></textarea>
         </div>
 
         <!-- 2-5 -->
@@ -324,30 +419,36 @@
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
               <label class="block text-xs font-semibold text-slate-500 mb-1">최댓값</label>
-              <input type="text" id="s2-max-val" oninput="saveStudentData()" placeholder="최댓값을 입력하세요" class="test-field w-full p-2 border rounded-lg text-sm">
+              <input type="text" id="s2-max-val" oninput="saveStudentData()" placeholder="최댓값을 입력하세요"
+                class="test-field w-full p-2 border rounded-lg text-sm">
             </div>
             <div>
               <label class="block text-xs font-semibold text-slate-500 mb-1">최솟값</label>
-              <input type="text" id="s2-min-val" oninput="saveStudentData()" placeholder="최솟값을 입력하세요" class="test-field w-full p-2 border rounded-lg text-sm">
+              <input type="text" id="s2-min-val" oninput="saveStudentData()" placeholder="최솟값을 입력하세요"
+                class="test-field w-full p-2 border rounded-lg text-sm">
             </div>
           </div>
         </div>
 
         <div class="pt-4 border-t flex justify-between">
-          <button type="button" onclick="showStep(1)" class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg border flex items-center space-x-2">
+          <button type="button" onclick="showStep(1)"
+            class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg border flex items-center space-x-2">
             <i class="fa-solid fa-arrow-left"></i><span>이전</span>
           </button>
-          <button type="button" onclick="showStep(3)" class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg shadow-md flex items-center space-x-2">
+          <button type="button" onclick="showStep(3)"
+            class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg shadow-md flex items-center space-x-2">
             <span>다음</span><i class="fa-solid fa-arrow-right"></i>
           </button>
         </div>
       </section>
 
       <!-- ===== Step 3 ===== -->
-      <section id="step-3" class="step-section hidden bg-white p-6 rounded-xl shadow-sm border border-slate-200 space-y-4">
+      <section id="step-3"
+        class="step-section hidden bg-white p-6 rounded-xl shadow-sm border border-slate-200 space-y-4">
         <div class="border-b pb-3 flex justify-between items-center">
           <h2 class="text-lg font-bold text-slate-900 flex items-center">
-            <span class="bg-indigo-100 text-indigo-700 w-7 h-7 rounded-full flex items-center justify-center text-sm mr-2">3</span>
+            <span
+              class="bg-indigo-100 text-indigo-700 w-7 h-7 rounded-full flex items-center justify-center text-sm mr-2">3</span>
             3단계 | 현재 순간변화율 산출 및 미래 예측 [논술형] (배점: 8점)
           </h2>
         </div>
@@ -357,11 +458,14 @@
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
               <label class="block text-xs font-semibold text-slate-500 mb-1">현재(가장 최근) 시점 x의 값</label>
-              <input type="text" id="s3-curr-x" oninput="saveStudentData()" placeholder="예: x = 7 (2025년)" class="test-field w-full p-2 border rounded-lg text-sm">
+              <input type="text" id="s3-curr-x" oninput="saveStudentData()" placeholder="예: x = 7 (2025년)"
+                class="test-field w-full p-2 border rounded-lg text-sm">
             </div>
             <div>
               <label class="block text-xs font-semibold text-slate-500 mb-1">순간변화율 f'(x현재) 계산 과정과 값</label>
-              <input type="text" id="s3-curr-dfx" oninput="saveStudentData()" placeholder="예: f'(11) = 0.537×121 - 6.48×11 + 13.6 ≈ 7.3" class="test-field w-full p-2 border rounded-lg text-sm">
+              <input type="text" id="s3-curr-dfx" oninput="saveStudentData()"
+                placeholder="예: f'(11) = 0.537×121 - 6.48×11 + 13.6 ≈ 7.3"
+                class="test-field w-full p-2 border rounded-lg text-sm">
             </div>
           </div>
         </div>
@@ -369,26 +473,34 @@
         <div class="space-y-3 pt-2">
           <label class="block text-sm font-semibold text-slate-800">[문항 3-2] 현재 변화율 해석 및 미래 전망 예측</label>
           <div class="p-3 bg-indigo-50/70 text-indigo-950 rounded-lg text-xs leading-relaxed">
-            📌 <strong>[지침]:</strong> f'(x현재)의 부호와 크기로 현재 변화의 방향과 속도를 해석하고, 앞으로 이 현상이 어떻게 전개될지 예측하시오. 추세선을 데이터 범위 밖으로 연장할 때의 한계도 함께 검토하고, 근거 자료로 주장을 뒷받침하시오.
+            📌 <strong>[지침]:</strong> f'(x현재)의 부호와 크기로 현재 변화의 방향과 속도를 해석하고, 앞으로 이 현상이 어떻게 전개될지 예측하시오. 추세선을 데이터 범위 밖으로
+            연장할 때의 한계도 함께 검토하고, 근거 자료로 주장을 뒷받침하시오.
           </div>
           <div>
             <label class="block text-xs font-semibold text-slate-700 mb-1">1. 현재 변화율 해석 및 미래 전망 논술</label>
-            <textarea id="s3-essay" rows="5" oninput="saveStudentData()" placeholder="현재 순간변화율의 의미와 이를 바탕으로 한 미래 전망, 추세선 예측의 한계를 논리적으로 서술하시오." class="test-field w-full p-3 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"></textarea>
+            <textarea id="s3-essay" rows="5" oninput="saveStudentData()"
+              placeholder="현재 순간변화율의 의미와 이를 바탕으로 한 미래 전망, 추세선 예측의 한계를 논리적으로 서술하시오."
+              class="test-field w-full p-3 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"></textarea>
           </div>
           <div>
             <label class="block text-xs font-semibold text-slate-700 mb-1">2. 주장을 뒷받침하는 근거 자료 출처 및 주요 내용</label>
             <div class="space-y-2">
-              <input type="text" id="s3-ref-title" oninput="saveStudentData()" placeholder="자료 출처 (예: 문화체육관광부 보도자료 '2025년 방한 외래관광객 동향', 2025)" class="test-field w-full p-2 border rounded-lg text-sm">
-              <textarea id="s3-ref-summary" rows="2" oninput="saveStudentData()" placeholder="근거 자료의 주요 내용을 요약하여 작성하시오." class="test-field w-full p-2 border rounded-lg text-sm"></textarea>
+              <input type="text" id="s3-ref-title" oninput="saveStudentData()"
+                placeholder="자료 출처 (예: 문화체육관광부 보도자료 '2025년 방한 외래관광객 동향', 2025)"
+                class="test-field w-full p-2 border rounded-lg text-sm">
+              <textarea id="s3-ref-summary" rows="2" oninput="saveStudentData()" placeholder="근거 자료의 주요 내용을 요약하여 작성하시오."
+                class="test-field w-full p-2 border rounded-lg text-sm"></textarea>
             </div>
           </div>
         </div>
 
         <div class="pt-4 border-t flex justify-between">
-          <button type="button" onclick="showStep(2)" class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg border flex items-center space-x-2">
+          <button type="button" onclick="showStep(2)"
+            class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg border flex items-center space-x-2">
             <i class="fa-solid fa-arrow-left"></i><span>이전</span>
           </button>
-          <button id="btn-submit" onclick="submitWorksheet()" class="test-field px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg shadow-md flex items-center space-x-2">
+          <button id="btn-submit" onclick="submitWorksheet()"
+            class="test-field px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg shadow-md flex items-center space-x-2">
             <i class="fa-solid fa-paper-plane"></i>
             <span>최종 수행평가지 제출하기</span>
           </button>
@@ -397,20 +509,25 @@
     </div>
 
     <!-- ================= TEACHER LOGIN ================= -->
-    <div id="teacher-login-view" class="hidden max-w-md mx-auto my-12 bg-white p-8 rounded-2xl shadow-lg border border-slate-200 space-y-5">
+    <div id="teacher-login-view"
+      class="hidden max-w-md mx-auto my-12 bg-white p-8 rounded-2xl shadow-lg border border-slate-200 space-y-5">
       <div class="text-center">
-        <div class="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mx-auto text-2xl">
+        <div
+          class="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mx-auto text-2xl">
           <i class="fa-solid fa-chalkboard-user"></i>
         </div>
         <h2 class="text-xl font-bold text-slate-900 mt-3">교사 로그인</h2>
         <p class="text-xs text-slate-500 mt-1">수파베이스에 등록된 교사 계정으로 로그인하세요.</p>
       </div>
       <div class="space-y-3">
-        <input type="email" id="t-email" placeholder="이메일" class="w-full p-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500">
-        <input type="password" id="t-password" placeholder="비밀번호" onkeydown="if(event.key==='Enter') teacherLogin()" class="w-full p-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500">
+        <input type="email" id="t-email" placeholder="이메일"
+          class="w-full p-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500">
+        <input type="password" id="t-password" placeholder="비밀번호" onkeydown="if(event.key==='Enter') teacherLogin()"
+          class="w-full p-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500">
         <p id="t-error" class="hidden text-xs text-red-600 font-semibold"></p>
       </div>
-      <button id="btn-teacher-login" onclick="teacherLogin()" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md">로그인</button>
+      <button id="btn-teacher-login" onclick="teacherLogin()"
+        class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md">로그인</button>
     </div>
 
     <!-- ================= TEACHER VIEW ================= -->
@@ -435,7 +552,8 @@
             <p id="teacher-email" class="text-[11px] text-slate-400 mt-0.5"></p>
           </div>
           <div class="flex flex-col items-end space-y-1">
-            <button onclick="loadTeacherRows()" class="text-xs text-indigo-600 font-semibold hover:underline"><i class="fa-solid fa-rotate mr-0.5"></i>새로고침</button>
+            <button onclick="loadTeacherRows()" class="text-xs text-indigo-600 font-semibold hover:underline"><i
+                class="fa-solid fa-rotate mr-0.5"></i>새로고침</button>
             <button onclick="teacherLogout()" class="text-xs text-slate-500 hover:underline">로그아웃</button>
             <button onclick="clearAllData()" class="text-xs text-red-500 hover:underline">데이터 초기화</button>
           </div>
@@ -475,14 +593,18 @@
       <div class="flex justify-between items-center border-b pb-3">
         <h3 id="modal-title" class="text-lg font-bold text-slate-900">학생 결과물 상세 검토</h3>
         <div class="flex items-center space-x-2">
-          <button onclick="resetStudentDevice()" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg border" title="학생이 다른 기기에서 이어서 응시할 수 있게 함">
+          <button onclick="resetStudentDevice()"
+            class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg border"
+            title="학생이 다른 기기에서 이어서 응시할 수 있게 함">
             <i class="fa-solid fa-laptop mr-1"></i>기기 초기화
           </button>
-          <button onclick="printStudentReport()" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg flex items-center space-x-1">
+          <button onclick="printStudentReport()"
+            class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg flex items-center space-x-1">
             <i class="fa-solid fa-file-pdf"></i>
             <span>A4 PDF 출력</span>
           </button>
-          <button onclick="closeDetailModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-xl"></i></button>
+          <button onclick="closeDetailModal()" class="text-slate-400 hover:text-slate-600"><i
+              class="fa-solid fa-xmark text-xl"></i></button>
         </div>
       </div>
       <div id="modal-body" class="space-y-4 text-xs leading-relaxed"></div>
@@ -641,7 +763,7 @@
       const xs = document.querySelectorAll('.dt-x'), ys = document.querySelectorAll('.dt-y');
       const last = n - 1;
       if ((xs[last].value !== '' || ys[last].value !== '') &&
-          !confirm(`${n}번째 열에 입력한 데이터(x = ${xs[last].value || '빈칸'}, y = ${ys[last].value || '빈칸'})가 함께 삭제됩니다. 삭제할까요?`)) return;
+        !confirm(`${n}번째 열에 입력한 데이터(x = ${xs[last].value || '빈칸'}, y = ${ys[last].value || '빈칸'})가 함께 삭제됩니다. 삭제할까요?`)) return;
       document.getElementById('dt-head').lastElementChild.remove();
       document.getElementById('dt-xrow').lastElementChild.remove();
       document.getElementById('dt-yrow').lastElementChild.remove();
@@ -795,7 +917,7 @@
 
     function queueServerSave(payload) {
       pendingPayload = payload;
-      try { localStorage.setItem(backupKey(), JSON.stringify(payload)); } catch (e) {}
+      try { localStorage.setItem(backupKey(), JSON.stringify(payload)); } catch (e) { }
       setSaveStatus('pending', '<i class="fa-solid fa-pen mr-0.5"></i>저장 대기');
       clearTimeout(saveTimer);
       saveTimer = setTimeout(() => flushSave(), 1200);
@@ -949,7 +1071,7 @@
 
       const key = `${g}학년_${c}반_${String(n).padStart(2, '0')}번_${name}`;
       let token = null;
-      try { token = localStorage.getItem(TOKEN_PREFIX + key); } catch (e) {}
+      try { token = localStorage.getItem(TOKEN_PREFIX + key); } catch (e) { }
 
       const btn = document.getElementById('btn-start');
       btn.disabled = true;
@@ -959,7 +1081,7 @@
 
       activeStudentKey = res.student_key;
       studentToken = res.token;
-      try { localStorage.setItem(TOKEN_PREFIX + key, res.token); } catch (e) {}
+      try { localStorage.setItem(TOKEN_PREFIX + key, res.token); } catch (e) { }
       serverOffsetMs = Date.parse(res.server_now) - Date.now();
       TEST_MINUTES = res.limit_minutes || TEST_MINUTES;
 
@@ -968,7 +1090,7 @@
       try {
         const bk = JSON.parse(localStorage.getItem(backupKey()) || 'null');
         if (!res.submitted && bk && bk.data && (bk.data.clientSavedAt || 0) > (saved.clientSavedAt || 0)) saved = bk.data;
-      } catch (e) {}
+      } catch (e) { }
 
       document.getElementById('stu-info-tag').innerText = `${g}학년 ${c}반 ${n}번 ${name}`;
       showOnly('student-view');
@@ -1039,10 +1161,10 @@
       return {
         1: [val('s1-topic'), val('s1-source'), val('s1-var-x'), val('s1-var-y'), points.length >= MIN_POINTS],
         2: [!!trend, val('s2-reason'), val('s2-dfx'), val('s2-crit'),
-            completeIntervals('inc').length + completeIntervals('dec').length > 0, val('s2-inc-reason'),
-            val('s2-max-pt') || val('s2-min-pt'), val('s2-ext-reason'), val('s2-max-val'), val('s2-min-val')],
+        completeIntervals('inc').length + completeIntervals('dec').length > 0, val('s2-inc-reason'),
+        val('s2-max-pt') || val('s2-min-pt'), val('s2-ext-reason'), val('s2-max-val'), val('s2-min-val')],
         3: [val('s3-curr-x'), val('s3-curr-dfx'), val('s3-essay').trim().length > 20,
-            val('s3-ref-title'), val('s3-ref-summary')]
+        val('s3-ref-title'), val('s3-ref-summary')]
       };
     }
 
@@ -1331,7 +1453,7 @@
         return;
       }
       pendingPayload = null;
-      try { localStorage.removeItem(backupKey()); } catch (e) {}
+      try { localStorage.removeItem(backupKey()); } catch (e) { }
       lockTestFields('submitted');
       setSaveStatus('saved', '<i class="fa-solid fa-circle-check mr-0.5"></i>제출됨');
       alert('수행평가지 제출이 완료되었습니다!');
@@ -1444,7 +1566,7 @@
         <div class="p-3 rounded-lg border ${t ? 'bg-indigo-50 border-indigo-200' : 'bg-slate-50'}">
           ${t ? `<p class="text-sm"><strong>추세선 (${t.degree}차):</strong> <span class="formula text-base">${formatPolynomial(t.coeffs, true)}</span></p>
                  <p class="text-slate-600">R² = ${t.r2.toFixed(3)} &nbsp;(3차 ${t.compare?.[3]?.toFixed(3) ?? '-'} / 4차 ${t.compare?.[4]?.toFixed(3) ?? '-'})</p>`
-              : '<p><strong>추세선:</strong> 미작도</p>'}
+          : '<p><strong>추세선:</strong> 미작도</p>'}
         </div>
         <div class="border-t pt-3 space-y-2">
           <h4 class="font-bold text-slate-800">2단계 추세선 해석</h4>
@@ -1607,4 +1729,5 @@
     if (!sb) document.getElementById('config-warning').classList.remove('hidden');
   </script>
 </body>
+
 </html>
