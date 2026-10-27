@@ -7,7 +7,7 @@
   <title>[미적분Ⅰ] 실세계 데이터 기반 다항함수 모델링 수행평가 시스템</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="config.js"></script>
   <style>
@@ -296,13 +296,17 @@
               <button onclick="removeColumn()"
                 class="test-field text-xs text-red-500 font-semibold hover:underline disabled:text-slate-300 disabled:no-underline"
                 id="btn-remove-col">− 열 삭제</button>
-              <button onclick="addColumn(); onDataChanged();"
+              <button id="btn-add-col" onclick="addColumn(); onDataChanged();"
                 class="test-field text-xs text-indigo-600 font-semibold hover:underline">+ 열 추가</button>
             </div>
           </div>
           <div class="p-2.5 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-900">
             <i class="fa-solid fa-circle-info mr-1"></i>
             x가 연도를 의미하는 경우, x에는 연도(2018, 2019 …)를 그대로 쓰지 말고 첫 시점을 0으로 바꿔 입력하세요. (예: 2018년 → 0, 2019년 → 1)
+          </div>
+          <div id="data-lock-note" class="hidden p-2.5 bg-slate-100 border border-slate-300 rounded-lg text-xs text-slate-700">
+            <i class="fa-solid fa-lock text-slate-500 mr-1"></i><strong>추세선이 고정되어 데이터를 수정할 수 없습니다.</strong> 데이터를 고치려면 2단계에서 [추세선 다시 고르기]를 누르세요.
+          </div>
             <div class="overflow-x-auto">
               <table id="data-table" class="w-full border-collapse border border-slate-200 text-center text-xs">
                 <thead>
@@ -517,7 +521,7 @@
             <div>
               <label class="block text-xs font-semibold text-slate-700 mb-1">(2) 현재(가장 최근) 시점의 순간변화율 f′(x)의 값</label>
               <input type="text" id="s3-curr-dfx" oninput="saveStudentData()"
-                placeholder="예: f'(7) = 0.537×49 − 6.48×7 + 13.6 ≈ 0.5"
+                placeholder="예: f'(7) = 0.537×49 − 6.48×7 + 13.6 ≈ −5.4"
                 class="test-field w-full p-2 border rounded-lg text-sm">
             </div>
           </div>
@@ -792,7 +796,7 @@
         td.className = 'border';
         td.innerHTML = `<input type="number" step="any" class="test-field dt-${k} w-full p-1.5 text-center border-none focus:outline-none" oninput="onDataChanged()">`;
         document.getElementById(`dt-${k}row`).appendChild(td);
-        if (isLocked) td.querySelector('input').disabled = true;
+        if (isLocked || trendIsLocked()) td.querySelector('input').disabled = true;
       });
     }
 
@@ -812,7 +816,7 @@
 
     function updateColumnButtons() {
       const btn = document.getElementById('btn-remove-col');
-      if (btn && !isLocked) btn.disabled = columnCount() <= MIN_POINTS;
+      if (btn && !isLocked) btn.disabled = trendIsLocked() || columnCount() <= MIN_POINTS;
     }
 
     function setColumnCount(n) {
@@ -1082,6 +1086,9 @@
       } else {
         currentMode = 'student';
         stopTeacherPoll();
+        // 학생 기기에 교사 로그인이 남지 않도록 로그아웃
+        if (sb) { try { const { data } = await sb.auth.getSession(); if (data.session) await sb.auth.signOut(); } catch (e) { } }
+        teacherRows = {};
         const loggedIn = !!activeStudentKey;
         showOnly(loggedIn ? 'student-view' : 'student-login-view');
         document.getElementById('timer-banner').classList.toggle('hidden', !loggedIn || isLocked);
@@ -1139,6 +1146,40 @@
 
     const fmtTime = t => t ? new Date(t).toLocaleString() : '';
 
+    // 학생이 저장한 데이터는 그대로 믿지 않음: 숫자만 남기고 추세선·정답을 교사 화면에서 다시 계산
+    // (자동채점 조작과 교사 화면에 스크립트를 심는 공격을 막음)
+    function sanitizeItem(d) {
+      const pts = (Array.isArray(d.points) ? d.points : [])
+        .map(p => ({ x: Number(p && p.x), y: Number(p && p.y) }))
+        .filter(p => isFinite(p.x) && isFinite(p.y)).sort((a, b) => a.x - b.x);
+      const columns = (Array.isArray(d.columns) ? d.columns : []).map(c => ({ x: String(c?.x ?? ''), y: String(c?.y ?? '') }));
+      const deg = Number(d.trend?.degree);
+      let t = null, trendMismatch = false;
+      if ((deg === 3 || deg === 4) && pts.length >= MIN_POINTS && new Set(pts.map(p => p.x)).size >= deg + 1) {
+        const compare = {}, fits = {};
+        [3, 4].forEach(k => {
+          const raw = fitPolynomial(pts, k);
+          if (raw) { fits[k] = raw.map(v => roundSig(v, 3)); compare[k] = rSquared(pts, fits[k]); }
+        });
+        if (fits[deg]) {
+          t = { degree: deg, coeffs: fits[deg], r2: compare[deg], compare };
+          const saved = Array.isArray(d.trend?.coeffs) ? d.trend.coeffs.map(Number) : [];
+          trendMismatch = saved.length !== fits[deg].length || saved.some((v, i) => Math.abs(v - fits[deg][i]) > 1e-9 * Math.max(1, Math.abs(v)));
+        }
+      } else if (d.trend) trendMismatch = true;
+      const a = (d.answers && typeof d.answers === 'object') ? d.answers : {};
+      const answers = {};
+      FIELD_IDS.forEach(id => answers[id] = typeof a[id] === 'string' ? a[id] : '');
+      answers['s2-ext-exist'] = ['yes', 'no'].includes(a['s2-ext-exist']) ? a['s2-ext-exist'] : '';
+      ['s2-maxx-list', 's2-minx-list'].forEach(k => answers[k] = (Array.isArray(a[k]) ? a[k] : []).map(v => String(v ?? '')));
+      const sg = a['s2-sign'];
+      answers['s2-sign'] = sg && Array.isArray(sg.xs) && Array.isArray(sg.signs)
+        ? { xs: sg.xs.map(Number), signs: sg.signs.map(v => (v === '+' || v === '-') ? v : '') } : null;
+      let answerKey = null;
+      try { answerKey = t ? buildAnswerKey(pts, t) : null; } catch (e) { console.error(e); }
+      return { columns, points: pts, trend: t, trendMismatch, answerKey, answers };
+    }
+
     async function loadTeacherRows() {
       const sync = document.getElementById('teacher-sync');
       sync.innerText = '불러오는 중...';
@@ -1147,7 +1188,7 @@
       teacherRows = {};
       data.forEach(r => {
         teacherRows[r.student_key] = {
-          ...(r.data || {}),
+          ...sanitizeItem(r.data || {}),
           studentInfo: { grade: r.grade, class: r.class_no, num: r.num, name: r.name },
           progress: r.progress, submitted: r.submitted,
           submittedAt: fmtTime(r.submitted_at), updatedAt: fmtTime(r.updated_at), startTime: fmtTime(r.start_time),
@@ -1370,6 +1411,7 @@
       if (markedSig && markedSig !== sigNow) { markTrendButtons(null); hideKeepNotice(); }
       if (trend && trend.pointsSig !== sigNow) {
         trend = null;
+        if (hasStage2Answers()) clearStage2Answers();   // 옛 추세선 기준으로 쓴 답은 지움
         renderTrendUI();
         document.getElementById('trend-reset-notice').classList.remove('hidden');
       }
@@ -1422,12 +1464,17 @@
       const locked = trendIsLocked();
       [3, 4].forEach(d => { document.getElementById(`btn-trend-${d}`).disabled = isLocked || locked; });
       document.getElementById('trend-lock-note').classList.toggle('hidden', !locked);
+      // 1단계 데이터 표도 함께 잠금 (데이터를 고치면 추세선이 바뀌어 답이 어긋나므로)
+      document.querySelectorAll('.dt-x, .dt-y, #btn-add-col').forEach(el => el.disabled = isLocked || locked);
+      document.getElementById('data-lock-note').classList.toggle('hidden', !locked || isLocked);
+      updateColumnButtons();
     }
 
     function unlockTrend() {
       if (!confirm('추세선을 다시 고를까요?\n\n' +
         '· 다른 차수의 추세선을 작도하면 [문항 2-1]~[문항 2-3]에 작성한 답이 모두 지워집니다.\n' +
-        '· 지금과 같은 차수를 다시 누르면 답은 그대로 유지됩니다.')) return;
+        '· 지금과 같은 차수를 다시 누르면 답은 그대로 유지됩니다.\n' +
+        '· 1단계 데이터도 다시 수정할 수 있게 되며, 데이터를 고치면 추세선과 [문항 2-1]~[문항 2-3]의 답이 지워집니다.')) return;
       trendUnlocked = true;
       updateTrendLock();
     }
@@ -1847,7 +1894,7 @@
         tr.innerHTML = `
           <td class="p-3 font-semibold text-slate-800">${esc(studentLabel(item.studentInfo || {}))}</td>
           <td class="p-3 text-slate-600 truncate max-w-xs">${esc(a['s1-topic'] || '(미작성)')}</td>
-          <td class="p-3 text-xs">${item.trend ? `<span class="font-bold">${item.trend.degree}차</span> <span class="text-slate-500">(R² ${item.trend.r2.toFixed(3)})</span>` : '<span class="text-slate-400">미작도</span>'}</td>
+          <td class="p-3 text-xs">${item.trend ? `<span class="font-bold">${item.trend.degree}차</span> <span class="text-slate-500">(R² ${item.trend.r2.toFixed(3)})</span>${item.trendMismatch ? ' <span class="text-red-600 font-bold" title="저장된 추세선이 데이터와 다름">⚠</span>' : ''}` : '<span class="text-slate-400">미작도</span>'}</td>
           <td class="p-3 text-xs font-bold">${item.answerKey ? gradeSummary(item) : '<span class="text-slate-400 font-normal">-</span>'}</td>
           <td class="p-3">
             <div class="flex items-center space-x-2">
@@ -1971,6 +2018,7 @@
           ${t ? `<p class="text-sm"><strong>추세선 (${t.degree}차):</strong> <span class="formula text-base">${formatPolynomial(t.coeffs, true)}</span></p>
                  <p class="text-slate-600">R² = ${t.r2.toFixed(3)} &nbsp;(3차 ${t.compare?.[3]?.toFixed(3) ?? '-'} / 4차 ${t.compare?.[4]?.toFixed(3) ?? '-'})</p>`
           : '<p><strong>추세선:</strong> 미작도</p>'}
+          ${item.trendMismatch ? '<p class="mt-1 text-red-600 font-bold"><i class="fa-solid fa-triangle-exclamation mr-1"></i>학생 화면에 저장된 추세선이 데이터로 다시 계산한 값과 다릅니다. 위 추세선과 자동채점은 다시 계산한 값 기준입니다.</p>' : ''}
         </div>
         <div class="border-t pt-3 space-y-2">
           <h4 class="font-bold text-slate-800">2단계 추세선 해석</h4>
