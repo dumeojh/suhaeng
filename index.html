@@ -354,18 +354,18 @@
               <h3 class="font-bold text-sm text-indigo-900"><i
                   class="fa-solid fa-wand-magic-sparkles text-indigo-600 mr-1.5"></i> 추세선 작도</h3>
               <p class="text-xs text-indigo-700 mt-0.5">데이터 모양에 맞는 차수를 골라 추세선 f(x)를 작도하세요. 두 가지를 모두 눌러 비교해 볼 수 있으며,
-                <strong>마지막으로 작도한 추세선</strong>으로 해석합니다.<br><strong class="text-rose-600">극대 또는 극소가 1개 이상 있는 추세선만 사용할 수
+                <strong>마지막으로 작도한 추세선</strong>으로 해석합니다.<br><strong class="text-indigo-900">아래 [문항 2-1]~[문항 2-3]에 답을 작성하기 시작하면 추세선이 고정됩니다.</strong><br><strong class="text-rose-600">극대 또는 극소가 1개 이상 있는 추세선만 사용할 수
                   있습니다.</strong>
               </p>
             </div>
             <div class="flex space-x-2 shrink-0">
               <button id="btn-trend-3" onclick="generateTrendline(3)"
-                class="test-field px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow">
+                class="test-field disabled:cursor-not-allowed disabled:grayscale px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow">
                 <i class="fa-solid fa-chart-line mr-1"></i> 3차 추세선
                 <span class="trend-na hidden block text-[10px] font-semibold mt-0.5">극값 없음 · 사용 불가</span>
               </button>
               <button id="btn-trend-4" onclick="generateTrendline(4)"
-                class="test-field px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow">
+                class="test-field disabled:cursor-not-allowed disabled:grayscale px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow">
                 <i class="fa-solid fa-chart-line mr-1"></i> 4차 추세선
                 <span class="trend-na hidden block text-[10px] font-semibold mt-0.5">극값 없음 · 사용 불가</span>
               </button>
@@ -378,6 +378,13 @@
               class="w-full p-3 border rounded-lg bg-white text-center text-lg text-indigo-900 min-h-[3rem]">
               <span class="text-sm text-slate-400 not-italic">[위 버튼을 눌러 추세선을 작도하세요]</span>
             </div>
+          </div>
+          <div id="trend-lock-note"
+            class="hidden p-2.5 bg-slate-100 border border-slate-300 rounded-lg text-xs text-slate-700 flex flex-wrap items-center justify-between gap-2">
+            <span><i class="fa-solid fa-lock text-slate-500 mr-1"></i><strong>추세선이 고정되었습니다.</strong> 문항 2-1~2-3에 답을 작성하여 실수로 추세선이 바뀌지 않도록 잠갔습니다.</span>
+            <button type="button" onclick="unlockTrend()"
+              class="test-field px-3 py-1 bg-white hover:bg-slate-50 border border-slate-400 text-slate-700 font-bold rounded-lg">
+              <i class="fa-solid fa-lock-open mr-1"></i>추세선 다시 고르기</button>
           </div>
           <div id="trend-keep-notice"
             class="hidden p-2.5 bg-amber-50 border-2 border-amber-400 rounded-lg text-sm text-amber-900 font-semibold"></div>
@@ -1326,6 +1333,7 @@
       document.getElementById('student-progress-text').innerText = payload.progress + '%';
       updateStepTabs();
       updateColumnButtons();
+      updateTrendLock();
       queueServerSave(payload);
     }
 
@@ -1353,6 +1361,7 @@
       document.getElementById('student-progress-text').innerText = pr + '%';
       updateStepTabs();
       updateColumnButtons();
+      updateTrendLock();
       setSaveStatus('saved', '<i class="fa-solid fa-cloud mr-0.5"></i>불러옴');
     }
 
@@ -1397,7 +1406,42 @@
       setTimeout(() => box.classList.remove('ring-4', 'ring-amber-400'), 2500);
     }
 
+    // ===== 추세선 고정 =====
+    // 문항 2-1~2-3에 답을 하나라도 작성하면 추세선 버튼을 잠금 (실수로 바꿔 답이 어긋나는 것을 막음)
+    let trendUnlocked = false;
+
+    function hasStage2Answers() {
+      return signAnswers.signs.some(Boolean) || !!extExist() ||
+        completeXs('maxx').length > 0 || completeXs('minx').length > 0 ||
+        ['s2-ext-reason', 's2-max-val', 's2-min-val'].some(id => val(id).trim() !== '');
+    }
+
+    function trendIsLocked() { return !!trend && !trendUnlocked && hasStage2Answers(); }
+
+    function updateTrendLock() {
+      const locked = trendIsLocked();
+      [3, 4].forEach(d => { document.getElementById(`btn-trend-${d}`).disabled = isLocked || locked; });
+      document.getElementById('trend-lock-note').classList.toggle('hidden', !locked);
+    }
+
+    function unlockTrend() {
+      if (!confirm('추세선을 다시 고를까요?\n\n' +
+        '· 다른 차수의 추세선을 작도하면 [문항 2-1]~[문항 2-3]에 작성한 답이 모두 지워집니다.\n' +
+        '· 지금과 같은 차수를 다시 누르면 답은 그대로 유지됩니다.')) return;
+      trendUnlocked = true;
+      updateTrendLock();
+    }
+
+    function clearStage2Answers() {
+      signAnswers = { xs: [], signs: [] };
+      setExtExist('');
+      setXRows('maxx');
+      setXRows('minx');
+      ['s2-ext-reason', 's2-max-val', 's2-min-val'].forEach(id => document.getElementById(id).value = '');
+    }
+
     function generateTrendline(degree) {
+      if (trendIsLocked()) { alert('추세선이 고정되어 있습니다. 바꾸려면 [추세선 다시 고르기]를 누르세요.'); return; }
       const points = getPoints();
       if (points.length < MIN_POINTS) {
         alert(`추세선을 작도하려면 1단계 표에 최소 ${MIN_POINTS}개의 데이터(x, y 쌍)를 입력해야 합니다.\n(현재 ${points.length}개)`);
@@ -1449,6 +1493,9 @@
         return;
       }
 
+      // 고정을 풀고 다른 차수를 고른 경우: 이전 추세선 기준으로 쓴 2-1~2-3 답을 지움
+      if (trend && trend.degree !== degree && hasStage2Answers()) clearStage2Answers();
+      trendUnlocked = false;
       trend = { degree, coeffs: chosen, r2: compare[degree], pointsSig: pointsSignature(points), compare, ext };
       document.getElementById('trend-reset-notice').classList.add('hidden');
       hideKeepNotice();
