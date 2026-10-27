@@ -571,9 +571,13 @@
 
     <!-- ================= TEACHER VIEW ================= -->
     <div id="teacher-view" class="hidden space-y-6">
+      <!-- 반 선택 탭 -->
+      <div class="bg-white p-3 rounded-xl shadow-sm border border-slate-200">
+        <div id="class-tabs" class="flex flex-wrap items-center gap-2"></div>
+      </div>
       <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
-          <p class="text-xs text-slate-500 font-semibold">총 접속 학생 수</p>
+          <p class="text-xs text-slate-500 font-semibold">접속 학생 수 <span class="filter-label text-indigo-600"></span></p>
           <p id="teacher-total-count" class="text-2xl font-bold text-slate-900 mt-1">0명</p>
         </div>
         <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
@@ -581,7 +585,7 @@
           <p id="teacher-submitted-count" class="text-2xl font-bold text-emerald-600 mt-1">0명</p>
         </div>
         <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
-          <p class="text-xs text-slate-500 font-semibold">작성 진행 중</p>
+          <p class="text-xs text-slate-500 font-semibold">미제출 <span class="text-[11px] font-normal">(작성 중·시간 종료)</span></p>
           <p id="teacher-progress-count" class="text-2xl font-bold text-amber-500 mt-1">0명</p>
         </div>
         <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between">
@@ -594,7 +598,7 @@
             <button onclick="loadTeacherRows()" class="text-xs text-indigo-600 font-semibold hover:underline"><i
                 class="fa-solid fa-rotate mr-0.5"></i>새로고침</button>
             <button onclick="teacherLogout()" class="text-xs text-slate-500 hover:underline">로그아웃</button>
-            <button onclick="clearAllData()" class="text-xs text-red-500 hover:underline">데이터 초기화</button>
+            <button onclick="clearAllData()" class="text-xs text-red-500 hover:underline">데이터 초기화 <span class="filter-label"></span></button>
           </div>
         </div>
       </div>
@@ -602,10 +606,20 @@
       <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
         <div class="p-4 border-b bg-slate-50 flex justify-between items-center">
           <h3 class="font-bold text-slate-800 flex items-center">
-            <i class="fa-solid fa-list-check mr-2 text-indigo-600"></i> 학생별 작성 현황
+            <i class="fa-solid fa-list-check mr-2 text-indigo-600"></i> 학생별 작성 현황 <span class="filter-label ml-1 text-indigo-600"></span>
           </h3>
-          <span class="text-xs text-slate-500">학생을 클릭하면 산출물을 검토하고 PDF로 출력할 수 있습니다.</span>
+          <div class="flex flex-wrap items-center gap-2">
+            <input id="teacher-search" type="search" placeholder="이름·번호 검색" oninput="teacherSearch = this.value.trim(); renderTeacherDashboard();"
+              class="px-2.5 py-1.5 border rounded-lg text-xs w-36 focus:ring-2 focus:ring-indigo-500">
+            <button onclick="exportCSV()" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg"
+              title="현재 목록의 자동채점 결과와 점수 입력 칸을 엑셀에서 열 수 있는 CSV로 저장">
+              <i class="fa-solid fa-file-excel mr-1"></i>엑셀(CSV) 내보내기</button>
+            <button onclick="printFilteredReports()" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg"
+              title="현재 목록의 모든 학생 산출물을 A4로 한꺼번에 출력 (학생당 2쪽)">
+              <i class="fa-solid fa-print mr-1"></i>PDF 일괄 출력</button>
+          </div>
         </div>
+        <p class="px-4 py-2 text-[11px] text-slate-500 border-b">학생을 클릭하면 산출물을 검토할 수 있습니다. 검토 창에서 ◀ ▶ 버튼(또는 키보드 ← →)으로 같은 목록의 다음 학생으로 넘어갑니다.</p>
         <div class="overflow-x-auto">
           <table class="w-full text-left border-collapse text-sm">
             <thead>
@@ -632,6 +646,11 @@
       <div class="flex justify-between items-center border-b pb-3">
         <h3 id="modal-title" class="text-lg font-bold text-slate-900">학생 결과물 상세 검토</h3>
         <div class="flex items-center space-x-2">
+          <div class="flex items-center space-x-1 mr-1">
+            <button onclick="moveDetail(-1)" class="px-2 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg border" title="이전 학생 (←)"><i class="fa-solid fa-chevron-left"></i></button>
+            <span id="modal-pos" class="text-xs text-slate-500 font-semibold w-12 text-center"></span>
+            <button onclick="moveDetail(1)" class="px-2 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg border" title="다음 학생 (→)"><i class="fa-solid fa-chevron-right"></i></button>
+          </div>
           <button id="btn-reopen" onclick="reopenExam()"
             class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg"
             title="제출했거나 시간이 끝난 시험을 다시 열어 이어서 응시하게 함 (답안 유지)">
@@ -1876,12 +1895,80 @@
       return `${info.grade || '?'}학년 ${info.class || '?'}반 ${info.num || '?'}번 ${info.name || '익명'}`;
     }
 
+    // ===== 반별 관리 =====
+    // 담당 반 묶음 (선생님별 담당 반이 바뀌면 여기만 고치면 됩니다)
+    const CLASS_LIST = [1, 2, 3, 4, 5, 6];
+    const CLASS_GROUPS = {
+      g135: { label: '1·3·5반', classes: [1, 3, 5] },
+      g246: { label: '2·4·6반', classes: [2, 4, 6] }
+    };
+    const CLASS_FILTER_KEY = 'calc_teacher_class';
+    let classFilter = 'all';
+    try { classFilter = localStorage.getItem(CLASS_FILTER_KEY) || 'all'; } catch (e) { }
+    let teacherSearch = '';
+
+    const classOf = item => Number(item.studentInfo?.class) || 0;
+    function allClasses() {
+      return [...new Set([...CLASS_LIST, ...Object.values(teacherRows).map(classOf).filter(Boolean)])].sort((a, b) => a - b);
+    }
+    // 현재 선택한 탭의 반 목록 (null = 전체)
+    function filterClasses() {
+      if (classFilter === 'all') return null;
+      if (CLASS_GROUPS[classFilter]) return CLASS_GROUPS[classFilter].classes;
+      return [Number(classFilter)];
+    }
+    function filterLabel() {
+      if (classFilter === 'all') return '전체';
+      if (CLASS_GROUPS[classFilter]) return CLASS_GROUPS[classFilter].label;
+      return `${classFilter}반`;
+    }
+    function setClassFilter(f) {
+      classFilter = String(f);
+      try { localStorage.setItem(CLASS_FILTER_KEY, classFilter); } catch (e) { }
+      renderTeacherDashboard();
+    }
+    // 현재 탭 + 검색어에 해당하는 학생 (학년·반·번호 순)
+    function filteredKeys() {
+      const cls = filterClasses();
+      return Object.keys(teacherRows).filter(k => {
+        const it = teacherRows[k];
+        if (cls && !cls.includes(classOf(it))) return false;
+        if (teacherSearch && !studentLabel(it.studentInfo || {}).replace(/\s/g, '').includes(teacherSearch.replace(/\s/g, ''))) return false;
+        return true;
+      });
+    }
+
+    function renderClassTabs() {
+      const valid = ['all', ...Object.keys(CLASS_GROUPS), ...allClasses().map(String)];
+      if (!valid.includes(classFilter)) classFilter = 'all';
+      const items = Object.values(teacherRows);
+      const tab = (key, label, list, wide) => {
+        const on = classFilter === key;
+        const sub = list.filter(i => i.submitted).length;
+        const writing = list.filter(i => examState(i) === 'writing').length;
+        return `<button type="button" onclick="setClassFilter('${key}')"
+          class="px-3 py-1.5 rounded-lg border-2 text-left transition-all ${wide ? 'min-w-[6.5rem]' : 'min-w-[5.2rem]'} ${on ? 'bg-indigo-600 border-indigo-600 text-white shadow' : 'bg-white border-slate-200 text-slate-700 hover:border-indigo-300 hover:bg-indigo-50'}">
+          <span class="block text-sm font-bold">${label}</span>
+          <span class="block text-[11px] ${on ? 'text-indigo-100' : 'text-slate-500'}">제출 ${sub}/${list.length}${writing ? ` · <span class="${on ? 'text-amber-200' : 'text-amber-600'} font-bold">응시 중 ${writing}</span>` : ''}</span>
+        </button>`;
+      };
+      const groups = Object.entries(CLASS_GROUPS)
+        .map(([k, g]) => tab(k, g.label, items.filter(i => g.classes.includes(classOf(i))), true)).join('');
+      const classes = allClasses().map(c => tab(String(c), `${c}반`, items.filter(i => classOf(i) === c))).join('');
+      document.getElementById('class-tabs').innerHTML =
+        tab('all', '전체', items, true) + '<span class="w-px h-8 bg-slate-200 mx-1"></span>' + groups +
+        '<span class="w-px h-8 bg-slate-200 mx-1"></span>' + classes;
+      document.querySelectorAll('.filter-label').forEach(el => el.innerText = `(${filterLabel()})`);
+    }
+
     function renderTeacherDashboard() {
+      renderClassTabs();
       const allData = teacherRows;
       const tbody = document.getElementById('teacher-student-tbody');
       tbody.innerHTML = '';
-      const keys = Object.keys(allData);
+      const keys = filteredKeys();
       document.getElementById('teacher-total-count').innerText = `${keys.length}명`;
+      if (!keys.length) tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-xs text-slate-400">${teacherSearch ? '검색 결과가 없습니다.' : `${filterLabel()}에 접속한 학생이 아직 없습니다.`}</td></tr>`;
       let submitted = 0;
 
       keys.forEach(key => {
@@ -2036,12 +2123,32 @@
         <p class="text-slate-400 text-right">${item.reopenCount ? `응시 재개 ${item.reopenCount}회 (최근 ${esc(item.reopenedAt)}) · ` : ''}시작: ${esc(item.startTime || '-')} · 마지막 저장: ${esc(item.updatedAt || '-')} ${item.submittedAt ? ' · 제출: ' + esc(item.submittedAt) : ''}</p>`;
 
       document.getElementById('detail-modal').classList.remove('hidden');
+      updateModalNav();
 
       if (modalChart) modalChart.destroy();
       const yv = a['s1-var-y'], xv = a['s1-var-x'];
       modalChart = createChart(document.getElementById('modal-chart'), item.points || [], t, { animation: false, xLabel: xv || 'x', yLabel: yv || 'y' });
       modalChartImage = modalChart.toBase64Image('image/png', 1);
     }
+
+    // 검토 창에서 같은 목록(현재 탭·검색)의 이전/다음 학생으로 이동
+    function moveDetail(step) {
+      const keys = filteredKeys();
+      if (!keys.length) return;
+      let i = keys.indexOf(inspectStudentKey);
+      i = i < 0 ? 0 : Math.min(keys.length - 1, Math.max(0, i + step));
+      if (keys[i] !== inspectStudentKey) openDetailModal(keys[i]);
+    }
+    function updateModalNav() {
+      const keys = filteredKeys(), i = keys.indexOf(inspectStudentKey);
+      document.getElementById('modal-pos').innerText = i >= 0 ? `${i + 1} / ${keys.length}` : '';
+    }
+    document.addEventListener('keydown', e => {
+      if (document.getElementById('detail-modal').classList.contains('hidden')) return;
+      if (e.key === 'ArrowLeft') moveDetail(-1);
+      else if (e.key === 'ArrowRight') moveDetail(1);
+      else if (e.key === 'Escape') closeDetailModal();
+    });
 
     function closeDetailModal() {
       document.getElementById('detail-modal').classList.add('hidden');
@@ -2050,9 +2157,29 @@
 
     // ================= A4 출력 =================
     function printStudentReport() {
-      if (!inspectStudentKey) return;
-      const item = teacherRows[inspectStudentKey];
-      if (!item) return;
+      if (!inspectStudentKey || !teacherRows[inspectStudentKey]) return;
+      printReports([inspectStudentKey]);
+    }
+
+    function printReports(keys) {
+      document.getElementById('print-area').innerHTML = keys.map(reportHTML).join('');
+      window.print();
+    }
+
+    // 현재 목록(탭·검색) 학생 전체를 한 번에 출력
+    function printFilteredReports() {
+      const keys = filteredKeys();
+      if (!keys.length) { alert('출력할 학생이 없습니다.'); return; }
+      const notSub = keys.filter(k => !teacherRows[k].submitted).length;
+      if (!confirm(`${filterLabel()} ${keys.length}명의 산출물을 A4로 일괄 출력합니다. (학생당 2쪽, 총 ${keys.length * 2}쪽)` +
+        (notSub ? `\n\n※ 아직 제출하지 않은 학생 ${notSub}명도 포함됩니다. (출력물 상단에 상태가 표시됩니다)` : '') +
+        '\n\n인쇄 창에서 [대상: PDF로 저장]을 고르면 PDF 파일 하나로 저장됩니다.')) return;
+      printReports(keys);
+    }
+
+    function reportHTML(key) {
+      const item = teacherRows[key];
+      if (!item) return '';
       const info = item.studentInfo || {};
       const a = item.answers || {};
       const t = item.trend;
@@ -2062,7 +2189,7 @@
       off.style.cssText = 'position:fixed;left:-9999px;top:0;width:1000px;height:460px;';
       document.body.appendChild(off);
       const pc = createChart(off, item.points || [], t, { animation: false, responsive: false, xLabel: a['s1-var-x'] || 'x', yLabel: a['s1-var-y'] || 'y' });
-      modalChartImage = pc.toBase64Image('image/png', 1);
+      const chartImg = pc.toBase64Image('image/png', 1);
       pc.destroy(); off.remove();
 
       const H3 = 'font-size:11pt;font-weight:bold;background:#e0e7ff;padding:4px 8px;margin:10px 0 6px 0;';
@@ -2071,7 +2198,7 @@
       const tbl = 'width:100%;border-collapse:collapse;font-size:9.3pt;';
       const pre = s => `<span style="white-space:pre-line">${esc(s || '')}</span>`;
 
-      document.getElementById('print-area').innerHTML = `
+      return `
         <div class="print-page">
           <div style="border-bottom:2px solid #4f46e5;padding-bottom:6px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:flex-end;">
             <div>
@@ -2080,6 +2207,7 @@
             </div>
             <div style="text-align:right;font-size:10.5pt;font-weight:bold;">
               ${esc(info.grade)}학년 ${esc(info.class)}반 ${esc(info.num)}번 &nbsp; 이름: ${esc(info.name)}
+              <div style="font-size:8pt;font-weight:normal;color:#64748b;">${STATE_TXT[examState(item)]}${item.submittedAt ? ' · ' + esc(item.submittedAt) : ''}</div>
             </div>
           </div>
 
@@ -2093,7 +2221,7 @@
           <div style="font-size:8.5pt;margin-top:6px;">${dataTableHTML(item.points, 'padding:2px;border:1px solid #94a3b8')}</div>
 
           <h3 style="${H3}">2단계 | 추세선 작도 및 도함수를 이용한 그래프 해석</h3>
-          ${modalChartImage ? `<img src="${modalChartImage}" style="width:100%;max-height:78mm;object-fit:contain;border:1px solid #cbd5e1;">` : ''}
+          ${chartImg ? `<img src="${chartImg}" style="width:100%;max-height:78mm;object-fit:contain;border:1px solid #cbd5e1;">` : ''}
           <p style="font-size:10pt;margin:6px 0;color:#3730a3;">
             <strong>추세선${t ? ` (${t.degree}차)` : ''}:</strong>
             <span style="font-family:'Times New Roman',serif;font-style:italic;font-size:11.5pt;">${t ? formatPolynomial(t.coeffs, true) : '미작도'}</span>
@@ -2139,14 +2267,67 @@
             <div style="height:18mm;margin-top:4px;border:1px dashed #cbd5e1;padding:3px;color:#94a3b8;">피드백:</div>
           </div>
         </div>`;
+    }
 
-      window.print();
+    const STATE_TXT = { submitted: '제출 완료', timeover: '시간 종료 (미제출)', writing: '작성 중' };
+
+    // 엑셀에서 수식으로 실행되지 않도록 =, +, -, @ 로 시작하는 글자는 앞에 '를 붙임
+    function csvCell(v) {
+      if (typeof v === 'number') return isFinite(v) ? String(v) : '';
+      let s = String(v ?? '');
+      if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
+      return '"' + s.replace(/"/g, '""') + '"';
+    }
+
+    function exportCSV() {
+      const keys = filteredKeys();
+      if (!keys.length) { alert('내보낼 학생이 없습니다.'); return; }
+      const ox = g => g ? (g.ok ? 'O' : 'X') : '';
+      const head = ['학년', '반', '번호', '이름', '상태', '진행률(%)', '탐구 주제', '추세선 차수', 'R²',
+        '자동채점(5문항 중 정답 수)', '2-1 부호 맞은 칸', '2-1 부호 전체 칸', '2-2 극대 x', '2-2 극소 x', '2-3 최댓값 x', '2-3 최솟값 x',
+        '추세선 불일치 경고', '응시 재개 횟수', '시작 시각', '제출 시각',
+        '1단계 점수(4)', '2단계 점수(8)', '3단계 점수(8)', '합계(20)'];
+      const lines = [head.map(csvCell).join(',')];
+      keys.forEach((k, idx) => {
+        const it = teacherRows[k], info = it.studentInfo || {}, a = it.answers || {};
+        const g = it.answerKey ? autoGrade(it) : null;
+        const n = g ? [g.sign.ok, g.maxX.ok, g.minX.ok, g.max.ok, g.min.ok].filter(Boolean).length : '';
+        const row = idx + 2;   // 엑셀 행 번호 (합계 수식용)
+        lines.push([
+          Number(info.grade) || '', Number(info.class) || '', Number(info.num) || '', info.name || '',
+          STATE_TXT[examState(it)], Number(it.progress) || 0, a['s1-topic'] || '',
+          it.trend ? it.trend.degree : '', it.trend ? Number(it.trend.r2.toFixed(3)) : '',
+          n, g ? g.sign.matched : '', g ? g.sign.total : '',
+          ox(g?.maxX), ox(g?.minX), ox(g?.max), ox(g?.min),
+          it.trendMismatch ? '확인 필요' : '', it.reopenCount || 0, it.startTime || '', it.submittedAt || '',
+          '', '', ''
+        ].map(csvCell).join(',') + `,=SUM(U${row}:W${row})`);
+      });
+      const d = new Date(), ymd = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
+      const blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `미적분Ⅰ_수행평가_${filterLabel().replace(/·/g, '-')}_${ymd}.csv`;
+      document.body.appendChild(link); link.click(); link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    function filteredKeysIgnoringSearch() {
+      const cls = filterClasses();
+      return Object.keys(teacherRows).filter(k => !cls || cls.includes(classOf(teacherRows[k])));
     }
 
     async function clearAllData() {
-      if (!confirm('모든 학생의 답안을 수파베이스에서 영구 삭제합니다. 계속할까요?')) return;
-      if (prompt('정말 삭제하려면 "삭제"라고 입력하세요.') !== '삭제') return;
-      const { error } = await sb.from(TABLE).delete().neq('student_key', '');
+      const cls = filterClasses();
+      const scope = cls ? `${filterLabel()} 학생` : '모든 반(전체) 학생';
+      const count = filteredKeysIgnoringSearch().length;
+      if (!confirm(`${scope} ${count}명의 답안을 수파베이스에서 영구 삭제합니다. 계속할까요?` +
+        (cls ? '\n\n※ 다른 반은 삭제되지 않습니다.' : '\n\n※ 특정 반만 지우려면 위의 반 탭을 먼저 고르세요.'))) return;
+      if (prompt(`정말 삭제하려면 "${filterLabel()} 삭제"라고 입력하세요.`) !== `${filterLabel()} 삭제`) return;
+      let q = sb.from(TABLE).delete().neq('student_key', '');
+      if (cls) q = q.in('class_no', cls);
+      const { error } = await q;
       if (error) { alert('삭제 실패: ' + error.message); return; }
       await loadTeacherRows();
     }
