@@ -2,7 +2,7 @@
 <html lang="ko">
 
 <head>
-  <meta charset="UTF-8">
+  <meta charset= "UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>[미적분Ⅰ] 실세계 데이터 기반 다항함수 모델링 수행평가 시스템</title>
   <script src="https://cdn.tailwindcss.com"></script>
@@ -708,6 +708,18 @@
       <button id="po-btn" type="button" class="hidden w-full py-3 text-white font-bold rounded-xl shadow-md"></button>
     </div>
   </div>
+  <!-- 화면 안 알림창: 시험 중에는 브라우저 알림창(alert·confirm)을 쓰지 않음 -->
+  <div id="ui-dialog" class="hidden fixed inset-0 z-[55] bg-black/50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl">
+      <p id="ui-dialog-msg" class="text-sm text-slate-800 whitespace-pre-line leading-relaxed"></p>
+      <div class="flex justify-end gap-2">
+        <button id="ui-dialog-cancel" type="button" onclick="closeUiDialog(false)"
+          class="hidden px-4 py-2 rounded-lg border bg-white hover:bg-slate-50 text-slate-700 text-sm font-bold">취소</button>
+        <button id="ui-dialog-ok" type="button" onclick="closeUiDialog(true)"
+          class="px-5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold">확인</button>
+      </div>
+    </div>
+  </div>
   <div id="toast" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-[70] px-4 py-2.5 rounded-lg bg-slate-900 text-white text-sm font-semibold shadow-lg"></div>
 
   <!-- PRINT CONTAINER -->
@@ -856,13 +868,13 @@
     }
 
     // 마지막 열 삭제 (최소 MIN_POINTS개 유지)
-    function removeColumn() {
+    async function removeColumn() {
       const n = columnCount();
-      if (n <= MIN_POINTS) { alert(`데이터 열은 최소 ${MIN_POINTS}개가 있어야 합니다.`); return; }
+      if (n <= MIN_POINTS) { uiAlert(`데이터 열은 최소 ${MIN_POINTS}개가 있어야 합니다.`); return; }
       const xs = document.querySelectorAll('.dt-x'), ys = document.querySelectorAll('.dt-y');
       const last = n - 1;
       if ((xs[last].value !== '' || ys[last].value !== '') &&
-        !confirm(`${n}번째 열에 입력한 데이터(x = ${xs[last].value || '빈칸'}, y = ${ys[last].value || '빈칸'})가 함께 삭제됩니다. 삭제할까요?`)) return;
+        !(await uiConfirm(`${n}번째 열에 입력한 데이터(x = ${xs[last].value || '빈칸'}, y = ${ys[last].value || '빈칸'})가 함께 삭제됩니다. 삭제할까요?`))) return;
       document.getElementById('dt-head').lastElementChild.remove();
       document.getElementById('dt-xrow').lastElementChild.remove();
       document.getElementById('dt-yrow').lastElementChild.remove();
@@ -1047,7 +1059,8 @@
       TOKEN_MISMATCH: '이미 다른 기기(또는 브라우저)에서 시작한 기록이 있습니다.\n처음 시작한 기기로 접속하거나, 선생님께 [기기 초기화]를 요청하세요.',
       TIME_OVER: '시험 시간이 종료되어 더 이상 저장할 수 없습니다.',
       ALREADY_SUBMITTED: '이미 제출한 답안입니다.',
-      TOO_LARGE: '답안 용량이 너무 큽니다. 선생님께 문의하세요.'
+      TOO_LARGE: '답안 용량이 너무 큽니다. 선생님께 문의하세요.',
+      PAUSED: '시험이 중지된 상태라 저장할 수 없습니다. 선생님께 해제를 요청하세요.'
     };
     function errCode(e) {
       const m = (e && (e.message || e.details)) || String(e);
@@ -1099,7 +1112,7 @@
         const c = errCode(e);
         if (c === 'TIME_OVER') { pendingPayload = null; lockTestFields('time'); setSaveStatus('error', '시간 종료'); }
         else if (c === 'ALREADY_SUBMITTED') { pendingPayload = null; lockTestFields('submitted'); setSaveStatus('saved', '제출됨'); }
-        else if (c === 'TOKEN_MISMATCH') { pendingPayload = null; lockTestFields('device'); setSaveStatus('error', '다른 기기에서 접속됨'); alert(ERR_TEXT.TOKEN_MISMATCH); }
+        else if (c === 'TOKEN_MISMATCH') { pendingPayload = null; lockTestFields('device'); setSaveStatus('error', '다른 기기에서 접속됨'); uiAlert(ERR_TEXT.TOKEN_MISMATCH); }
         else {
           setSaveStatus('error', '<i class="fa-solid fa-triangle-exclamation mr-0.5"></i>저장 실패 · 재시도 중');
           saveTimer = setTimeout(() => flushSave(), 5000);   // 네트워크 오류: 5초 뒤 다시 시도
@@ -1335,6 +1348,27 @@
     });
     const inDialog = () => Date.now() < dialogUntil;
 
+    // 화면 안 알림창. 브라우저 알림창은 떠 있는 동안 화면 이탈을 감지할 수 없고(그 사이 다른 창으로 갈 수 있음)
+    // 전체화면도 풀어 버리므로, 시험 중에는 모두 이것을 사용함
+    let uiDialogResolve = null;
+    function uiDialog(msg, withCancel) {
+      return new Promise(resolve => {
+        if (uiDialogResolve) uiDialogResolve(false);
+        uiDialogResolve = resolve;
+        document.getElementById('ui-dialog-msg').innerText = msg;
+        document.getElementById('ui-dialog-cancel').classList.toggle('hidden', !withCancel);
+        document.getElementById('ui-dialog').classList.remove('hidden');
+        document.getElementById('ui-dialog-ok').focus();
+      });
+    }
+    function closeUiDialog(v) {
+      document.getElementById('ui-dialog').classList.add('hidden');
+      const r = uiDialogResolve; uiDialogResolve = null;
+      if (r) r(v);
+    }
+    const uiAlert = msg => uiDialog(msg, false);
+    const uiConfirm = msg => uiDialog(msg, true);
+
     const fsSupported = () => !!(document.fullscreenEnabled || document.webkitFullscreenEnabled);
     const isFullscreen = () => !!(document.fullscreenElement || document.webkitFullscreenElement);
     function enterFullscreen() {
@@ -1390,7 +1424,7 @@
         title.innerText = '전체화면으로 시험을 진행합니다';
         desc.innerText = '아래 버튼을 눌러 전체화면으로 전환하세요.\n시험 중 Esc를 누르거나 다른 창으로 이동하면 시험이 중지됩니다.';
         btn.innerHTML = '<i class="fa-solid fa-expand mr-1"></i> 전체화면으로 전환';
-        btn.onclick = () => enterFullscreen().then(ok => { if (ok || !fsSupported()) hideOverlay(); });
+        btn.onclick = () => enterFullscreen().then(() => hideOverlay());   // 전체화면이 막힌 컴퓨터여도 시험은 진행 (창 이탈 감지는 계속됨)
         btn.classList.remove('hidden');
       }
       btn.className = btn.className.replace(/\bbg-\S+|\bhover:bg-\S+/g, '').trim() + ' ' + st.btn;
@@ -1408,19 +1442,49 @@
       if (window.TEACHER_PAGE || isLocked) return;
       const { data, error } = await sb.rpc('calc_status', { p_key: activeStudentKey, p_token: studentToken });
       if (error) {
-        // add_pause.sql을 아직 실행하지 않았으면 이 기능 없이 시험 진행 (학생이 갇히지 않도록)
-        proctorReady = false;
-        console.warn('이탈 감지 기능을 사용할 수 없습니다. 수파베이스에서 add_pause.sql을 실행하세요.', error);
+        if (isSetupError(error)) {
+          // add_pause.sql을 아직 실행하지 않았으면 이 기능 없이 시험 진행 (학생이 갇히지 않도록)
+          proctorReady = false;
+          console.warn('이탈 감지 기능을 사용할 수 없습니다. 수파베이스에서 add_pause.sql을 실행하세요.', error);
+          return;
+        }
+        // 일시적인 네트워크 오류: 감지는 바로 켜고, 서버의 중지 상태는 다시 확인
+        proctorReady = true;
+        beginMonitoring();
+        setTimeout(recheckStatus, 4000);
         return;
       }
       proctorReady = true;
       pauseCount = data.pause_count || 0;
       if (isLocked) return;
-      if (data.paused) { examPaused = true; setFieldsPaused(true); showOverlay('paused'); startPausePoll(); return; }
+      if (data.paused) { enterPausedFromServer(); return; }
+      beginMonitoring();
+    }
+
+    // 기능 설치가 안 된 경우(함수 없음)·토큰 방식이 달라 확인할 수 없는 경우
+    function isSetupError(e) {
+      const m = String((e && (e.message || e.details)) || '');
+      return (e && e.code === 'PGRST202') || /could not find the function|does not exist/i.test(m) || errCode(e) === 'TOKEN_MISMATCH';
+    }
+    function beginMonitoring() {
       proctorOn = true;
       if (hadActiveFlag()) { triggerPause('시험 중 새로고침 또는 창 닫기'); return; }
       setActiveFlag(true);
       if (fsSupported() && !isFullscreen()) showOverlay('fullscreen');
+    }
+    function enterPausedFromServer() {
+      proctorOn = false;
+      examPaused = true;
+      setFieldsPaused(true);
+      showOverlay('paused');
+      startPausePoll();
+    }
+    async function recheckStatus() {
+      if (isLocked || examPaused || !activeStudentKey) return;
+      const { data, error } = await sb.rpc('calc_status', { p_key: activeStudentKey, p_token: studentToken });
+      if (error) { setTimeout(recheckStatus, 4000); return; }
+      pauseCount = data.pause_count || 0;
+      if (data.paused && !examPaused && !isLocked) enterPausedFromServer();
     }
 
     function proctorStop() {
@@ -1437,10 +1501,10 @@
       if (!proctorReady || !proctorOn || examPaused || isLocked || window.TEACHER_PAGE) return;
       proctorOn = false;
       examPaused = true;
-      flushSave();   // 지금까지 쓴 내용은 저장
       setFieldsPaused(true);
       pausePending = reason;
       showOverlay('paused', reason);
+      await flushSave();   // 중지 직전까지 쓴 내용을 먼저 저장 (중지된 뒤에는 서버가 저장을 거부)
       await sendPause();
       startPausePoll();
     }
@@ -1491,11 +1555,11 @@
 
     // 다른 탭으로 이동 / 창을 최소화
     document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'hidden' && !inDialog()) triggerPause('다른 탭·창으로 이동');
+      if (document.visibilityState === 'hidden') triggerPause('다른 탭·창으로 이동');
     });
-    // 다른 프로그램·창을 클릭 (알림창 때문에 생긴 것은 제외)
+    // 다른 프로그램·창을 클릭
     window.addEventListener('blur', () => {
-      setTimeout(() => { if (!inDialog() && !document.hasFocus()) triggerPause('다른 프로그램·창 클릭'); }, 150);
+      setTimeout(() => { if (!document.hasFocus()) triggerPause('다른 프로그램·창 클릭'); }, 150);
     });
     // 전체화면 나가기 (알림창 때문에 풀린 경우는 다시 전체화면으로만 안내)
     function onFullscreenChange() {
@@ -1515,6 +1579,10 @@
       clearTimeout(showToast.timer);
       showToast.timer = setTimeout(() => t.classList.add('hidden'), 2500);
     }
+    document.addEventListener('contextmenu', e => {
+      if (window.TEACHER_PAGE || !activeStudentKey) return;
+      if (e.target && e.target.closest && e.target.closest('#student-view')) e.preventDefault();
+    }, true);
     ['paste', 'drop'].forEach(ev => document.addEventListener(ev, e => {
       if (window.TEACHER_PAGE || !activeStudentKey) return;
       if (e.target && e.target.closest && e.target.closest('#student-view')) {
@@ -1751,11 +1819,11 @@
       updateColumnButtons();
     }
 
-    function unlockTrend() {
-      if (!confirm('추세선을 다시 고를까요?\n\n' +
+    async function unlockTrend() {
+      if (!(await uiConfirm('추세선을 다시 고를까요?\n\n' +
         '· 다른 차수의 추세선을 작도하면 [문항 2-1]~[문항 2-3]에 작성한 답이 모두 지워집니다.\n' +
         '· 지금과 같은 차수를 다시 누르면 답은 그대로 유지됩니다.\n' +
-        '· 1단계 데이터도 다시 수정할 수 있게 되며, 데이터를 고치면 추세선과 [문항 2-1]~[문항 2-3]의 답이 지워집니다.')) return;
+        '· 1단계 데이터도 다시 수정할 수 있게 되며, 데이터를 고치면 추세선과 [문항 2-1]~[문항 2-3]의 답이 지워집니다.'))) return;
       trendUnlocked = true;
       updateTrendLock();
     }
@@ -1769,19 +1837,19 @@
     }
 
     function generateTrendline(degree) {
-      if (trendIsLocked()) { alert('추세선이 고정되어 있습니다. 바꾸려면 [추세선 다시 고르기]를 누르세요.'); return; }
+      if (trendIsLocked()) { uiAlert('추세선이 고정되어 있습니다. 바꾸려면 [추세선 다시 고르기]를 누르세요.'); return; }
       const points = getPoints();
       if (points.length < MIN_POINTS) {
-        alert(`추세선을 작도하려면 1단계 표에 최소 ${MIN_POINTS}개의 데이터(x, y 쌍)를 입력해야 합니다.\n(현재 ${points.length}개)`);
+        uiAlert(`추세선을 작도하려면 1단계 표에 최소 ${MIN_POINTS}개의 데이터(x, y 쌍)를 입력해야 합니다.\n(현재 ${points.length}개)`);
         return;
       }
       const maxAbs = Math.max(...points.map(p => Math.abs(p.x)));
       if (maxAbs > MAX_ABS_X) {
-        alert(`x의 값이 너무 큽니다 (최대 ${maxAbs}).\n연도를 그대로 입력했다면 첫 시점을 0으로 바꿔 입력하세요.\n예: 2018년 → 0, 2019년 → 1, ...`);
+        uiAlert(`x의 값이 너무 큽니다 (최대 ${maxAbs}).\n연도를 그대로 입력했다면 첫 시점을 0으로 바꿔 입력하세요.\n예: 2018년 → 0, 2019년 → 1, ...`);
         return;
       }
       if (new Set(points.map(p => p.x)).size < degree + 1) {
-        alert('서로 다른 x 값이 부족하여 추세선을 만들 수 없습니다.');
+        uiAlert('서로 다른 x 값이 부족하여 추세선을 만들 수 없습니다.');
         return;
       }
 
@@ -1796,7 +1864,7 @@
         ext[d] = { max: kp.list.filter(p => p.type === 'max').length, min: kp.list.filter(p => p.type === 'min').length };
         if (d === degree) chosen = coeffs;
       });
-      if (!chosen) { alert('추세선을 계산할 수 없습니다. 데이터를 확인하세요.'); return; }
+      if (!chosen) { uiAlert('추세선을 계산할 수 없습니다. 데이터를 확인하세요.'); return; }
       markTrendButtons(ext, pointsSignature(points));
       const keepMsg = trend ? `\n\n※ 현재 사용 중인 ${trend.degree}차 추세선은 바뀌지 않고 그대로 유지됩니다.` : '';
 
@@ -1804,7 +1872,7 @@
       const okDeg = d => ext[d] && (ext[d].max + ext[d].min) >= 1;
       if (!okDeg(3) && !okDeg(4)) {
         // 3차·4차 모두 극값이 없음 → 자료가 한 방향(일차함수 모양)으로만 변함
-        alert(`입력한 자료로는 극대·극소가 있는 추세선을 만들 수 없습니다.\n` +
+        uiAlert(`입력한 자료로는 극대·극소가 있는 추세선을 만들 수 없습니다.\n` +
           `자료가 계속 증가하거나 계속 감소하여 일차함수(직선)에 가까운 모양입니다.\n\n` +
           `→ 1단계로 돌아가 입력 자료를 수정하세요.\n` +
           `  · 증가와 감소가 모두 나타나도록 데이터의 기간을 늘리거나\n` +
@@ -1814,7 +1882,7 @@
       }
       if (!okDeg(degree)) {
         const other = degree === 3 ? 4 : 3;
-        alert(`${degree}차 추세선은 정의역 안에 극대·극소가 없어 사용할 수 없습니다.\n` +
+        uiAlert(`${degree}차 추세선은 정의역 안에 극대·극소가 없어 사용할 수 없습니다.\n` +
           `이 수행평가는 극대 또는 극소가 1개 이상 있는 추세선만 사용합니다.\n\n` +
           `→ ${other}차 추세선을 작도해 보세요.` + keepMsg);
         showKeepNotice(degree);
@@ -2135,8 +2203,9 @@
 
     async function submitWorksheet() {
       if (!activeStudentKey || isLocked) return;
-      if (!trend && !confirm('아직 추세선을 작도하지 않았습니다. 그래도 제출하시겠습니까?')) return;
-      if (!confirm('제출 후에는 답안을 수정할 수 없습니다. 최종 제출하시겠습니까?')) return;
+      if (!trend && !(await uiConfirm('아직 추세선을 작도하지 않았습니다. 그래도 제출하시겠습니까?'))) return;
+      if (!(await uiConfirm('제출 후에는 답안을 수정할 수 없습니다. 최종 제출하시겠습니까?'))) return;
+      if (isLocked || examPaused) return;   // 확인 창이 떠 있는 사이 시간이 끝났거나 중지된 경우
       clearTimeout(saveTimer);
       const payload = collectPayload();
       const btn = document.getElementById('btn-submit');
@@ -2148,14 +2217,14 @@
         btn.disabled = false;
         const c = errCode(error);
         if (c === 'TIME_OVER') lockTestFields('time');
-        alert('제출하지 못했습니다.\n' + errText(error));
+        uiAlert('제출하지 못했습니다.\n' + errText(error));
         return;
       }
       pendingPayload = null;
       try { localStorage.removeItem(backupKey()); } catch (e) { }
       lockTestFields('submitted');
       setSaveStatus('saved', '<i class="fa-solid fa-circle-check mr-0.5"></i>제출됨');
-      alert('수행평가지 제출이 완료되었습니다!');
+      uiAlert('수행평가지 제출이 완료되었습니다!');
     }
 
     // ================= 교사 대시보드 =================
