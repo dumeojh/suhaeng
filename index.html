@@ -359,13 +359,15 @@
               </p>
             </div>
             <div class="flex space-x-2 shrink-0">
-              <button onclick="generateTrendline(3)"
+              <button id="btn-trend-3" onclick="generateTrendline(3)"
                 class="test-field px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow">
                 <i class="fa-solid fa-chart-line mr-1"></i> 3차 추세선
+                <span class="trend-na hidden block text-[10px] font-semibold mt-0.5">극값 없음 · 사용 불가</span>
               </button>
-              <button onclick="generateTrendline(4)"
+              <button id="btn-trend-4" onclick="generateTrendline(4)"
                 class="test-field px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow">
                 <i class="fa-solid fa-chart-line mr-1"></i> 4차 추세선
+                <span class="trend-na hidden block text-[10px] font-semibold mt-0.5">극값 없음 · 사용 불가</span>
               </button>
             </div>
           </div>
@@ -377,6 +379,8 @@
               <span class="text-sm text-slate-400 not-italic">[위 버튼을 눌러 추세선을 작도하세요]</span>
             </div>
           </div>
+          <div id="trend-keep-notice"
+            class="hidden p-2.5 bg-amber-50 border-2 border-amber-400 rounded-lg text-sm text-amber-900 font-semibold"></div>
           <div id="trend-reset-notice" class="hidden text-xs text-red-600 font-semibold">
             <i class="fa-solid fa-rotate mr-1"></i> 데이터가 바뀌어 추세선이 초기화되었습니다. 추세선을 다시 작도하세요.
           </div>
@@ -471,6 +475,23 @@
           </h2>
         </div>
 
+        <!-- 참고: 2단계 그래프와 증감표 (보기 전용) -->
+        <details id="s3-ref-panel" open ontoggle="if(this.open) renderCharts()"
+          class="bg-slate-50 border border-slate-200 rounded-xl p-3 group">
+          <summary class="cursor-pointer select-none text-sm font-bold text-indigo-900 flex items-center justify-between">
+            <span><i class="fa-solid fa-book-open text-indigo-600 mr-1.5"></i>참고 자료: 2단계 그래프와 [문항 2-1] 증감표</span>
+            <span class="text-xs font-semibold text-slate-500"><span class="group-open:hidden">펼치기 ▼</span><span class="hidden group-open:inline">접기 ▲</span></span>
+          </summary>
+          <div class="mt-3 space-y-3">
+            <div id="s3-ref-fx" class="text-center text-base"></div>
+            <div class="border rounded-xl p-3 bg-white flex flex-col items-center justify-center h-72">
+              <canvas id="student-chart-step3" class="w-full h-full"></canvas>
+            </div>
+            <div id="s3-ref-table"></div>
+            <p class="text-[11px] text-slate-500"><i class="fa-solid fa-circle-info mr-1"></i>보기 전용입니다. 증감표의 부호를 고치려면 2단계로 돌아가세요.</p>
+          </div>
+        </details>
+
         <div class="space-y-2">
           <label class="block text-sm font-semibold text-slate-800">[문항 3-1] [문항 2-1]의 증감표에서 그래프의 증가·감소가 바뀌는 구간을 기준으로 2개 이상 구간을 선정하여 추세선 f(x)의 그래프의 변화 양상과 실제 현상을 연관지어 어떤 상황이 나타날 것인지 설명하시오.</label>
           <textarea id="s3-interval" rows="5" oninput="saveStudentData()"
@@ -496,18 +517,8 @@
           <div>
             <label class="block text-xs font-semibold text-slate-700 mb-1">(3) 현재 시점의 순간 변화율 해석 및 전망 예측하기</label>
             <textarea id="s3-essay" rows="5" oninput="saveStudentData()"
-              placeholder="f'(x)의 부호와 크기로 현재 변화의 방향과 속도를 해석하고, 이를 근거로 앞으로 현상이 어떻게 전개될지 예측하시오."
+              placeholder="현재 시점의 f'(x)의 값을 바탕으로 현재 상황을 해석하고 앞으로 현상이 어떻게 변화할지 판단 근거와 함께 구체적으로 작성하시오."
               class="test-field w-full p-3 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"></textarea>
-          </div>
-          <div>
-            <label class="block text-xs font-semibold text-slate-700 mb-1">주장을 뒷받침하는 근거 자료 출처 및 주요 내용</label>
-            <div class="space-y-2">
-              <input type="text" id="s3-ref-title" oninput="saveStudentData()"
-                placeholder="자료 출처 (예: 문화체육관광부 보도자료 '2025년 방한 외래관광객 동향', 2025)"
-                class="test-field w-full p-2 border rounded-lg text-sm">
-              <textarea id="s3-ref-summary" rows="2" oninput="saveStudentData()" placeholder="근거 자료의 주요 내용을 요약하여 작성하시오."
-                class="test-field w-full p-2 border rounded-lg text-sm"></textarea>
-            </div>
           </div>
         </div>
 
@@ -656,7 +667,7 @@
     let currentMode = 'student';
     let activeStudentKey = null;
     let timerInterval = null;
-    let chartStep1 = null, chartStep2 = null, modalChart = null;
+    let chartStep1 = null, chartStep2 = null, chartStep3 = null, modalChart = null;
     let trend = null;        // { degree, coeffs:[a0..an](반올림), r2, pointsSig, compare:{3:r2,4:r2} }
     let isLocked = false;
     let modalChartImage = '';
@@ -1234,7 +1245,7 @@
     // ================= 학생 데이터 저장/불러오기 =================
     const FIELD_IDS = ['s1-topic', 's1-source', 's1-var-x', 's1-var-y',
       's2-ext-reason', 's2-max-val', 's2-min-val',
-      's3-interval', 's3-curr-x', 's3-curr-dfx', 's3-essay', 's3-ref-title', 's3-ref-summary'];
+      's3-interval', 's3-curr-x', 's3-curr-dfx', 's3-essay'];
 
     function val(id) { return document.getElementById(id).value; }
 
@@ -1244,8 +1255,7 @@
         2: [!!trend,
         !!trend && signAnswers.signs.length > 0 && signAnswers.signs.every(Boolean),
         extExist() === 'no' || (extExist() === 'yes' && completeXs('maxx').length + completeXs('minx').length > 0), val('s2-ext-reason'), val('s2-max-val'), val('s2-min-val')],
-        3: [val('s3-interval').trim().length > 20, val('s3-curr-x'), val('s3-curr-dfx'), val('s3-essay').trim().length > 20,
-        val('s3-ref-title'), val('s3-ref-summary')]
+        3: [val('s3-interval').trim().length > 20, val('s3-curr-x'), val('s3-curr-dfx'), val('s3-essay').trim().length > 20]
       };
     }
 
@@ -1332,6 +1342,7 @@
       setXRows('maxx', item.answers?.['s2-maxx-list']);
       setXRows('minx', item.answers?.['s2-minx-list']);
       trend = item.trend || null;
+      markTrendButtons(trend?.ext, trend?.pointsSig);
 
       renderTrendUI();
       renderCharts();
@@ -1344,7 +1355,9 @@
     }
 
     function onDataChanged() {
-      if (trend && trend.pointsSig !== pointsSignature(getPoints())) {
+      const sigNow = pointsSignature(getPoints());
+      if (markedSig && markedSig !== sigNow) { markTrendButtons(null); hideKeepNotice(); }
+      if (trend && trend.pointsSig !== sigNow) {
         trend = null;
         renderTrendUI();
         document.getElementById('trend-reset-notice').classList.remove('hidden');
@@ -1354,6 +1367,34 @@
     }
 
     // ================= 추세선 =================
+    // 극값이 없어 쓸 수 없는 차수의 버튼에 '사용 불가' 표시 (데이터가 바뀌면 해제)
+    let markedSig = null;
+    function markTrendButtons(ext, sig = null) {
+      markedSig = ext ? sig : null;
+      [3, 4].forEach(d => {
+        const btn = document.getElementById(`btn-trend-${d}`);
+        const bad = !!(ext && ext[d] && ext[d].max + ext[d].min === 0);
+        btn.querySelector('.trend-na').classList.toggle('hidden', !bad);
+        btn.classList.toggle('opacity-50', bad);
+        btn.classList.toggle('line-through', bad);
+        btn.title = bad ? `${d}차 추세선은 정의역 안에 극대·극소가 없어 사용할 수 없습니다.` : '';
+      });
+    }
+
+    function hideKeepNotice() { document.getElementById('trend-keep-notice').classList.add('hidden'); }
+
+    // 작도가 거부됐을 때: 기존 추세선이 그대로 유지된다는 것을 화면에 분명히 표시
+    function showKeepNotice(rejectedDeg) {
+      const el = document.getElementById('trend-keep-notice');
+      if (!trend) { hideKeepNotice(); return; }
+      el.innerHTML = `<i class="fa-solid fa-circle-exclamation mr-1"></i>${rejectedDeg}차 추세선은 사용할 수 없어 작도되지 않았습니다. ` +
+        `<u>현재 사용 중인 추세선은 ${trend.degree}차</u>이며, 그대로 유지됩니다.`;
+      el.classList.remove('hidden');
+      const box = document.getElementById('s2-fx-box');
+      box.classList.add('ring-4', 'ring-amber-400');
+      setTimeout(() => box.classList.remove('ring-4', 'ring-amber-400'), 2500);
+    }
+
     function generateTrendline(degree) {
       const points = getPoints();
       if (points.length < MIN_POINTS) {
@@ -1382,6 +1423,8 @@
         if (d === degree) chosen = coeffs;
       });
       if (!chosen) { alert('추세선을 계산할 수 없습니다. 데이터를 확인하세요.'); return; }
+      markTrendButtons(ext, pointsSignature(points));
+      const keepMsg = trend ? `\n\n※ 현재 사용 중인 ${trend.degree}차 추세선은 바뀌지 않고 그대로 유지됩니다.` : '';
 
       // 극대 또는 극소가 1개 이상 있어야 사용 가능
       const okDeg = d => ext[d] && (ext[d].max + ext[d].min) >= 1;
@@ -1391,19 +1434,22 @@
           `자료가 계속 증가하거나 계속 감소하여 일차함수(직선)에 가까운 모양입니다.\n\n` +
           `→ 1단계로 돌아가 입력 자료를 수정하세요.\n` +
           `  · 증가와 감소가 모두 나타나도록 데이터의 기간을 늘리거나\n` +
-          `  · 증가·감소가 바뀌는 다른 주제의 데이터를 수집하세요.`);
+          `  · 증가·감소가 바뀌는 다른 주제의 데이터를 수집하세요.` + keepMsg);
+        showKeepNotice(degree);
         return;
       }
       if (!okDeg(degree)) {
         const other = degree === 3 ? 4 : 3;
         alert(`${degree}차 추세선은 정의역 안에 극대·극소가 없어 사용할 수 없습니다.\n` +
           `이 수행평가는 극대 또는 극소가 1개 이상 있는 추세선만 사용합니다.\n\n` +
-          `→ ${other}차 추세선을 작도해 보세요.`);
+          `→ ${other}차 추세선을 작도해 보세요.` + keepMsg);
+        showKeepNotice(degree);
         return;
       }
 
       trend = { degree, coeffs: chosen, r2: compare[degree], pointsSig: pointsSignature(points), compare, ext };
       document.getElementById('trend-reset-notice').classList.add('hidden');
+      hideKeepNotice();
       renderTrendUI();
       renderCharts();
       saveStudentData();
@@ -1638,6 +1684,45 @@
       chartStep1 = createChart(document.getElementById('student-chart-step1'), points, null, labels);
       if (chartStep2) chartStep2.destroy();
       chartStep2 = createChart(document.getElementById('student-chart-step2'), points, trend, labels);
+      if (chartStep3) { chartStep3.destroy(); chartStep3 = null; }
+      if (trend) chartStep3 = createChart(document.getElementById('student-chart-step3'), points, trend, labels);
+      renderStep3Ref(points);
+    }
+
+    // 3단계 참고 자료: 추세선 식 + 학생이 고른 부호가 들어간 증감표 (정답은 표시하지 않음)
+    function renderStep3Ref(points) {
+      const fxEl = document.getElementById('s3-ref-fx');
+      const tblEl = document.getElementById('s3-ref-table');
+      const canvasBox = document.getElementById('student-chart-step3').parentElement;
+      if (!trend) {
+        fxEl.innerHTML = '';
+        canvasBox.classList.add('hidden');
+        tblEl.innerHTML = '<div class="p-3 rounded-lg border border-dashed text-xs text-slate-400 text-center">2단계에서 추세선을 작도하면 여기에 그래프와 증감표가 표시됩니다.</div>';
+        return;
+      }
+      canvasBox.classList.remove('hidden');
+      fxEl.innerHTML = `<span class="formula text-indigo-900">${formatPolynomial(trend.coeffs, true)}</span>
+        <span class="ml-2 text-xs font-bold px-2 py-0.5 rounded bg-indigo-100 text-indigo-700">${trend.degree}차</span>`;
+      const tb = derivTable(points, trend);
+      if (!tb) { tblEl.innerHTML = ''; return; }
+      const same = JSON.stringify(signAnswers.xs) === JSON.stringify(tb.rows.map(r => r.x));
+      const td = 'border px-2 py-1.5 text-center formula whitespace-nowrap';
+      const dots = 'border px-1 py-1.5 text-center bg-amber-50/60';
+      const sign = i => {
+        const v = same ? signAnswers.signs[i] : '';
+        return v ? `<td class="${dots} font-extrabold text-lg text-indigo-900">${SIGN_TXT[v]}</td>`
+          : `<td class="${dots} text-red-500 font-bold" title="2단계에서 아직 고르지 않음">?</td>`;
+      };
+      const gapCell = (i, html) => i < tb.gaps.length ? html : '';
+      tblEl.innerHTML = `
+        <p class="text-xs font-bold text-slate-700 mb-1"><i class="fa-solid fa-table text-indigo-500 mr-1"></i>[문항 2-1] 증감표 <span class="font-normal text-slate-500">(⋯ 칸은 내가 고른 부호, ?는 아직 고르지 않은 칸)</span></p>
+        <div class="overflow-x-auto bg-white rounded-lg border">
+          <table class="w-full border-collapse text-sm">
+            <tr><th class="border px-2 py-1.5 bg-slate-100 w-16 formula">x</th>${tb.rows.map((r, i) => `<td class="${td}">${r.x}</td>` + gapCell(i, `<td class="${dots} text-slate-400">⋯</td>`)).join('')}</tr>
+            <tr><th class="border px-2 py-1.5 bg-slate-100 formula">f ′(x)</th>${tb.rows.map((r, i) => `<td class="${td}">${r.d}</td>` + gapCell(i, sign(i))).join('')}</tr>
+            <tr><th class="border px-2 py-1.5 bg-slate-100 formula">f(x)</th>${tb.rows.map((r, i) => `<td class="${td}">${r.f}</td>` + gapCell(i, `<td class="${dots}"></td>`)).join('')}</tr>
+          </table>
+        </div>`;
     }
 
     // ================= 기타 학생 기능 =================
@@ -1827,8 +1912,6 @@
           ${box('3-1. 증가·감소가 바뀌는 구간별 변화 양상과 실제 현상', a['s3-interval'])}
           <p><strong>3-2 (1) 현재 시점:</strong> ${esc(a['s3-curr-x'] || '-')} &nbsp;/&nbsp; <strong>(2) 순간변화율:</strong> ${esc(a['s3-curr-dfx'] || '-')}</p>
           ${box('3-2 (3) 순간 변화율 해석 및 전망 예측', a['s3-essay'])}
-          ${row('근거 자료 출처', a['s3-ref-title'])}
-          ${box('근거 자료 요약', a['s3-ref-summary'])}
         </div>
         <p class="text-slate-400 text-right">${item.reopenCount ? `응시 재개 ${item.reopenCount}회 (최근 ${esc(item.reopenedAt)}) · ` : ''}시작: ${esc(item.startTime || '-')} · 마지막 저장: ${esc(item.updatedAt || '-')} ${item.submittedAt ? ' · 제출: ' + esc(item.submittedAt) : ''}</p>`;
 
@@ -1919,11 +2002,7 @@
             <tr><th style="${TH}">(2) 순간변화율 f'(x)</th><td style="${TD}">${esc(a['s3-curr-dfx'])}</td></tr>
           </table>
           <p style="font-size:9pt;font-weight:bold;margin:6px 0 4px 0;">(3) 순간 변화율 해석 및 전망 예측</p>
-          <div style="border:1px solid #cbd5e1;padding:8px;min-height:40mm;font-size:9.3pt;line-height:1.6;white-space:pre-line;">${esc(a['s3-essay'])}</div>
-          <div style="border:1px solid #cbd5e1;padding:6px 8px;font-size:9pt;margin-top:6px;">
-            <p style="margin:0 0 3px 0;"><strong>근거 자료 출처:</strong> ${esc(a['s3-ref-title'] || '-')}</p>
-            <p style="margin:0;white-space:pre-line;"><strong>주요 내용:</strong> ${esc(a['s3-ref-summary'] || '-')}</p>
-          </div>
+          <div style="border:1px solid #cbd5e1;padding:8px;min-height:55mm;font-size:9.3pt;line-height:1.6;white-space:pre-line;">${esc(a['s3-essay'])}</div>
 
           <div style="border:1px solid #94a3b8;padding:6px;font-size:8.5pt;margin-top:10px;">
             <p style="font-weight:bold;margin:0 0 4px 0;font-size:9pt;">[교사 평가 및 피드백] (총점: 20점 만점)</p>
