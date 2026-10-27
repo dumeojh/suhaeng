@@ -476,7 +476,7 @@
         </div>
 
         <!-- 참고: 2단계 그래프와 증감표 (보기 전용) -->
-        <details id="s3-ref-panel" open ontoggle="if(this.open) renderCharts()"
+        <details id="s3-ref-panel" open ontoggle="if (this.open && window.renderCharts && activeStudentKey) renderCharts()"
           class="bg-slate-50 border border-slate-200 rounded-xl p-3 group">
           <summary class="cursor-pointer select-none text-sm font-bold text-indigo-900 flex items-center justify-between">
             <span><i class="fa-solid fa-book-open text-indigo-600 mr-1.5"></i>참고 자료: 2단계 그래프와 [문항 2-1] 증감표</span>
@@ -1512,6 +1512,8 @@
         a.every((v, i) => Math.abs(v - b[i]) <= 0.05 + 1e-9);
     }
     const KP_LABEL = { left: '왼쪽 끝점', right: '오른쪽 끝점', max: '극대', min: '극소' };
+    // 문항 2-1 표의 f'(x) 칸: f'(x)=0인 점(극대·극소)만 0을 보여 주고, 나머지는 비움 (값을 보면 부호를 바로 알 수 있으므로)
+    const dShow = r => r.crit ? '0' : '';
 
     // x, f'(x) 표: 정의역을 7칸으로 (양 끝점 + 극대·극소 반드시 포함)
     function derivTable(points, t, cols = 7) {
@@ -1573,7 +1575,7 @@
       const td = 'border px-2 py-1.5 text-center formula whitespace-nowrap';
       const dots = 'border px-1 py-1.5 text-center text-slate-400 bg-amber-50/60';
       const xRow = tb.rows.map((r, i) => `<td class="${td}">${r.x}</td>` + (i < tb.gaps.length ? `<td class="${dots}">⋯</td>` : '')).join('');
-      const dRow = tb.rows.map((r, i) => `<td class="${td}">${r.d}</td>` + (i < tb.gaps.length ? `
+      const dRow = tb.rows.map((r, i) => `<td class="${td}">${dShow(r)}</td>` + (i < tb.gaps.length ? `
           <td class="border px-2 py-2 text-center bg-red-50/50">
             <select class="test-field sign-sel ${signAnswers.signs[i] ? 'filled' : ''}" onchange="this.classList.toggle('filled', !!this.value); onSignChange(${i}, this.value)">
               <option value="">?</option>
@@ -1611,7 +1613,7 @@
         return `<td style="${dc}font-weight:bold;color:${ok ? '#059669' : '#dc2626'}">${SIGN_TXT[sv]}${ok ? '' : ` <span style="font-size:7.5pt;font-weight:normal">(${SIGN_TXT[tb.gaps[i]]})</span>`}</td>`;
       };
       const xRow = tb.rows.map((r, i) => `<td style="${c}">${r.x}</td>` + (i < tb.gaps.length ? `<td style="${dc}color:#94a3b8">⋯</td>` : '')).join('');
-      const dRow = tb.rows.map((r, i) => `<td style="${c}">${r.d}</td>` + (i < tb.gaps.length ? cell(i) : '')).join('');
+      const dRow = tb.rows.map((r, i) => `<td style="${c}">${dShow(r)}</td>` + (i < tb.gaps.length ? cell(i) : '')).join('');
       return `<table style="width:100%;border-collapse:collapse;font-size:8.6pt;margin:4px 0 6px 0;">
         <tr><th style="${c}background:#f1f5f9">x</th>${xRow}</tr>
         <tr><th style="${c}background:#f1f5f9">f'(x)</th>${dRow}</tr>
@@ -1742,7 +1744,7 @@
         <div class="overflow-x-auto bg-white rounded-lg border">
           <table class="w-full border-collapse text-sm">
             <tr><th class="border px-2 py-1.5 bg-slate-100 w-16 formula">x</th>${tb.rows.map((r, i) => `<td class="${td}">${r.x}</td>` + gapCell(i, `<td class="${dots} text-slate-400">⋯</td>`)).join('')}</tr>
-            <tr><th class="border px-2 py-1.5 bg-slate-100 formula">f ′(x)</th>${tb.rows.map((r, i) => `<td class="${td}">${r.d}</td>` + gapCell(i, sign(i))).join('')}</tr>
+            <tr><th class="border px-2 py-1.5 bg-slate-100 formula">f ′(x)</th>${tb.rows.map((r, i) => `<td class="${td}">${dShow(r)}</td>` + gapCell(i, sign(i))).join('')}</tr>
             <tr><th class="border px-2 py-1.5 bg-slate-100 formula">f(x)</th>${tb.rows.map((r, i) => `<td class="${td}">${r.f}</td>` + gapCell(i, `<td class="${dots}"></td>`)).join('')}</tr>
           </table>
         </div>`;
