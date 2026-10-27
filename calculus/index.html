@@ -861,7 +861,7 @@
       ['x', 'y'].forEach(k => {
         const td = document.createElement('td');
         td.className = 'border';
-        td.innerHTML = `<input type="number" step="any" class="test-field dt-${k} w-full p-1.5 text-center border-none focus:outline-none" oninput="onDataChanged()">`;
+        td.innerHTML = `<input type="number" step="any" autocomplete="off" class="test-field dt-${k} w-full p-1.5 text-center border-none focus:outline-none" oninput="onDataChanged()">`;
         document.getElementById(`dt-${k}row`).appendChild(td);
         if (isLocked || trendIsLocked()) td.querySelector('input').disabled = true;
       });
@@ -916,9 +916,9 @@
       row.className = 'iv-row flex items-center space-x-1.5 text-sm';
       row.innerHTML = `
         <span class="text-xs text-slate-500">x =</span>
-        <input type="number" step="any" class="test-field iv-a w-20 p-1.5 border rounded text-center" oninput="saveStudentData()">
+        <input type="number" step="any" autocomplete="off" class="test-field iv-a w-20 p-1.5 border rounded text-center" oninput="saveStudentData()">
         <span class="text-xs text-slate-500">부터 x =</span>
-        <input type="number" step="any" class="test-field iv-b w-20 p-1.5 border rounded text-center" oninput="saveStudentData()">
+        <input type="number" step="any" autocomplete="off" class="test-field iv-b w-20 p-1.5 border rounded text-center" oninput="saveStudentData()">
         <span class="text-xs text-slate-500">까지</span>
         <button type="button" class="test-field text-slate-400 hover:text-red-500 px-1" title="이 구간 삭제"><i class="fa-solid fa-xmark"></i></button>`;
       row.querySelector('.iv-a').value = a;
@@ -946,7 +946,7 @@
       row.className = 'xv-row flex items-center space-x-1.5 text-sm';
       row.innerHTML = `
         <span class="text-xs text-slate-500">x =</span>
-        <input type="number" step="any" class="test-field xv w-28 p-1.5 border rounded text-center" oninput="saveStudentData()">
+        <input type="number" step="any" autocomplete="off" class="test-field xv w-28 p-1.5 border rounded text-center" oninput="saveStudentData()">
         <button type="button" class="test-field text-slate-400 hover:text-red-500 px-1" title="삭제"><i class="fa-solid fa-xmark"></i></button>`;
       row.querySelector('.xv').value = v;
       row.querySelector('button').onclick = () => { row.remove(); saveStudentData(); };
@@ -1371,15 +1371,25 @@
 
     const fsSupported = () => !!(document.fullscreenEnabled || document.webkitFullscreenEnabled);
     const isFullscreen = () => !!(document.fullscreenElement || document.webkitFullscreenElement);
+    // 전체화면 중 Esc를 '길게(약 2초)' 눌러야 전체화면이 풀리게 함 → 습관적으로 누른 Esc로 시험이 중지되는 일을 줄임
+    // (크롬·엣지·웨일에서만 동작, 그 밖의 브라우저는 예전처럼 Esc 한 번으로 풀림)
+    function lockEsc() {
+      try { if (navigator.keyboard && navigator.keyboard.lock) navigator.keyboard.lock(['Escape']).catch(() => { }); } catch (e) { }
+    }
+    function unlockEsc() {
+      try { if (navigator.keyboard && navigator.keyboard.unlock) navigator.keyboard.unlock(); } catch (e) { }
+    }
     function enterFullscreen() {
-      if (window.TEACHER_PAGE || !fsSupported() || isFullscreen()) return Promise.resolve(true);
+      if (window.TEACHER_PAGE || !fsSupported()) return Promise.resolve(true);
+      if (isFullscreen()) { lockEsc(); return Promise.resolve(true); }
       const el = document.documentElement;
       try {
         const r = (el.requestFullscreen || el.webkitRequestFullscreen).call(el);
-        return Promise.resolve(r).then(() => true, () => false);
+        return Promise.resolve(r).then(() => { lockEsc(); return true; }, () => false);
       } catch (e) { return Promise.resolve(false); }
     }
     function exitFullscreenSafe() {
+      unlockEsc();
       if (!isFullscreen()) return;
       try { const r = (document.exitFullscreen || document.webkitExitFullscreen).call(document); if (r && r.catch) r.catch(() => { }); } catch (e) { }
     }
@@ -1426,6 +1436,7 @@
         btn.innerHTML = '<i class="fa-solid fa-expand mr-1"></i> 전체화면으로 전환';
         btn.onclick = () => enterFullscreen().then(() => hideOverlay());   // 전체화면이 막힌 컴퓨터여도 시험은 진행 (창 이탈 감지는 계속됨)
         btn.classList.remove('hidden');
+        setFieldsPaused(true);   // 안내 화면 뒤에서 Tab 키로 답안을 입력하지 못하게 잠금
       }
       btn.className = btn.className.replace(/\bbg-\S+|\bhover:bg-\S+/g, '').trim() + ' ' + st.btn;
       document.getElementById('po-count').innerText = pauseCount ? `지금까지 중지 횟수: ${pauseCount}회 (선생님 화면에 기록됨)` : '';
@@ -1433,8 +1444,10 @@
     }
     function hideOverlay() {
       const ov = document.getElementById('proctor-overlay');
+      const wasFullscreenGuide = ov.dataset.mode === 'fullscreen';
       ov.className = 'hidden';
       ov.dataset.mode = '';
+      if (wasFullscreenGuide && !examPaused) setFieldsPaused(false);   // 전체화면 안내 때 잠근 답안 칸을 다시 풂
     }
 
     // 응시 시작(또는 새로고침 후 재접속) 직후 호출
@@ -2745,6 +2758,8 @@
       await loadTeacherRows();
     }
 
+    // 답안 칸의 브라우저 자동완성 끄기 (예전에 입력해 둔 문구가 목록으로 뜨지 않게, 목록을 닫으려고 Esc를 누르지 않게)
+    document.querySelectorAll('#student-view input, #student-view textarea').forEach(el => el.setAttribute('autocomplete', 'off'));
     ensureColumns(INITIAL_COLUMNS);
     setXRows('maxx');
     setXRows('minx');
