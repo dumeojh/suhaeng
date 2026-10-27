@@ -10,6 +10,11 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="config.js"></script>
+  <script>
+    // 주소 뒤에 ?teacher 를 붙이면 교사용 페이지 (예: https://○○.vercel.app/?teacher)
+    window.TEACHER_PAGE = new URLSearchParams(location.search).has('teacher');
+    if (window.TEACHER_PAGE) document.documentElement.classList.add('teacher-page');
+  </script>
   <style>
     @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
 
@@ -24,6 +29,16 @@
 
     #print-area {
       display: none;
+    }
+
+    /* 교사용 페이지(?teacher)에서는 학생 화면을, 학생용 페이지에서는 교사 화면을 처음부터 숨김 */
+    .teacher-page #student-login-view,
+    .teacher-page #student-view,
+    .teacher-page #btn-teacher-mode,
+    html:not(.teacher-page) #teacher-login-view,
+    html:not(.teacher-page) #teacher-view,
+    html:not(.teacher-page) #detail-modal {
+      display: none !important;
     }
 
     /* 문항 2-1: f'(x) 부호 선택 상자 — 크게, 눈에 띄게 */
@@ -133,14 +148,15 @@
           <span class="text-xs text-indigo-200">남은 시간:</span>
           <span id="timer-display" class="font-mono font-bold text-amber-300">45:00</span>
         </div>
-        <button id="btn-student-mode" onclick="switchMode('student')"
-          class="px-3 py-1.5 rounded-lg text-sm font-semibold bg-white text-indigo-700 shadow">
-          <i class="fa-solid fa-user-graduate mr-1"></i> 학생 모드
-        </button>
-        <button id="btn-teacher-mode" onclick="switchMode('teacher')"
-          class="px-3 py-1.5 rounded-lg text-sm font-semibold bg-indigo-600 hover:bg-indigo-500 text-white">
+        <button id="btn-teacher-mode" type="button" onclick="goTeacherPage()"
+          class="px-3 py-1.5 rounded-lg text-sm font-semibold bg-indigo-600 hover:bg-indigo-500 text-white border border-indigo-400/40
+                 disabled:bg-indigo-800/60 disabled:text-indigo-300 disabled:cursor-not-allowed disabled:hover:bg-indigo-800/60">
           <i class="fa-solid fa-chalkboard-user mr-1"></i> 교사 모니터링
         </button>
+        <span id="teacher-badge"
+          class="hidden px-3 py-1.5 rounded-lg text-sm font-semibold bg-white text-indigo-700 shadow">
+          <i class="fa-solid fa-chalkboard-user mr-1"></i> 교사 모니터링
+        </span>
       </div>
     </div>
   </header>
@@ -1082,8 +1098,6 @@
     });
 
     // ================= 모드 전환 =================
-    const MODE_ON = 'px-3 py-1.5 rounded-lg text-sm font-semibold bg-white text-indigo-700 shadow';
-    const MODE_OFF = 'px-3 py-1.5 rounded-lg text-sm font-semibold bg-indigo-600 hover:bg-indigo-500 text-white';
 
     function showOnly(id) {
       ['student-login-view', 'student-view', 'teacher-login-view', 'teacher-view']
@@ -1091,14 +1105,14 @@
     }
 
     async function switchMode(mode) {
+      if (mode === 'teacher' && !window.TEACHER_PAGE) return;   // 학생용 페이지에서는 교사 화면을 열지 않음
+      if (mode === 'student' && window.TEACHER_PAGE) return;
       if (mode === 'teacher') {
         if (!sb) { alert('수파베이스 연결 설정(config.js)이 없습니다.'); return; }
         if (activeStudentKey && !isLocked && !confirm('응시 중인 화면입니다. 교사 화면으로 이동할까요?\n(학생 답안은 저장되어 있습니다)')) return;
         if (activeStudentKey) await flushSave();
         currentMode = 'teacher';
         document.getElementById('timer-banner').classList.add('hidden');
-        document.getElementById('btn-student-mode').className = MODE_OFF;
-        document.getElementById('btn-teacher-mode').className = MODE_ON;
         const { data } = await sb.auth.getSession();
         if (data.session) await enterTeacherDashboard(data.session);
         else showOnly('teacher-login-view');
@@ -1111,8 +1125,6 @@
         const loggedIn = !!activeStudentKey;
         showOnly(loggedIn ? 'student-view' : 'student-login-view');
         document.getElementById('timer-banner').classList.toggle('hidden', !loggedIn || isLocked);
-        document.getElementById('btn-student-mode').className = MODE_ON;
-        document.getElementById('btn-teacher-mode').className = MODE_OFF;
         if (loggedIn) renderCharts();
       }
     }
@@ -1254,6 +1266,7 @@
       } catch (e) { }
 
       document.getElementById('stu-info-tag').innerText = `${g}학년 ${c}반 ${n}번 ${name}`;
+      disableTeacherButton();
       showOnly('student-view');
       document.getElementById('timer-banner').classList.remove('hidden');
 
@@ -2345,6 +2358,24 @@
     setXRows('maxx');
     setXRows('minx');
     if (!sb) document.getElementById('config-warning').classList.remove('hidden');
+    // 학생이 시험을 시작하면 [교사 모니터링] 버튼을 잠금 (새로고침 전까지 유지)
+    function disableTeacherButton() {
+      const btn = document.getElementById('btn-teacher-mode');
+      btn.disabled = true;
+      btn.title = '응시 중에는 교사 모니터링을 사용할 수 없습니다';
+      btn.innerHTML = '<i class="fa-solid fa-lock mr-1"></i> 교사 모니터링';
+    }
+    // 시험 시작 전 로그인 화면에서만: 교사용 주소(?teacher)로 이동
+    function goTeacherPage() {
+      if (activeStudentKey) return;
+      location.href = location.pathname + '?teacher';
+    }
+
+    if (window.TEACHER_PAGE) {
+      document.title = '[교사] 미적분Ⅰ 수행평가 모니터링';
+      document.getElementById('teacher-badge').classList.remove('hidden');
+      switchMode('teacher');
+    }
   </script>
 </body>
 
