@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- ★ 파일 위치: calculus/r1/index.html  (1회차 시험 페이지 = 문항·채점) ★ -->
 <html lang="ko">
 
 <head>
@@ -223,7 +224,7 @@
         <span>시험 시작하기 (카운트다운 시작)</span>
       </button>
       <a href="../" class="block text-xs text-slate-400 hover:text-indigo-600 hover:underline">← 회차 선택 화면으로</a>
-      <p class="text-[10px] text-slate-300">버전 2026-10-28e · <span class="exam-label"></span></p>
+      <p class="text-[10px] text-slate-300">버전 2026-10-28f · <span class="exam-label"></span></p>
     </div>
 
     <!-- ================= STUDENT WORKSHEET ================= -->
@@ -1247,7 +1248,19 @@
       showOnly('teacher-view');
       if (window.ExamAdmin) ExamAdmin.mount(document.getElementById('exam-admin'), sb, {
         examId: EXAM_ID, pageBase: '../',
-        onChange: list => { if (list[0]) TEST_MINUTES = list[0].limit_minutes || TEST_MINUTES; }
+        onChange: list => {
+          if (!list[0]) return;
+          TEST_MINUTES = list[0].limit_minutes || TEST_MINUTES;
+          // 위에서 반을 열고 닫으면 아래 현황이 '시험 중인 반'만 보이도록 자동 전환
+          const next = [...(list[0].open_classes || [])].map(Number).sort((a, b) => a - b);
+          const changed = next.join(',') !== openClasses.join(',');
+          openClasses = next;
+          if (changed) {
+            if (openClasses.length) setClassFilter('open');
+            else if (classFilter === 'open') setClassFilter('all');
+            else renderTeacherDashboard();
+          }
+        }
       });
       await loadTeacherRows();
       stopTeacherPoll();
@@ -2407,6 +2420,7 @@
     let classFilter = 'all';
     try { classFilter = localStorage.getItem(CLASS_FILTER_KEY) || 'all'; } catch (e) { }
     let teacherSearch = '';
+    let openClasses = [];   // 이 회차가 지금 열려 있는 반 (위 '응시 관리'에서 연 반)
 
     const classOf = item => Number(item.studentInfo?.class) || 0;
     function allClasses() {
@@ -2415,11 +2429,13 @@
     // 현재 선택한 탭의 반 목록 (null = 전체)
     function filterClasses() {
       if (classFilter === 'all') return null;
+      if (classFilter === 'open') return openClasses;
       if (CLASS_GROUPS[classFilter]) return CLASS_GROUPS[classFilter].classes;
       return [Number(classFilter)];
     }
     function filterLabel() {
       if (classFilter === 'all') return '전체';
+      if (classFilter === 'open') return `시험 중 ${openClasses.join('·')}반`;
       if (CLASS_GROUPS[classFilter]) return CLASS_GROUPS[classFilter].label;
       return `${classFilter}반`;
     }
@@ -2441,6 +2457,7 @@
 
     function renderClassTabs() {
       const valid = ['all', ...Object.keys(CLASS_GROUPS), ...allClasses().map(String)];
+      if (openClasses.length) valid.push('open');
       if (!valid.includes(classFilter)) classFilter = 'all';
       const items = Object.values(teacherRows);
       const tab = (key, label, list, wide, classes = null) => {
@@ -2459,6 +2476,12 @@
         .map(([k, g]) => tab(k, g.label, items.filter(i => g.classes.includes(classOf(i))), true, g.classes)).join('');
       const classes = allClasses().map(c => tab(String(c), `${c}반`, items.filter(i => classOf(i) === c), false, [c])).join('');
       document.getElementById('class-tabs').innerHTML =
+        (openClasses.length
+          ? tab('open', `<i class="fa-solid fa-pen-to-square mr-1"></i>시험 중 ${openClasses.join('·')}반`,
+            items.filter(i => openClasses.includes(classOf(i))), true, openClasses)
+              .replace('bg-white border-slate-200', 'bg-emerald-50 border-emerald-400') +
+            '<span class="w-px h-8 bg-slate-200 mx-1"></span>'
+          : '') +
         tab('all', '전체', items, true) + '<span class="w-px h-8 bg-slate-200 mx-1"></span>' + groups +
         '<span class="w-px h-8 bg-slate-200 mx-1"></span>' + classes;
       document.querySelectorAll('.filter-label').forEach(el => el.innerText = `(${filterLabel()})`);
