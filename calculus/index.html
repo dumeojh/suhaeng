@@ -2,7 +2,7 @@
 <html lang="ko">
 
 <head>
-  <meta charset= "UTF-8">
+  <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>[미적분Ⅰ] 실세계 데이터 기반 다항함수 모델링 수행평가 시스템</title>
   <script src="https://cdn.tailwindcss.com"></script>
@@ -196,7 +196,8 @@
       <div class="p-3 bg-red-50 border border-red-200 rounded-lg text-xs text-red-800 text-left leading-relaxed">
         <p class="font-bold mb-1"><i class="fa-solid fa-shield-halved mr-1"></i>부정행위 방지 안내</p>
         · 시험은 <strong>전체화면</strong>으로 진행됩니다.<br>
-        · 시험 중 <strong>다른 탭·창·프로그램으로 이동</strong>하거나 <strong>전체화면을 나가면(Esc)</strong> 시험이 즉시 중지되고, 선생님이 해제해야 이어서 볼 수 있습니다.<br>
+        · 시험 중 <strong>다른 탭·창·프로그램으로 이동</strong>하거나 <strong>전체화면을 나가면(Esc)</strong> 시험이 즉시 중지되고, 선생님이 해제해야 이어서 볼 수
+        있습니다.<br>
         · 중지된 동안에도 <strong>시험 시간은 계속 흐르며</strong>, 중지 횟수는 기록됩니다.<br>
         · 답안 칸에 <strong>붙여넣기</strong>는 사용할 수 없습니다.
       </div>
@@ -291,8 +292,7 @@
           </div>
           <div>
             <label class="block text-xs font-semibold text-slate-600 mb-1">데이터 출처 (기관명, 통계명, 기간)</label>
-            <input type="text" id="s1-source" oninput="saveStudentData()"
-              placeholder="예: 기상청 기상자료개방포털 ‘서울 월평균기온 평년값’"
+            <input type="text" id="s1-source" oninput="saveStudentData()" placeholder="예: 기상청 기상자료개방포털 ‘서울 월평균기온 평년값’"
               class="test-field w-full p-2 border rounded-lg text-sm">
           </div>
           <div>
@@ -322,40 +322,42 @@
             <i class="fa-solid fa-circle-info mr-1"></i>
             x가 연도를 의미하는 경우, x에는 연도(2018, 2019 …)를 그대로 쓰지 말고 첫 시점을 0으로 바꿔 입력하세요. (예: 2018년 → 0, 2019년 → 1)
           </div>
-          <div id="data-lock-note" class="hidden p-2.5 bg-slate-100 border border-slate-300 rounded-lg text-xs text-slate-700">
-            <i class="fa-solid fa-lock text-slate-500 mr-1"></i><strong>추세선이 고정되어 데이터를 수정할 수 없습니다.</strong> 데이터를 고치려면 2단계에서 [추세선 다시 고르기]를 누르세요.
+          <div id="data-lock-note"
+            class="hidden p-2.5 bg-slate-100 border border-slate-300 rounded-lg text-xs text-slate-700">
+            <i class="fa-solid fa-lock text-slate-500 mr-1"></i><strong>추세선이 고정되어 데이터를 수정할 수 없습니다.</strong> 데이터를 고치려면
+            2단계에서 [추세선 다시 고르기]를 누르세요.
           </div>
-            <div class="overflow-x-auto">
-              <table id="data-table" class="w-full border-collapse border border-slate-200 text-center text-xs">
-                <thead>
-                  <tr id="dt-head" class="bg-slate-100 text-slate-700">
-                    <th class="border p-2 w-16">구분</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr id="dt-xrow">
-                    <td class="border p-2 font-bold bg-slate-50">x 값</td>
-                  </tr>
-                  <tr id="dt-yrow">
-                    <td class="border p-2 font-bold bg-slate-50">y 값</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+          <div class="overflow-x-auto">
+            <table id="data-table" class="w-full border-collapse border border-slate-200 text-center text-xs">
+              <thead>
+                <tr id="dt-head" class="bg-slate-100 text-slate-700">
+                  <th class="border p-2 w-16">구분</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr id="dt-xrow">
+                  <td class="border p-2 font-bold bg-slate-50">x 값</td>
+                </tr>
+                <tr id="dt-yrow">
+                  <td class="border p-2 font-bold bg-slate-50">y 값</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
+        </div>
 
-          <div class="border rounded-xl p-3 bg-white flex flex-col items-center justify-center h-60">
-            <span class="text-xs font-bold text-slate-500 mb-1"><i
-                class="fa-solid fa-chart-line text-indigo-600 mr-1"></i> 수집한 데이터 그래프 (점 연결)</span>
-            <canvas id="student-chart-step1" class="w-full h-full"></canvas>
-          </div>
+        <div class="border rounded-xl p-3 bg-white flex flex-col items-center justify-center h-60">
+          <span class="text-xs font-bold text-slate-500 mb-1"><i
+              class="fa-solid fa-chart-line text-indigo-600 mr-1"></i> 수집한 데이터 그래프 (점 연결)</span>
+          <canvas id="student-chart-step1" class="w-full h-full"></canvas>
+        </div>
 
-          <div class="pt-4 border-t flex justify-end">
-            <button type="button" onclick="showStep(2)"
-              class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg shadow-md flex items-center space-x-2">
-              <span>다음</span><i class="fa-solid fa-arrow-right"></i>
-            </button>
-          </div>
+        <div class="pt-4 border-t flex justify-end">
+          <button type="button" onclick="showStep(2)"
+            class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg shadow-md flex items-center space-x-2">
+            <span>다음</span><i class="fa-solid fa-arrow-right"></i>
+          </button>
+        </div>
       </section>
 
       <!-- ===== Step 2 ===== -->
@@ -376,7 +378,8 @@
               <h3 class="font-bold text-sm text-indigo-900"><i
                   class="fa-solid fa-wand-magic-sparkles text-indigo-600 mr-1.5"></i> 추세선 작도</h3>
               <p class="text-xs text-indigo-700 mt-0.5">데이터 모양에 맞는 차수를 골라 추세선 f(x)를 작도하세요. 두 가지를 모두 눌러 비교해 볼 수 있으며,
-                <strong>마지막으로 작도한 추세선</strong>으로 해석합니다.<br><strong class="text-indigo-900">아래 [문항 2-1]~[문항 2-3]에 답을 작성하기 시작하면 추세선이 고정됩니다.</strong><br><strong class="text-rose-600">극대 또는 극소가 1개 이상 있는 추세선만 사용할 수
+                <strong>마지막으로 작도한 추세선</strong>으로 해석합니다.<br><strong class="text-indigo-900">아래 [문항 2-1]~[문항 2-3]에 답을 작성하기
+                  시작하면 추세선이 고정됩니다.</strong><br><strong class="text-rose-600">극대 또는 극소가 1개 이상 있는 추세선만 사용할 수
                   있습니다.</strong>
               </p>
             </div>
@@ -403,13 +406,15 @@
           </div>
           <div id="trend-lock-note"
             class="hidden p-2.5 bg-slate-100 border border-slate-300 rounded-lg text-xs text-slate-700 flex flex-wrap items-center justify-between gap-2">
-            <span><i class="fa-solid fa-lock text-slate-500 mr-1"></i><strong>추세선이 고정되었습니다.</strong> 문항 2-1~2-3에 답을 작성하여 실수로 추세선이 바뀌지 않도록 잠갔습니다.</span>
+            <span><i class="fa-solid fa-lock text-slate-500 mr-1"></i><strong>추세선이 고정되었습니다.</strong> 문항 2-1~2-3에 답을 작성하여
+              실수로 추세선이 바뀌지 않도록 잠갔습니다.</span>
             <button type="button" onclick="unlockTrend()"
               class="test-field px-3 py-1 bg-white hover:bg-slate-50 border border-slate-400 text-slate-700 font-bold rounded-lg">
               <i class="fa-solid fa-lock-open mr-1"></i>추세선 다시 고르기</button>
           </div>
           <div id="trend-keep-notice"
-            class="hidden p-2.5 bg-amber-50 border-2 border-amber-400 rounded-lg text-sm text-amber-900 font-semibold"></div>
+            class="hidden p-2.5 bg-amber-50 border-2 border-amber-400 rounded-lg text-sm text-amber-900 font-semibold">
+          </div>
           <div id="trend-reset-notice" class="hidden text-xs text-red-600 font-semibold">
             <i class="fa-solid fa-rotate mr-1"></i> 데이터가 바뀌어 추세선이 초기화되었습니다. 추세선을 다시 작도하세요.
           </div>
@@ -466,7 +471,8 @@
 
         <!-- 2-3 (구 2-5) -->
         <div class="space-y-2">
-          <label class="block text-sm font-semibold text-slate-800">[문항 2-3] [문항 2-1]의 증감표를 바탕으로 정의역에서 추세선 f(x)의 최댓값과 최솟값을 갖는 x의 값을 작성하시오.</label>
+          <label class="block text-sm font-semibold text-slate-800">[문항 2-3] [문항 2-1]의 증감표를 바탕으로 정의역에서 추세선 f(x)의 최댓값과
+            최솟값을 갖는 x의 값을 작성하시오.</label>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
               <label class="block text-xs font-semibold text-slate-500 mb-1">최댓값을 갖는 x의 값</label>
@@ -505,11 +511,14 @@
         </div>
 
         <!-- 참고: 2단계 그래프와 증감표 (보기 전용) -->
-        <details id="s3-ref-panel" open ontoggle="if (this.open && window.renderCharts && activeStudentKey) renderCharts()"
+        <details id="s3-ref-panel" open
+          ontoggle="if (this.open && window.renderCharts && activeStudentKey) renderCharts()"
           class="bg-slate-50 border border-slate-200 rounded-xl p-3 group">
-          <summary class="cursor-pointer select-none text-sm font-bold text-indigo-900 flex items-center justify-between">
+          <summary
+            class="cursor-pointer select-none text-sm font-bold text-indigo-900 flex items-center justify-between">
             <span><i class="fa-solid fa-book-open text-indigo-600 mr-1.5"></i>참고 자료: 2단계 그래프와 [문항 2-1] 증감표</span>
-            <span class="text-xs font-semibold text-slate-500"><span class="group-open:hidden">펼치기 ▼</span><span class="hidden group-open:inline">접기 ▲</span></span>
+            <span class="text-xs font-semibold text-slate-500"><span class="group-open:hidden">펼치기 ▼</span><span
+                class="hidden group-open:inline">접기 ▲</span></span>
           </summary>
           <div class="mt-3 space-y-3">
             <div id="s3-ref-fx" class="text-center text-base"></div>
@@ -517,19 +526,22 @@
               <canvas id="student-chart-step3" class="w-full h-full"></canvas>
             </div>
             <div id="s3-ref-table"></div>
-            <p class="text-[11px] text-slate-500"><i class="fa-solid fa-circle-info mr-1"></i>보기 전용입니다. 증감표의 부호를 고치려면 2단계로 돌아가세요.</p>
+            <p class="text-[11px] text-slate-500"><i class="fa-solid fa-circle-info mr-1"></i>보기 전용입니다. 증감표의 부호를 고치려면
+              2단계로 돌아가세요.</p>
           </div>
         </details>
 
         <div class="space-y-2">
-          <label class="block text-sm font-semibold text-slate-800">[문항 3-1] [문항 2-1]의 증감표에서 그래프의 증가·감소가 바뀌는 구간을 기준으로 2개 이상 구간을 선정하여 추세선 f(x)의 그래프의 변화 양상과 실제 현상을 연관지어 어떤 상황이 나타날 것인지 설명하시오.</label>
+          <label class="block text-sm font-semibold text-slate-800">[문항 3-1] [문항 2-1]의 증감표에서 그래프의 증가·감소가 바뀌는 구간을 기준으로 2개
+            이상 구간을 선정하여 추세선 f(x)의 그래프의 변화 양상과 실제 현상을 연관지어 어떤 상황이 나타날 것인지 설명하시오.</label>
           <textarea id="s3-interval" rows="5" oninput="saveStudentData()"
             placeholder="선정한 구간(예: x = 0 ~ 2.35, x = 2.35 ~ 5.8)별로 f(x)의 증가·감소 양상과 그때 실제 현상에서 나타나는 상황을 연결하여 서술하시오."
             class="test-field w-full p-3 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"></textarea>
         </div>
 
         <div class="space-y-3 pt-2">
-          <label class="block text-sm font-semibold text-slate-800">[문항 3-2] 현재(가장 최근) 시점의 순간 변화율을 구하고, 이를 근거로 앞으로 현상이 어떻게 전개될지 예측하는 과정을 논리적으로 작성하시오.</label>
+          <label class="block text-sm font-semibold text-slate-800">[문항 3-2] 현재(가장 최근) 시점의 순간 변화율을 구하고, 이를 근거로 앞으로 현상이
+            어떻게 전개될지 예측하는 과정을 논리적으로 작성하시오.</label>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
               <label class="block text-xs font-semibold text-slate-700 mb-1">(1) 현재(가장 최근) 시점 x의 값</label>
@@ -605,7 +617,8 @@
           <p id="teacher-submitted-count" class="text-2xl font-bold text-emerald-600 mt-1">0명</p>
         </div>
         <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
-          <p class="text-xs text-slate-500 font-semibold">미제출 <span class="text-[11px] font-normal">(작성 중·시간 종료)</span></p>
+          <p class="text-xs text-slate-500 font-semibold">미제출 <span class="text-[11px] font-normal">(작성 중·시간 종료)</span>
+          </p>
           <p id="teacher-progress-count" class="text-2xl font-bold text-amber-500 mt-1">0명</p>
         </div>
         <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between">
@@ -618,7 +631,8 @@
             <button onclick="loadTeacherRows()" class="text-xs text-indigo-600 font-semibold hover:underline"><i
                 class="fa-solid fa-rotate mr-0.5"></i>새로고침</button>
             <button onclick="teacherLogout()" class="text-xs text-slate-500 hover:underline">로그아웃</button>
-            <button onclick="clearAllData()" class="text-xs text-red-500 hover:underline">데이터 초기화 <span class="filter-label"></span></button>
+            <button onclick="clearAllData()" class="text-xs text-red-500 hover:underline">데이터 초기화 <span
+                class="filter-label"></span></button>
           </div>
         </div>
       </div>
@@ -626,20 +640,25 @@
       <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
         <div class="p-4 border-b bg-slate-50 flex justify-between items-center">
           <h3 class="font-bold text-slate-800 flex items-center">
-            <i class="fa-solid fa-list-check mr-2 text-indigo-600"></i> 학생별 작성 현황 <span class="filter-label ml-1 text-indigo-600"></span>
+            <i class="fa-solid fa-list-check mr-2 text-indigo-600"></i> 학생별 작성 현황 <span
+              class="filter-label ml-1 text-indigo-600"></span>
           </h3>
           <div class="flex flex-wrap items-center gap-2">
-            <input id="teacher-search" type="search" placeholder="이름·번호 검색" oninput="teacherSearch = this.value.trim(); renderTeacherDashboard();"
+            <input id="teacher-search" type="search" placeholder="이름·번호 검색"
+              oninput="teacherSearch = this.value.trim(); renderTeacherDashboard();"
               class="px-2.5 py-1.5 border rounded-lg text-xs w-36 focus:ring-2 focus:ring-indigo-500">
-            <button onclick="exportCSV()" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg"
+            <button onclick="exportCSV()"
+              class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg"
               title="현재 목록의 자동채점 결과와 점수 입력 칸을 엑셀에서 열 수 있는 CSV로 저장">
               <i class="fa-solid fa-file-excel mr-1"></i>엑셀(CSV) 내보내기</button>
-            <button onclick="printFilteredReports()" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg"
+            <button onclick="printFilteredReports()"
+              class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg"
               title="현재 목록의 모든 학생 산출물을 A4로 한꺼번에 출력 (학생당 2쪽)">
               <i class="fa-solid fa-print mr-1"></i>PDF 일괄 출력</button>
           </div>
         </div>
-        <p class="px-4 py-2 text-[11px] text-slate-500 border-b">학생을 클릭하면 산출물을 검토할 수 있습니다. 검토 창에서 ◀ ▶ 버튼(또는 키보드 ← →)으로 같은 목록의 다음 학생으로 넘어갑니다.</p>
+        <p class="px-4 py-2 text-[11px] text-slate-500 border-b">학생을 클릭하면 산출물을 검토할 수 있습니다. 검토 창에서 ◀ ▶ 버튼(또는 키보드 ← →)으로
+          같은 목록의 다음 학생으로 넘어갑니다.</p>
         <div class="overflow-x-auto">
           <table class="w-full text-left border-collapse text-sm">
             <thead>
@@ -667,9 +686,13 @@
         <h3 id="modal-title" class="text-lg font-bold text-slate-900">학생 결과물 상세 검토</h3>
         <div class="flex items-center space-x-2">
           <div class="flex items-center space-x-1 mr-1">
-            <button onclick="moveDetail(-1)" class="px-2 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg border" title="이전 학생 (←)"><i class="fa-solid fa-chevron-left"></i></button>
+            <button onclick="moveDetail(-1)"
+              class="px-2 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg border"
+              title="이전 학생 (←)"><i class="fa-solid fa-chevron-left"></i></button>
             <span id="modal-pos" class="text-xs text-slate-500 font-semibold w-12 text-center"></span>
-            <button onclick="moveDetail(1)" class="px-2 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg border" title="다음 학생 (→)"><i class="fa-solid fa-chevron-right"></i></button>
+            <button onclick="moveDetail(1)"
+              class="px-2 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg border"
+              title="다음 학생 (→)"><i class="fa-solid fa-chevron-right"></i></button>
           </div>
           <button id="btn-reopen" onclick="reopenExam()"
             class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg"
@@ -721,7 +744,9 @@
       </div>
     </div>
   </div>
-  <div id="toast" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-[70] px-4 py-2.5 rounded-lg bg-slate-900 text-white text-sm font-semibold shadow-lg"></div>
+  <div id="toast"
+    class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-[70] px-4 py-2.5 rounded-lg bg-slate-900 text-white text-sm font-semibold shadow-lg">
+  </div>
 
   <!-- PRINT CONTAINER -->
   <div id="print-area"></div>
@@ -2390,14 +2415,14 @@
       const cls = filterClasses();
       el.innerHTML = `<p class="font-bold text-red-700 text-sm"><i class="fa-solid fa-triangle-exclamation mr-1"></i>시험이 중지된 학생 ${list.length}명 — 학생과 확인한 뒤 [해제]를 누르세요.</p>
         <div class="flex flex-wrap gap-2">${list.map(k => {
-          const it = teacherRows[k], last = [...it.pauseLog].reverse().find(l => l && l.type === 'pause');
-          const mine = !cls || cls.includes(classOf(it));
-          return `<div class="flex items-center gap-2 px-3 py-2 rounded-lg border ${mine ? 'bg-white border-red-300' : 'bg-red-50/60 border-red-200 opacity-70'}">
+        const it = teacherRows[k], last = [...it.pauseLog].reverse().find(l => l && l.type === 'pause');
+        const mine = !cls || cls.includes(classOf(it));
+        return `<div class="flex items-center gap-2 px-3 py-2 rounded-lg border ${mine ? 'bg-white border-red-300' : 'bg-red-50/60 border-red-200 opacity-70'}">
             <div class="text-xs"><p class="font-bold text-slate-800">${esc(studentLabel(it.studentInfo || {}))}</p>
               <p class="text-slate-500">${last ? esc(fmtClock(last.at)) + ' · ' + esc(last.reason || '') : ''} · 누적 ${it.pauseCount}회</p></div>
             <button onclick="releasePause('${k}', event)" class="px-2.5 py-1 rounded bg-red-600 hover:bg-red-700 text-white text-xs font-bold">해제</button>
           </div>`;
-        }).join('')}</div>`;
+      }).join('')}</div>`;
       el.classList.remove('hidden');
     }
 
