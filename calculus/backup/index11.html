@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<!-- ★ 파일 위치: calculus/index.html  (첫 화면 = 회차 선택·회차 관리) ★ -->
+<html lang="ko">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>[미적분Ⅰ] 수행평가</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+  <script src="exam-admin.js"></script>
+  <script>
+    // 주소 뒤에 ?teacher 를 붙이면 교사용 회차 관리 화면
+    window.TEACHER_PAGE = new URLSearchParams(location.search).has('teacher');
+    if (window.TEACHER_PAGE) document.documentElement.classList.add('teacher-page');
+  </script>
+  <style>
+    @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+
+    body {
+      font-family: 'Pretendard', sans-serif;
+    }
+
+    .teacher-page #student-box,
+    html:not(.teacher-page) #teacher-box {
+      display: none !important;
+    }
+  </style>
+</head>
+
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+  <header class="bg-indigo-700 text-white shadow-md">
+    <div class="max-w-5xl mx-auto px-4 py-3 flex justify-between items-center">
+      <div class="flex items-center space-x-3">
+        <i class="fa-solid fa-square-root-variable text-2xl text-indigo-200"></i>
+        <div>
+          <h1 class="font-bold text-lg md:text-xl">미적분Ⅰ 수행평가</h1>
+          <p class="text-xs text-indigo-200">인적사항을 입력하면 지금 응시할 회차로 안내합니다</p>
+        </div>
+      </div>
+      <span id="teacher-badge" class="hidden px-3 py-1.5 rounded-lg text-sm font-semibold bg-white text-indigo-700 shadow">
+        <i class="fa-solid fa-chalkboard-user mr-1"></i> 회차 관리</span>
+    </div>
+  </header>
+
+  <main class="flex-grow max-w-5xl w-full mx-auto p-4 md:p-6">
+
+    <!-- ================= 학생: 회차 찾기 ================= -->
+    <div id="student-box" class="max-w-md mx-auto my-10 bg-white p-8 rounded-2xl shadow-lg border border-slate-200 space-y-5">
+      <div class="text-center">
+        <div class="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mx-auto text-2xl">
+          <i class="fa-solid fa-id-card"></i>
+        </div>
+        <h2 class="text-xl font-bold text-slate-900 mt-3">수행평가 인적사항 입력</h2>
+        <p class="text-xs text-slate-500 mt-1">입력 후 [응시할 시험 확인]을 누르세요.<br>아직 시험 시간은 시작되지 않습니다.</p>
+      </div>
+      <div class="space-y-3">
+        <div class="grid grid-cols-3 gap-2">
+          <div><label class="block text-xs font-semibold text-slate-600 mb-1">학년</label>
+            <input type="number" id="g" placeholder="예: 2" class="w-full p-2.5 border rounded-lg text-center font-bold text-sm focus:ring-2 focus:ring-indigo-500"></div>
+          <div><label class="block text-xs font-semibold text-slate-600 mb-1">반</label>
+            <input type="number" id="c" placeholder="예: 3" class="w-full p-2.5 border rounded-lg text-center font-bold text-sm focus:ring-2 focus:ring-indigo-500"></div>
+          <div><label class="block text-xs font-semibold text-slate-600 mb-1">번호</label>
+            <input type="number" id="n" placeholder="예: 15" class="w-full p-2.5 border rounded-lg text-center font-bold text-sm focus:ring-2 focus:ring-indigo-500"></div>
+        </div>
+        <div><label class="block text-xs font-semibold text-slate-600 mb-1">이름</label>
+          <input type="text" id="name" placeholder="성명을 입력하세요" onkeydown="if(event.key==='Enter') findExams()"
+            class="w-full p-2.5 border rounded-lg text-center font-bold text-sm focus:ring-2 focus:ring-indigo-500"></div>
+      </div>
+      <div id="config-warning" class="hidden p-3 bg-red-50 border border-red-300 rounded-lg text-xs text-red-700">
+        <i class="fa-solid fa-plug-circle-xmark mr-1"></i> 수파베이스 연결 설정(config.js)이 없습니다.
+      </div>
+      <button id="btn-find" onclick="findExams()"
+        class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md flex items-center justify-center space-x-2">
+        <i class="fa-solid fa-magnifying-glass"></i><span>응시할 시험 확인</span>
+      </button>
+      <div id="result" class="space-y-2"></div>
+    </div>
+
+    <!-- ================= 교사: 회차 관리 ================= -->
+    <div id="teacher-box" class="space-y-4">
+      <div id="t-login" class="max-w-md mx-auto my-10 bg-white p-8 rounded-2xl shadow-lg border border-slate-200 space-y-4">
+        <div class="text-center">
+          <div class="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mx-auto text-2xl">
+            <i class="fa-solid fa-chalkboard-user"></i></div>
+          <h2 class="text-xl font-bold text-slate-900 mt-3">교사 로그인</h2>
+        </div>
+        <input type="email" id="t-email" placeholder="이메일" class="w-full p-2.5 border rounded-lg text-sm">
+        <input type="password" id="t-password" placeholder="비밀번호" onkeydown="if(event.key==='Enter') teacherLogin()"
+          class="w-full p-2.5 border rounded-lg text-sm">
+        <p id="t-error" class="hidden text-xs text-red-600 font-semibold"></p>
+        <button id="btn-login" onclick="teacherLogin()" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md">로그인</button>
+      </div>
+      <div id="t-main" class="hidden space-y-4">
+        <div class="bg-white p-3 rounded-xl border border-slate-200 text-xs text-slate-600 flex flex-wrap items-center justify-between gap-2">
+          <span><i class="fa-solid fa-circle-info text-indigo-500 mr-1"></i>학생은 이 주소(<b>?teacher</b> 없이)로 들어오면 자기 반에 열린 회차로 안내됩니다.
+            답안 확인·채점·이탈 해제는 각 회차의 <b>[이 회차 모니터링·채점]</b>에서 합니다.</span>
+          <span class="flex items-center gap-3"><span id="t-email-label" class="text-slate-400"></span>
+            <button onclick="teacherLogout()" class="text-slate-500 hover:underline">로그아웃</button></span>
+        </div>
+        <div id="exam-admin"></div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const CFG = window.APP_CONFIG || {};
+    let sb = null;
+    try {
+      if (CFG.SUPABASE_URL && CFG.SUPABASE_ANON_KEY && !CFG.SUPABASE_URL.includes('YOUR-PROJECT')) {
+        // 교사 로그인은 '이 탭'에서만 유지 (탭·브라우저를 닫으면 자동 로그아웃).
+        // 예전처럼 브라우저에 로그인이 저장되면 다음 교사가 아이디·비번 없이 앞 교사 계정으로 바로 들어가 버림.
+        try { Object.keys(localStorage).forEach(k => { if (/^sb-.+-auth-token/.test(k)) localStorage.removeItem(k); }); } catch (e) { }
+        sb = window.supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON_KEY, {
+          auth: { storage: window.sessionStorage, persistSession: true, autoRefreshToken: true }
+        });
+      }
+    } catch (e) { console.error(e); }
+
+    const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const PAGE_RE = /^[A-Za-z0-9_-]+$/;
+    const STATUS = {
+      new: { txt: '응시 가능', cls: 'bg-indigo-100 text-indigo-700' },
+      writing: { txt: '이어서 응시', cls: 'bg-amber-100 text-amber-700' },
+      submitted: { txt: '제출 완료', cls: 'bg-emerald-100 text-emerald-700' },
+      timeover: { txt: '시간 종료', cls: 'bg-slate-200 text-slate-600' }
+    };
+
+    // ===== 학생 =====
+    async function findExams() {
+      const box = document.getElementById('result');
+      if (!sb) { box.innerHTML = msg('수파베이스 연결 설정이 없습니다. 선생님께 문의하세요.', 'red'); return; }
+      const g = parseInt(document.getElementById('g').value, 10);
+      const c = parseInt(document.getElementById('c').value, 10);
+      const n = parseInt(document.getElementById('n').value, 10);
+      const name = document.getElementById('name').value.trim();
+      if (!g || !c || !n || !name) { box.innerHTML = msg('학년, 반, 번호, 이름을 모두 입력하세요.', 'red'); return; }
+      const btn = document.getElementById('btn-find');
+      btn.disabled = true;
+      box.innerHTML = msg('<i class="fa-solid fa-spinner fa-spin mr-1"></i>확인 중...', 'slate');
+      const { data, error } = await sb.rpc('calc_available', { p_grade: g, p_class: c, p_num: n, p_name: name });
+      btn.disabled = false;
+      if (error) {
+        const m = String(error.message || '');
+        box.innerHTML = msg(m.includes('NOT_IN_ROSTER') ? '명렬표에 없는 정보입니다. 학년·반·번호·이름을 다시 확인하세요.'
+          : '서버에 연결하지 못했습니다. 인터넷 연결을 확인하세요.', 'red');
+        return;
+      }
+      const list = (data || []).filter(x => PAGE_RE.test(x.page || ''));
+      const go = list.filter(x => x.status === 'new' || x.status === 'writing');
+      if (!list.length) { box.innerHTML = msg('지금 응시할 수 있는 시험이 없습니다.<br>시험 시간이 맞는지 선생님께 확인하세요.', 'amber'); return; }
+      const login = { g, c, n, name };
+      if (go.length === 1 && list.length === 1) { enter(go[0], login); return; }   // 하나뿐이면 바로 이동
+      box.innerHTML = `<p class="text-xs font-bold text-slate-600">응시할 회차를 고르세요.</p>` + list.map(x => {
+        const st = STATUS[x.status] || STATUS.new, ok = x.status === 'new' || x.status === 'writing';
+        return `<button type="button" ${ok ? '' : 'disabled'} data-id="${x.id}"
+          class="exam-pick w-full text-left p-3 rounded-xl border-2 ${ok ? 'border-indigo-200 hover:border-indigo-500 hover:bg-indigo-50' : 'border-slate-200 bg-slate-50 opacity-60 cursor-not-allowed'}">
+          <span class="flex items-center justify-between">
+            <span class="font-bold text-slate-900">${x.id}회차 · ${esc(x.title)}</span>
+            <span class="px-2 py-0.5 rounded text-[11px] font-bold ${st.cls}">${st.txt}</span></span>
+          <span class="block text-xs text-slate-500 mt-0.5">제한 시간 ${Number(x.limit_minutes) || ''}분</span></button>`;
+      }).join('');
+      box.querySelectorAll('.exam-pick:not([disabled])').forEach(b => b.onclick = () => enter(list.find(x => x.id === Number(b.dataset.id)), login));
+    }
+
+    // 회차 페이지로 이동 (인적사항은 다음 화면에 미리 채워 둠 → 학생은 [시험 시작하기]만 누르면 됨)
+    function enter(exam, login) {
+      try { sessionStorage.setItem('calc_login', JSON.stringify({ ...login, exam: exam.id })); } catch (e) { }
+      location.href = exam.page + '/';
+    }
+
+    function msg(html, color) {
+      const c = { red: 'bg-red-50 border-red-200 text-red-700', amber: 'bg-amber-50 border-amber-200 text-amber-800', slate: 'bg-slate-50 border-slate-200 text-slate-600' }[color];
+      return `<div class="p-3 rounded-lg border text-sm ${c}">${html}</div>`;
+    }
+
+    // ===== 교사 =====
+    async function teacherLogin() {
+      const email = document.getElementById('t-email').value.trim(), password = document.getElementById('t-password').value;
+      const err = document.getElementById('t-error');
+      err.classList.add('hidden');
+      if (!sb) { err.innerText = '수파베이스 연결 설정(config.js)이 없습니다.'; err.classList.remove('hidden'); return; }
+      if (!email || !password) { err.innerText = '이메일과 비밀번호를 입력하세요.'; err.classList.remove('hidden'); return; }
+      const btn = document.getElementById('btn-login');
+      btn.disabled = true; btn.innerText = '로그인 중...';
+      const { data, error } = await sb.auth.signInWithPassword({ email, password });
+      btn.disabled = false; btn.innerText = '로그인';
+      if (error) { err.innerText = '로그인 실패: 이메일 또는 비밀번호를 확인하세요.'; err.classList.remove('hidden'); return; }
+      document.getElementById('t-password').value = '';
+      enterTeacher(data.session);
+    }
+
+    async function enterTeacher(session) {
+      const { data: ok, error } = await sb.rpc('calc_is_teacher');
+      if (error || !ok) {
+        await sb.auth.signOut();
+        const err = document.getElementById('t-error');
+        err.innerText = '교사로 등록되지 않은 계정입니다.';
+        err.classList.remove('hidden');
+        return;
+      }
+      document.getElementById('t-login').classList.add('hidden');
+      document.getElementById('t-main').classList.remove('hidden');
+      // 담당 반 (add_teacher_classes.sql 미실행이면 예전처럼 모든 반)
+      const { data: me } = await sb.rpc('calc_me');
+      const role = me && me.role ? (me.role === 'admin' ? ' · 관리자(모든 반)' : (me.classes || []).length ? ` · ${me.classes.join('·')}반 담당` : ' · 담당 반 미선택') : '';
+      document.getElementById('t-email-label').innerText = session.user.email + role;
+      ExamAdmin.mount(document.getElementById('exam-admin'), sb, { pageBase: '', me: me && me.role ? me : null });
+    }
+
+    async function teacherLogout() {
+      await sb.auth.signOut();
+      document.getElementById('t-email').value = '';
+      document.getElementById('t-password').value = '';
+      document.getElementById('exam-admin').innerHTML = '';
+      document.getElementById('t-main').classList.add('hidden');
+      document.getElementById('t-login').classList.remove('hidden');
+    }
+
+    if (!sb) document.getElementById('config-warning').classList.remove('hidden');
+    if (window.TEACHER_PAGE) {
+      document.title = '[교사] 미적분Ⅰ 수행평가 회차 관리';
+      document.getElementById('teacher-badge').classList.remove('hidden');
+      if (sb) sb.auth.getSession().then(({ data }) => { if (data.session) enterTeacher(data.session); });
+    } else if (sb) {
+      // 학생 기기에 교사 로그인이 남지 않도록
+      sb.auth.getSession().then(({ data }) => { if (data.session) sb.auth.signOut(); }).catch(() => { });
+    }
+  </script>
+</body>
+
+</html>

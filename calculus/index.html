@@ -11,6 +11,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="config.js"></script>
   <script src="exam-admin.js"></script>
+  <script src="roster-admin.js"></script>
   <script>
     // 주소 뒤에 ?teacher 를 붙이면 교사용 회차 관리 화면
     window.TEACHER_PAGE = new URLSearchParams(location.search).has('teacher');
@@ -101,6 +102,8 @@
             <button onclick="teacherLogout()" class="text-slate-500 hover:underline">로그아웃</button></span>
         </div>
         <div id="exam-admin"></div>
+        <!-- 관리자 계정에만 보임 -->
+        <div id="roster-admin"></div>
       </div>
     </div>
   </main>
@@ -208,6 +211,8 @@
       const role = me && me.role ? (me.role === 'admin' ? ' · 관리자(모든 반)' : (me.classes || []).length ? ` · ${me.classes.join('·')}반 담당` : ' · 담당 반 미선택') : '';
       document.getElementById('t-email-label').innerText = session.user.email + role;
       ExamAdmin.mount(document.getElementById('exam-admin'), sb, { pageBase: '', me: me && me.role ? me : null });
+      if (me && me.role === 'admin' && window.RosterAdmin) RosterAdmin.mount(document.getElementById('roster-admin'), sb);
+      else document.getElementById('roster-admin').innerHTML = '';
     }
 
     async function teacherLogout() {
@@ -215,6 +220,7 @@
       document.getElementById('t-email').value = '';
       document.getElementById('t-password').value = '';
       document.getElementById('exam-admin').innerHTML = '';
+      document.getElementById('roster-admin').innerHTML = '';
       document.getElementById('t-main').classList.add('hidden');
       document.getElementById('t-login').classList.remove('hidden');
     }
