@@ -209,6 +209,7 @@
         <i class="fa-solid fa-play"></i>
         <span>시험 시작하기 (45분 카운트다운)</span>
       </button>
+      <p class="text-[10px] text-slate-300">버전 2026-10-28c</p>
     </div>
 
     <!-- ================= STUDENT WORKSHEET ================= -->
@@ -1441,14 +1442,42 @@
       btn.className = btn.className.replace(/\bbg-\S+|\bhover:bg-\S+/g, '').trim() + ' ' + st.btn;
       document.getElementById('po-count').innerText = pauseCount ? `지금까지 중지 횟수: ${pauseCount}회 (선생님 화면에 기록됨)` : '';
       if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+      setOverlayBlock(true);
+      setTimeout(() => { const b = document.getElementById('po-btn'); if (!b.classList.contains('hidden')) b.focus(); }, 0);
     }
     function hideOverlay() {
       const ov = document.getElementById('proctor-overlay');
       const wasFullscreenGuide = ov.dataset.mode === 'fullscreen';
       ov.className = 'hidden';
       ov.dataset.mode = '';
+      setOverlayBlock(false);
       if (wasFullscreenGuide && !examPaused) setFieldsPaused(false);   // 전체화면 안내 때 잠근 답안 칸을 다시 풂
     }
+
+    // 안내·중지 화면이 떠 있는 동안 그 뒤의 화면 전체를 '손댈 수 없는 상태(inert)'로 만듦
+    // → Tab 키로 뒤쪽 칸에 들어가거나, 클릭·입력하는 것이 원천적으로 불가능
+    function setOverlayBlock(on) {
+      ['header', 'main', '#ui-dialog', '#toast'].forEach(sel => {
+        const el = document.querySelector(sel);
+        if (!el) return;
+        if (on) el.setAttribute('inert', ''); else el.removeAttribute('inert');
+      });
+    }
+    // inert를 지원하지 않는 오래된 브라우저 대비: 안내·중지 화면 밖으로 가는 키 입력·글자 입력을 모두 막음
+    ['keydown', 'keypress', 'beforeinput', 'input', 'compositionstart'].forEach(ev => document.addEventListener(ev, e => {
+      const ov = document.getElementById('proctor-overlay');
+      if (!ov.dataset.mode || window.TEACHER_PAGE) return;
+      if (e.target && ov.contains(e.target)) return;
+      if (ev === 'keydown' && e.key === 'Tab') {   // Tab은 안내 화면의 버튼으로만 이동
+        e.preventDefault();
+        const b = document.getElementById('po-btn');
+        if (!b.classList.contains('hidden')) b.focus();
+        return;
+      }
+      if (e.cancelable) e.preventDefault();
+      e.stopImmediatePropagation();
+      if (e.target && e.target.blur) e.target.blur();
+    }, true));
 
     // 응시 시작(또는 새로고침 후 재접속) 직후 호출
     async function proctorStart() {
