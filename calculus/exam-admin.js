@@ -11,6 +11,29 @@
   const PAGE_RE = /^[A-Za-z0-9_-]+$/;
 
   let sb = null, root = null, opts = {}, exams = [], makeups = [], stats = {};
+  let lastSig = '', poll = null;
+  // 로그인한 교사 (mount의 options.me = { role, classes }). 없으면 예전처럼 모든 반
+  let owners = null;   // [{email, role, classes}] — 선생님별 담당 반 (add_teacher_classes.sql 미실행이면 null)
+  const isAdmin = () => !opts.me || opts.me.role === 'admin';
+  const sameEmail = (a, b) => String(a || '').toLowerCase() === String(b || '').toLowerCase();
+  // 내 담당 반: 서버의 최신 배정을 우선 (관리자가 바꿨을 수 있으므로)
+  function myClasses() {
+    if (isAdmin()) return CLASSES;
+    const row = owners && owners.find(o => sameEmail(o.email, opts.me.email));
+    const list = row ? row.classes : opts.me.classes;
+    return CLASSES.filter(c => (list || []).map(Number).includes(c));
+  }
+  const ownerOf = c => owners && owners.find(o => o.role === 'teacher' && (o.classes || []).map(Number).includes(c));
+  const shortEmail = e => String(e || '').split('@')[0];
+  const NOT_MINE = '담당 반이 아닌 학생(반)은 관리할 수 없습니다. (관리자 계정으로 처리하세요)';
+  const errMsg = e => {
+    const m = String((e && e.message) || e);
+    if (m.includes('NOT_MY_CLASS')) return NOT_MINE;
+    const t = m.match(/CLASS_TAKEN:([\d,]+)/);
+    if (t) return `${t[1].split(',').join('·')}반은 이미 다른 선생님이 담당하고 있습니다. 화면을 새로고침해 확인하세요.`;
+    return m;
+  };
+  const POLL_MS = 15000;   // 다른 선생님이 반을 열고 닫은 것을 15초마다 반영
 
   function setupError(e) {
     root.innerHTML = `<div class="p-4 rounded-xl border-2 border-red-300 bg-red-50 text-sm text-red-700">
@@ -18,14 +41,15 @@
       <p class="text-xs mt-1">수파베이스 SQL Editor에서 <b>add_exams.sql</b>을 실행했는지 확인하세요. (${esc(e && e.message)})</p></div>`;
   }
 
-  async function load() {
+  async function load(silent) {
     if (!root) return;
     let q = sb.from('calc_exams').select('*').order('id');
     if (opts.examId) q = q.eq('id', opts.examId);
     let mq = sb.from('calc_makeup').select('*').order('added_at');
     if (opts.examId) mq = mq.eq('exam_id', opts.examId);
-    const [ex, mk] = await Promise.all([q, mq]);
-    if (ex.error || mk.error) { setupError(ex.error || mk.error); return; }
+    const [ex, mk, ow] = await Promise.all([q, mq, sb.rpc('calc_class_owners')]);
+    owners = ow.error ? null : (Array.isArray(ow.data) ? ow.data : []);
+    if (ex.error || mk.error) { if (!silent) setupError(ex.error || mk.error); return; }
     exams = ex.data || [];
     makeups = mk.data || [];
     stats = {};
@@ -36,8 +60,24 @@
         s.started++; if (r.submitted) s.submitted++;
       });
     }
+    const sig = JSON.stringify([exams, makeups, stats, owners]);
+    if (silent && sig === lastSig) return;   // 바뀐 것이 없으면 화면을 다시 그리지 않음
+    lastSig = sig;
     render();
     if (opts.onChange) opts.onChange(exams);
+  }
+
+  // 자동 새로고침: 선생님이 입력 중이거나 '새 회차 만들기'를 펼쳐 둔 때는 건너뜀
+  function busy() {
+    if (!root || !root.isConnected || root.offsetParent === null) return true;
+    if (document.visibilityState !== 'visible') return true;
+    if (root.contains(document.activeElement) && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName)) return true;
+    if (root.querySelector('details.new-exam-box[open]')) return true;
+    return [...root.querySelectorAll('form input')].some(i => i.value && !i.defaultValue);
+  }
+  function startPoll() {
+    if (poll) clearInterval(poll);
+    poll = setInterval(() => { if (!busy()) load(true); }, POLL_MS);
   }
 
   // 같은 반이 여러 회차에 동시에 열려 있으면 알려 줌 (학생이 첫 화면에서 회차를 골라야 함)
@@ -55,6 +95,8 @@
     const mine = makeups.filter(m => m.exam_id === e.id);
     const st = stats[e.id];
     const href = (opts.pageBase || '') + e.page + '/?teacher';
+    const mineC = myClasses();
+    const otherOpen = (e.open_classes || []).filter(c => !mineC.includes(c));
     const classBtn = c => {
       const on = open.has(c);
       return `<button type="button" data-act="toggle" data-exam="${e.id}" data-class="${c}"
@@ -73,8 +115,8 @@
               ${st ? ` · 응시 ${st.started}명 (제출 ${st.submitted}명)` : ''}</p>
           </div>
           <div class="flex items-center gap-2">
-            <button type="button" data-act="edit" data-exam="${e.id}" class="px-2.5 py-1 text-xs font-semibold rounded-lg border bg-white hover:bg-slate-50 text-slate-600">
-              <i class="fa-solid fa-pen mr-1"></i>이름·시간 수정</button>
+            ${isAdmin() ? `<button type="button" data-act="edit" data-exam="${e.id}" class="px-2.5 py-1 text-xs font-semibold rounded-lg border bg-white hover:bg-slate-50 text-slate-600">
+              <i class="fa-solid fa-pen mr-1"></i>이름·시간 수정</button>` : ''}
             ${opts.examId ? '' : `<a href="${esc(href)}" class="px-3 py-1 text-xs font-bold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white">
               <i class="fa-solid fa-chalkboard-user mr-1"></i>이 회차 모니터링·채점</a>`}
           </div>
@@ -83,16 +125,17 @@
         <div class="space-y-1.5">
           <p class="text-xs font-bold text-slate-700">반별 응시 열기 <span class="font-normal text-slate-500">— 눌러서 열기/닫기. 닫아도 이미 시작한 학생은 남은 시간 동안 계속 응시합니다.</span></p>
           <div class="flex flex-wrap items-center gap-2">
-            ${CLASSES.map(classBtn).join('')}
+            ${mineC.map(classBtn).join('')}
             <span class="w-px h-7 bg-slate-200 mx-1"></span>
-            <button type="button" data-act="all-open" data-exam="${e.id}" class="text-xs font-semibold text-emerald-700 hover:underline">모두 열기</button>
-            <button type="button" data-act="all-close" data-exam="${e.id}" class="text-xs font-semibold text-slate-500 hover:underline">모두 닫기</button>
+            <button type="button" data-act="all-open" data-exam="${e.id}" class="text-xs font-semibold text-emerald-700 hover:underline">${isAdmin() ? '모두 열기' : '내 반 모두 열기'}</button>
+            <button type="button" data-act="all-close" data-exam="${e.id}" class="text-xs font-semibold text-slate-500 hover:underline">${isAdmin() ? '모두 닫기' : '내 반 모두 닫기'}</button>
           </div>
+          ${!isAdmin() ? `<p class="text-[11px] text-slate-500">다른 선생님 담당 반: ${otherOpen.length ? `<b class="text-emerald-700">${otherOpen.join('·')}반 열림</b>` : '열린 반 없음'} (변경은 담당 선생님·관리자만)</p>` : ''}
           <p class="overlap-note hidden text-xs font-semibold text-amber-700" data-exam="${e.id}"></p>
         </div>
 
         <div class="space-y-1.5 pt-2 border-t">
-          <p class="text-xs font-bold text-slate-700">결석생 개별 응시 허용 <span class="font-normal text-slate-500">— 반이 닫혀 있어도 이 학생은 이 회차를 볼 수 있습니다.</span></p>
+          <p class="text-xs font-bold text-slate-700">결석생 개별 응시 허용 <span class="font-normal text-slate-500">— 반이 닫혀 있어도 이 학생은 이 회차를 볼 수 있습니다.${isAdmin() ? '' : ` (담당 ${mineC.join('·')}반 학생만)`}</span></p>
           <div class="flex flex-wrap gap-1.5">
             ${mine.length ? mine.map(m => `
               <span class="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-sky-50 border border-sky-200 text-xs text-sky-900">
@@ -114,7 +157,7 @@
   function newExamForm() {
     const next = exams.reduce((m, e) => Math.max(m, e.id), 0) + 1;
     return `
-      <details class="border border-dashed border-indigo-300 rounded-xl p-4 bg-indigo-50/40">
+      <details class="new-exam-box border border-dashed border-indigo-300 rounded-xl p-4 bg-indigo-50/40">
         <summary class="cursor-pointer text-sm font-bold text-indigo-800"><i class="fa-solid fa-plus mr-1"></i>새 회차 만들기</summary>
         <form data-act="new-exam" class="mt-3 grid grid-cols-2 md:grid-cols-5 gap-2 items-end text-xs">
           <label class="space-y-1"><span class="font-semibold text-slate-600">회차 번호</span>
@@ -131,6 +174,81 @@
       </details>`;
   }
 
+  // ===== 담당 반 =====
+  function ownerPanel() {
+    if (!owners || !opts.me) return '';
+    if (isAdmin()) {
+      const teachers = owners.filter(o => o.role === 'teacher');
+      const row = c => {
+        const o = ownerOf(c);
+        return `<label class="flex items-center gap-1.5 text-xs">
+          <span class="w-9 font-bold text-slate-700">${c}반</span>
+          <select data-class="${c}" class="owner-sel p-1 border rounded text-xs ${o ? '' : 'text-rose-600 font-bold'}">
+            <option value="">미지정</option>
+            ${teachers.map(t => `<option value="${esc(t.email)}" ${o && sameEmail(o.email, t.email) ? 'selected' : ''}>${esc(t.email)}</option>`).join('')}
+          </select></label>`;
+      };
+      const none = CLASSES.filter(c => !ownerOf(c));
+      return `<details class="border border-slate-200 rounded-xl p-3 bg-slate-50" ${none.length ? 'open' : ''}>
+        <summary class="cursor-pointer text-sm font-bold text-slate-800"><i class="fa-solid fa-user-gear text-indigo-600 mr-1"></i>담당 반 배정 (관리자)
+          <span class="font-normal text-xs text-slate-500">— ${teachers.map(t => `${esc(shortEmail(t.email))}: ${(t.classes || []).length ? t.classes.join('·') + '반' : '없음'}`).join(' / ') || '등록된 담당 교사 없음'}
+          ${none.length ? ` · <b class="text-rose-600">미지정 ${none.join('·')}반</b>` : ''}</span></summary>
+        <div class="mt-3 grid grid-cols-2 md:grid-cols-3 gap-2">${CLASSES.map(row).join('')}</div>
+        <p class="mt-2 text-[11px] text-slate-500">담당 교사는 로그인 후 [내 담당 반]에서 직접 고를 수도 있습니다. 한 반은 한 선생님만 담당합니다. 관리자는 담당과 관계없이 모든 반을 관리합니다.</p>
+      </details>`;
+    }
+    const mine = myClasses();
+    const btn = c => {
+      const o = ownerOf(c), isMine = mine.includes(c);
+      if (o && !isMine) return `<button type="button" disabled title="${esc(o.email)} 선생님 담당"
+          class="px-3 py-1.5 rounded-lg border-2 border-slate-200 bg-slate-100 text-slate-400 text-sm font-bold cursor-not-allowed">
+          ${c}반 <span class="block text-[10px] font-semibold">${esc(shortEmail(o.email))}</span></button>`;
+      return `<button type="button" data-act="claim" data-class="${c}"
+          class="px-3 py-1.5 rounded-lg border-2 text-sm font-bold ${isMine ? 'bg-indigo-600 border-indigo-600 text-white shadow' : 'bg-white border-slate-300 text-slate-600 hover:border-indigo-400'}">
+          ${c}반 <span class="block text-[10px] font-semibold ${isMine ? 'text-indigo-100' : 'text-slate-400'}">${isMine ? '내 반' : '선택 가능'}</span></button>`;
+    };
+    return `<div class="border-2 ${mine.length ? 'border-slate-200 bg-slate-50' : 'border-amber-400 bg-amber-50'} rounded-xl p-3 space-y-2">
+      <p class="text-sm font-bold text-slate-800"><i class="fa-solid fa-user-check text-indigo-600 mr-1"></i>내 담당 반
+        <span class="font-normal text-xs text-slate-500">— 눌러서 고르거나 빼세요. 다른 선생님이 고른 반(회색)은 고를 수 없습니다.</span></p>
+      ${mine.length ? '' : '<p class="text-xs font-bold text-amber-800"><i class="fa-solid fa-hand-point-down mr-1"></i>먼저 담당 반을 고르세요. 고른 반의 학생만 보이고 관리할 수 있습니다.</p>'}
+      <div class="flex flex-wrap gap-2">${CLASSES.map(btn).join('')}</div>
+      ${mineChanged() ? '<p class="text-xs font-bold text-rose-600"><i class="fa-solid fa-rotate mr-1"></i>담당 반이 바뀌었습니다. 아래 학생 현황에 반영하려면 페이지를 새로고침하세요.</p>' : ''}
+    </div>`;
+  }
+  // 이 페이지를 연 뒤 담당 반이 바뀌었는지 (관리자가 바꾼 경우)
+  function mineChanged() {
+    if (isAdmin() || !owners) return false;
+    return myClasses().join(',') !== CLASSES.filter(c => (opts.me.classes || []).map(Number).includes(c)).join(',');
+  }
+
+  async function claim(c) {
+    const mine = myClasses(), has = mine.includes(c);
+    const next = has ? mine.filter(x => x !== c) : [...mine, c].sort((a, b) => a - b);
+    if (has) {
+      const openIn = exams.filter(e => (e.open_classes || []).includes(c)).map(e => `${e.id}회차`);
+      if (!confirm(`${c}반을 내 담당에서 뺄까요?` + (openIn.length ? `\n※ ${c}반은 지금 ${openIn.join('·')}에 열려 있습니다. 담당에서 빼면 그 반 학생을 관리할 수 없게 됩니다.` : ''))) return;
+    }
+    const { error } = await sb.rpc('calc_claim_classes', { p_classes: next });
+    if (error) { alert('담당 반 변경 실패: ' + errMsg(error)); return load(); }
+    location.reload();   // 학생 현황·명렬표를 새 담당 반 기준으로 다시 불러옴
+  }
+
+  async function assign(c, email) {
+    const prev = ownerOf(c);
+    const target = email && owners.find(o => sameEmail(o.email, email));
+    if (prev && target && sameEmail(prev.email, target.email)) return;
+    if (!confirm(`${c}반 담당을 ${prev ? prev.email : '미지정'} → ${target ? target.email : '미지정'} 으로 바꿀까요?`)) return load();
+    if (prev) {
+      const { error } = await sb.rpc('calc_admin_set_classes', { p_email: prev.email, p_classes: prev.classes.filter(x => Number(x) !== c) });
+      if (error) { alert('변경 실패: ' + errMsg(error)); return load(); }
+    }
+    if (target) {
+      const { error } = await sb.rpc('calc_admin_set_classes', { p_email: target.email, p_classes: [...new Set([...(target.classes || []), c])].sort((a, b) => a - b) });
+      if (error) { alert('변경 실패: ' + errMsg(error)); return load(); }
+    }
+    load();
+  }
+
   function render() {
     root.innerHTML = `
       <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-3">
@@ -138,8 +256,9 @@
           <h3 class="font-bold text-slate-800"><i class="fa-solid fa-layer-group text-indigo-600 mr-1.5"></i>${opts.examId ? '이 회차 응시 관리' : '회차 관리'}</h3>
           <button type="button" data-act="reload" class="text-xs text-indigo-600 font-semibold hover:underline"><i class="fa-solid fa-rotate mr-0.5"></i>새로고침</button>
         </div>
+        ${ownerPanel()}
         ${exams.length ? exams.map(examCard).join('') : '<p class="text-sm text-slate-400">회차가 없습니다.</p>'}
-        ${opts.examId ? '' : newExamForm()}
+        ${opts.examId || !isAdmin() ? '' : newExamForm()}
       </div>`;
     exams.forEach(async e => {
       const dup = await overlapWarning(e);
@@ -151,10 +270,26 @@
     });
   }
 
-  async function setClasses(id, list) {
-    const { error } = await sb.from('calc_exams').update({ open_classes: [...new Set(list)].sort((a, b) => a - b) }).eq('id', id);
-    if (error) alert('변경 실패: ' + error.message);
+  // 지정한 반만 열거나 닫음 (다른 선생님이 연 반은 건드리지 않음)
+  async function setClasses(id, classes, open) {
+    let { error } = await sb.rpc('calc_set_classes', { p_exam: id, p_classes: classes, p_open: open });
+    if (error && (error.code === 'PGRST202' || /calc_set_classes/.test(String(error.message)))) {
+      // add_class_toggle.sql을 아직 실행하지 않은 경우: 서버의 최신 목록을 읽어서 바꿈
+      const cur = await sb.from('calc_exams').select('open_classes').eq('id', id).single();
+      if (cur.error) { error = cur.error; }
+      else {
+        const set = new Set(cur.data.open_classes || []);
+        classes.forEach(c => open ? set.add(c) : set.delete(c));
+        ({ error } = await sb.from('calc_exams').update({ open_classes: [...set].sort((a, b) => a - b) }).eq('id', id));
+      }
+    }
+    if (error) alert('변경 실패: ' + errMsg(error));
     await load();
+  }
+
+  async function freshOpen(id) {
+    const { data } = await sb.from('calc_exams').select('open_classes').eq('id', id).single();
+    return (data && data.open_classes) || [];
   }
 
   async function onClick(ev) {
@@ -163,24 +298,35 @@
     const act = b.dataset.act, id = Number(b.dataset.exam);
     const e = exams.find(x => x.id === id);
     if (act === 'reload') return load();
+    if (act === 'claim') return claim(Number(b.dataset.class));
     if (!e) return;
     if (act === 'toggle') {
-      const c = Number(b.dataset.class), cur = new Set(e.open_classes || []);
-      cur.has(c) ? cur.delete(c) : cur.add(c);
-      return setClasses(id, [...cur]);
+      // 화면에 보이는 상태의 반대로 바꿈 (열림 → 닫기, 닫힘 → 열기)
+      const c = Number(b.dataset.class), isOpen = (e.open_classes || []).includes(c);
+      if (!myClasses().includes(c)) { alert(NOT_MINE); return; }
+      return setClasses(id, [c], !isOpen);
     }
     if (act === 'all-open') {
-      if (!confirm(`${id}회차를 모든 반(${CLASSES.join('·')}반)에 열까요?`)) return;
-      return setClasses(id, CLASSES);
+      const mc = myClasses();
+      if (!confirm(`${id}회차를 ${isAdmin() ? '모든 반' : '내 담당 반'}(${mc.join('·')}반)에 열까요?`)) return;
+      return setClasses(id, mc, true);
     }
     if (act === 'all-close') {
-      if (!confirm(`${id}회차를 모든 반에서 닫을까요?\n(이미 시작한 학생은 남은 시간 동안 계속 응시합니다)`)) return;
-      return setClasses(id, []);
+      const mc = myClasses();
+      const now = (await freshOpen(id)).filter(c => mc.includes(c));
+      if (!now.length) { alert(`지금 열려 있는 ${isAdmin() ? '' : '담당 '}반이 없습니다.`); return load(); }
+      if (!confirm(`${id}회차를 ${isAdmin() ? '모든 반' : '내 담당 반'}에서 닫을까요?\n지금 열려 있는 반: ${now.join('·')}반` +
+        (isAdmin() ? '\n※ 관리자 계정이므로 다른 선생님이 시험 중인 반도 함께 닫힙니다. 한 반만 닫으려면 반 버튼을 누르세요.' : '') +
+        '\n(이미 시작한 학생은 남은 시간 동안 계속 응시합니다)')) return;
+      return setClasses(id, mc, false);
     }
     if (act === 'edit') {
+      if (!isAdmin()) { alert('회차 이름·제한 시간은 관리자 계정만 바꿀 수 있습니다.'); return; }
       const title = prompt(`${id}회차 이름`, e.title);
       if (title === null) return;
-      const min = prompt(`${id}회차 제한 시간(분, 1~180)\n※ 이미 응시 중인 학생의 남은 시간도 함께 바뀝니다.`, String(e.limit_minutes));
+      const now = await freshOpen(id);
+      const min = prompt(`${id}회차 제한 시간(분, 1~180)\n※ 이미 응시 중인 학생의 남은 시간도 함께 바뀝니다.` +
+        (now.length ? `\n※ 지금 열려 있는 반: ${now.join('·')}반 — 다른 선생님 반 학생에게도 적용됩니다.` : ''), String(e.limit_minutes));
       if (min === null) return;
       const m = parseInt(min, 10);
       if (!title.trim() || !(m >= 1 && m <= 180)) { alert('이름과 1~180 사이의 시간을 입력하세요.'); return; }
@@ -192,7 +338,7 @@
       const m = makeups.find(x => x.exam_id === id && x.student_key === b.dataset.key);
       if (!confirm(`${m ? `${m.class_no}반 ${m.num}번 ${m.name}` : '이 학생'}의 ${id}회차 개별 응시 허용을 취소할까요?\n(이미 시작한 답안은 지워지지 않습니다)`)) return;
       const { error } = await sb.from('calc_makeup').delete().eq('exam_id', id).eq('student_key', b.dataset.key);
-      if (error) alert('취소 실패: ' + error.message);
+      if (error) alert('취소 실패: ' + errMsg(error));
       return load();
     }
   }
@@ -210,7 +356,8 @@
       const { error } = await sb.rpc('calc_makeup_add', { p_exam: id, p_grade: g, p_class: c, p_num: n, p_name: name });
       if (error) {
         const msg = String(error.message || '');
-        alert(msg.includes('NOT_IN_ROSTER') ? '명렬표에 없는 학생입니다. 학년·반·번호·이름을 확인하세요.' : '허용 실패: ' + msg);
+        alert(msg.includes('NOT_IN_ROSTER') ? '명렬표에 없는 학생입니다. 학년·반·번호·이름을 확인하세요.'
+          : msg.includes('NOT_MY_CLASS') ? NOT_MINE : '허용 실패: ' + msg);
         return;
       }
       return load();
@@ -234,8 +381,14 @@
       if (!root.dataset.bound) {
         root.addEventListener('click', onClick);
         root.addEventListener('submit', onSubmit);
+        root.addEventListener('change', ev => {
+          const sel = ev.target.closest('select.owner-sel');
+          if (sel) assign(Number(sel.dataset.class), sel.value);
+        });
         root.dataset.bound = '1';
       }
+      lastSig = '';
+      startPoll();
       return load();
     },
     reload: () => load()

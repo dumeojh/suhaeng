@@ -224,7 +224,7 @@
         <span>시험 시작하기 (카운트다운 시작)</span>
       </button>
       <a href="../" class="block text-xs text-slate-400 hover:text-indigo-600 hover:underline">← 회차 선택 화면으로</a>
-      <p class="text-[10px] text-slate-300">버전 2026-10-28g · <span class="exam-label"></span></p>
+      <p class="text-[10px] text-slate-300">버전 2026-10-28j · <span class="exam-label"></span></p>
     </div>
 
     <!-- ================= STUDENT WORKSHEET ================= -->
@@ -1249,23 +1249,35 @@
         errEl.classList.remove('hidden');
         return;
       }
-      document.getElementById('teacher-email').innerText = session.user.email;
+      // 담당 반 (add_teacher_classes.sql 미실행이면 예전처럼 모든 반)
+      const { data: me } = await sb.rpc('calc_me');
+      TEACHER_ME = me && me.role ? me : null;
+      IS_ADMIN = !TEACHER_ME || TEACHER_ME.role === 'admin';
+      CLASS_LIST = IS_ADMIN ? ALL_CLASSES.slice()
+        : ALL_CLASSES.filter(c => (TEACHER_ME.classes || []).map(Number).includes(c));
+      roster = null; openClasses = []; teacherRows = {};   // 앞서 로그인했던 교사의 정보가 남지 않게
+      document.getElementById('teacher-email').innerText = session.user.email +
+        (TEACHER_ME ? (IS_ADMIN ? ' · 관리자(모든 반)' : CLASS_LIST.length ? ` · ${CLASS_LIST.join('·')}반 담당` : ' · 담당 반 미선택') : '');
+      document.getElementById('teacher-badge').innerHTML = '<i class="fa-solid fa-chalkboard-user mr-1"></i> ' +
+        (TEACHER_ME && !IS_ADMIN && CLASS_LIST.length ? `${CLASS_LIST.join('·')}반 모니터링` : '교사 모니터링' + (TEACHER_ME ? ' (관리자)' : ''));
       loadClassFilter(session.user.email);   // 이 교사가 마지막으로 보던 반 탭
       showOnly('teacher-view');
       if (window.ExamAdmin) ExamAdmin.mount(document.getElementById('exam-admin'), sb, {
-        examId: EXAM_ID, pageBase: '../',
+        examId: EXAM_ID, pageBase: '../', me: TEACHER_ME,
         onChange: list => {
           if (!list[0]) return;
           TEST_MINUTES = list[0].limit_minutes || TEST_MINUTES;
-          // 위에서 반을 열고 닫으면 아래 현황이 '시험 중인 반'만 보이도록 자동 전환
-          const next = [...(list[0].open_classes || [])].map(Number).sort((a, b) => a - b);
+          const next = [...(list[0].open_classes || [])].map(Number).filter(c => CLASS_LIST.includes(c)).sort((a, b) => a - b);
           const changed = next.join(',') !== openClasses.join(',');
+          const mine = ownAdminClick && Date.now() - ownAdminClick < 10000;
+          ownAdminClick = 0;
           openClasses = next;
-          if (changed) {
-            if (openClasses.length) setClassFilter('open');
-            else if (classFilter === 'open') setClassFilter('all');
-            else renderTeacherDashboard();
-          }
+          if (!changed) return;
+          // '내가' 반을 열었을 때만 아래 현황을 '시험 중인 반'으로 바꿈.
+          // 다른 선생님이 다른 교실에서 반을 열고 닫은 것(15초마다 반영)은 내가 보던 탭을 바꾸지 않음.
+          if (mine && openClasses.length) setClassFilter('open');
+          else if (classFilter === 'open' && !openClasses.length) setClassFilter('all');
+          else renderTeacherDashboard();
         }
       });
       await loadTeacherRows();
@@ -1275,6 +1287,12 @@
     }
 
     let pausedWatch = null, lastPausedSig = '';
+    // 이 선생님이 직접 반 열기·닫기 버튼을 눌렀는지 (다른 선생님의 변경과 구별)
+    let ownAdminClick = 0;
+    document.getElementById('exam-admin').addEventListener('click', e => {
+      const b = e.target.closest('button[data-act]');
+      if (b && ['toggle', 'all-open', 'all-close'].includes(b.dataset.act)) ownAdminClick = Date.now();
+    }, true);
     function startPausedWatch() {
       if (pausedWatch) clearInterval(pausedWatch);
       pausedWatch = setInterval(async () => {
@@ -1294,6 +1312,7 @@
       stopTeacherPoll();
       await sb.auth.signOut();
       teacherRows = {};
+      roster = null;
       inspectStudentKey = null;
       closeDetailModal();
       document.getElementById('t-email').value = '';
@@ -2421,7 +2440,10 @@
 
     // ===== 반별 관리 =====
     // 담당 반 묶음 (선생님별 담당 반이 바뀌면 여기만 고치면 됩니다)
-    const CLASS_LIST = [1, 2, 3, 4, 5, 6];
+    const ALL_CLASSES = [1, 2, 3, 4, 5, 6];
+    let CLASS_LIST = ALL_CLASSES.slice();   // 로그인한 교사가 관리하는 반 (담당 교사는 자기 반만)
+    let TEACHER_ME = null, IS_ADMIN = true;
+    // 반 묶음 탭은 관리자 화면에만 보임 (담당 반은 수파베이스 calc_teachers 표에서 정함)
     const CLASS_GROUPS = {
       g135: { label: '1·3·5반', classes: [1, 3, 5] },
       g246: { label: '2·4·6반', classes: [2, 4, 6] }
@@ -2448,7 +2470,7 @@
       return [Number(classFilter)];
     }
     function filterLabel() {
-      if (classFilter === 'all') return '전체';
+      if (classFilter === 'all') return IS_ADMIN ? '전체' : CLASS_LIST.length ? `${CLASS_LIST.join('·')}반 전체` : '담당 반 없음';
       if (classFilter === 'open') return `시험 중 ${openClasses.join('·')}반`;
       if (CLASS_GROUPS[classFilter]) return CLASS_GROUPS[classFilter].label;
       return `${classFilter}반`;
@@ -2470,7 +2492,7 @@
     }
 
     function renderClassTabs() {
-      const valid = ['all', ...Object.keys(CLASS_GROUPS), ...allClasses().map(String)];
+      const valid = ['all', ...(IS_ADMIN ? Object.keys(CLASS_GROUPS) : []), ...allClasses().map(String)];
       if (openClasses.length) valid.push('open');
       if (!valid.includes(classFilter)) classFilter = 'all';
       const items = Object.values(teacherRows);
@@ -2486,7 +2508,7 @@
           <span class="block text-[11px] ${on ? 'text-indigo-100' : 'text-slate-500'}">제출 ${sub}/${list.length}${writing ? ` · <span class="${on ? 'text-amber-200' : 'text-amber-600'} font-bold">응시 중 ${writing}</span>` : ''}${pausedN ? ` · <span class="px-1 rounded bg-red-600 text-white font-bold">중지 ${pausedN}</span>` : ''}${absentN ? ` · <span class="${on ? 'text-rose-200' : 'text-rose-600'} font-bold">미접속 ${absentN}</span>` : ''}</span>
         </button>`;
       };
-      const groups = Object.entries(CLASS_GROUPS)
+      const groups = !IS_ADMIN ? '' : Object.entries(CLASS_GROUPS)
         .map(([k, g]) => tab(k, g.label, items.filter(i => g.classes.includes(classOf(i))), true, g.classes)).join('');
       const classes = allClasses().map(c => tab(String(c), `${c}반`, items.filter(i => classOf(i) === c), false, [c])).join('');
       document.getElementById('class-tabs').innerHTML =
@@ -2496,8 +2518,8 @@
               .replace('bg-white border-slate-200', 'bg-emerald-50 border-emerald-400') +
             '<span class="w-px h-8 bg-slate-200 mx-1"></span>'
           : '') +
-        tab('all', '전체', items, true) + '<span class="w-px h-8 bg-slate-200 mx-1"></span>' + groups +
-        '<span class="w-px h-8 bg-slate-200 mx-1"></span>' + classes;
+        tab('all', IS_ADMIN ? '전체' : '내 반 전체', items, true) + '<span class="w-px h-8 bg-slate-200 mx-1"></span>' +
+        (groups ? groups + '<span class="w-px h-8 bg-slate-200 mx-1"></span>' : '') + classes;
       document.querySelectorAll('.filter-label').forEach(el => el.innerText = `(${filterLabel()})`);
     }
 
@@ -2550,12 +2572,24 @@
     // 시험이 중지된 학생 목록 (모든 반) — 맨 위에 빨간 알림으로 표시
     function renderPausedBanner() {
       const el = document.getElementById('paused-banner');
-      const list = Object.keys(teacherRows).filter(k => teacherRows[k].paused);
-      lastPausedSig = list.slice().sort().join('|');
-      document.title = (list.length ? `(🚨${list.length}) ` : '') + `[교사] ${EXAM_LABEL} 미적분Ⅰ 수행평가 모니터링`;
-      if (!list.length) { el.classList.add('hidden'); el.innerHTML = ''; return; }
+      const all = Object.keys(teacherRows).filter(k => teacherRows[k].paused);
+      lastPausedSig = all.slice().sort().join('|');
       const cls = filterClasses();
-      el.innerHTML = `<p class="font-bold text-red-700 text-sm"><i class="fa-solid fa-triangle-exclamation mr-1"></i>시험이 중지된 학생 ${list.length}명 — 학생과 확인한 뒤 [해제]를 누르세요.</p>
+      // 지금 보고 있는 반 학생을 앞에, 다른 반(다른 교실) 학생은 뒤에 흐리게
+      const isMine = k => !cls || cls.includes(classOf(teacherRows[k]));
+      const list = [...all.filter(isMine), ...all.filter(k => !isMine(k))];
+      const mineN = all.filter(isMine).length;
+      document.title = (mineN ? `(🚨${mineN}) ` : '') + `[교사] ${EXAM_LABEL} 미적분Ⅰ 수행평가 모니터링`;
+      if (!list.length) { el.classList.add('hidden'); el.innerHTML = ''; return; }
+      if (!mineN) {
+        // 내가 보는 반에는 중지된 학생이 없음 → 작게만 알림 (다른 교실 선생님이 처리)
+        el.className = 'p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-600';
+        el.innerHTML = `<i class="fa-solid fa-circle-info mr-1"></i>다른 반에서 시험이 중지된 학생 ${list.length}명 (` +
+          list.map(k => esc(studentLabel(teacherRows[k].studentInfo || {}))).join(', ') + `) — 해당 반 선생님이 해제합니다.`;
+        return;
+      }
+      el.className = 'p-4 bg-red-50 border-2 border-red-500 rounded-xl space-y-2';
+      el.innerHTML = `<p class="font-bold text-red-700 text-sm"><i class="fa-solid fa-triangle-exclamation mr-1"></i>시험이 중지된 학생 ${mineN}명${list.length > mineN ? ` <span class="font-normal text-xs">(다른 반 ${list.length - mineN}명은 흐리게 표시)</span>` : ''} — 학생과 확인한 뒤 [해제]를 누르세요.</p>
         <div class="flex flex-wrap gap-2">${list.map(k => {
         const it = teacherRows[k], last = [...it.pauseLog].reverse().find(l => l && l.type === 'pause');
         const mine = !cls || cls.includes(classOf(it));
@@ -2565,7 +2599,6 @@
             <button onclick="releasePause('${k}', event)" class="px-2.5 py-1 rounded bg-red-600 hover:bg-red-700 text-white text-xs font-bold">해제</button>
           </div>`;
       }).join('')}</div>`;
-      el.classList.remove('hidden');
     }
 
     const fmtClock = t => t ? new Date(t).toLocaleTimeString() : '';
@@ -2577,7 +2610,8 @@
       if (!confirm(`${studentLabel(it.studentInfo || {})} 학생의 시험 중지를 해제할까요?\n(지금까지 중지 ${it.pauseCount}회 — 횟수는 그대로 기록됩니다)`)) return;
       const { error } = await sb.rpc('calc_unpause', { p_key: key });
       if (error) {
-        alert(String(error.message).includes('calc_unpause')
+        alert(String(error.message).includes('NOT_MY_CLASS') ? '담당 반 학생이 아니어서 해제할 수 없습니다.'
+          : String(error.message).includes('calc_unpause')
           ? '수파베이스에 중지 해제 기능이 아직 없습니다. add_pause.sql을 SQL Editor에서 실행하세요.'
           : '해제 실패: ' + error.message);
         return;
@@ -2628,7 +2662,8 @@
       if (!(minutes >= 1 && minutes <= 120)) { alert('1~120 사이의 숫자(분)를 입력하세요.'); return; }
       const { data, error } = await sb.rpc('calc_reopen', { p_key: inspectStudentKey, p_minutes: minutes });
       if (error) {
-        alert(String(error.message).includes('calc_reopen')
+        alert(String(error.message).includes('NOT_MY_CLASS') ? '담당 반 학생이 아니어서 응시 재개를 할 수 없습니다.'
+          : String(error.message).includes('calc_reopen')
           ? '수파베이스에 응시 재개 기능이 아직 없습니다. add_reopen.sql을 SQL Editor에서 실행하세요.'
           : '응시 재개 실패: ' + error.message);
         return;
@@ -2942,6 +2977,12 @@
       const cls = filterClasses();
       const scope = cls ? `${EXAM_LABEL} ${filterLabel()} 학생` : `${EXAM_LABEL} 모든 반(전체) 학생`;
       const count = filteredKeysIgnoringSearch().length;
+      // 다른 교실에서 시험 중인 반의 답안을 실수로 지우지 않도록, 열려 있는 반이 포함되면 삭제 금지
+      const busy = (cls || allClasses()).filter(c => openClasses.includes(c));
+      if (busy.length) {
+        alert(`지금 시험 중(열림)인 ${busy.join('·')}반이 포함되어 있어 삭제할 수 없습니다.\n먼저 위의 [이 회차 응시 관리]에서 해당 반을 닫은 뒤 다시 시도하세요.`);
+        return;
+      }
       if (!confirm(`${scope} ${count}명의 답안을 수파베이스에서 영구 삭제합니다. 계속할까요?` +
         '\n\n※ 다른 회차 답안은 삭제되지 않습니다.' +
         (cls ? '\n※ 다른 반은 삭제되지 않습니다.' : '\n※ 특정 반만 지우려면 위의 반 탭을 먼저 고르세요.'))) return;

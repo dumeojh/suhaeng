@@ -203,8 +203,11 @@
       }
       document.getElementById('t-login').classList.add('hidden');
       document.getElementById('t-main').classList.remove('hidden');
-      document.getElementById('t-email-label').innerText = session.user.email;
-      ExamAdmin.mount(document.getElementById('exam-admin'), sb, { pageBase: '' });
+      // 담당 반 (add_teacher_classes.sql 미실행이면 예전처럼 모든 반)
+      const { data: me } = await sb.rpc('calc_me');
+      const role = me && me.role ? (me.role === 'admin' ? ' · 관리자(모든 반)' : (me.classes || []).length ? ` · ${me.classes.join('·')}반 담당` : ' · 담당 반 미선택') : '';
+      document.getElementById('t-email-label').innerText = session.user.email + role;
+      ExamAdmin.mount(document.getElementById('exam-admin'), sb, { pageBase: '', me: me && me.role ? me : null });
     }
 
     async function teacherLogout() {
