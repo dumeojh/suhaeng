@@ -110,7 +110,12 @@
     let sb = null;
     try {
       if (CFG.SUPABASE_URL && CFG.SUPABASE_ANON_KEY && !CFG.SUPABASE_URL.includes('YOUR-PROJECT')) {
-        sb = window.supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON_KEY);
+        // 교사 로그인은 '이 탭'에서만 유지 (탭·브라우저를 닫으면 자동 로그아웃).
+        // 예전처럼 브라우저에 로그인이 저장되면 다음 교사가 아이디·비번 없이 앞 교사 계정으로 바로 들어가 버림.
+        try { Object.keys(localStorage).forEach(k => { if (/^sb-.+-auth-token/.test(k)) localStorage.removeItem(k); }); } catch (e) { }
+        sb = window.supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON_KEY, {
+          auth: { storage: window.sessionStorage, persistSession: true, autoRefreshToken: true }
+        });
       }
     } catch (e) { console.error(e); }
 
@@ -204,6 +209,9 @@
 
     async function teacherLogout() {
       await sb.auth.signOut();
+      document.getElementById('t-email').value = '';
+      document.getElementById('t-password').value = '';
+      document.getElementById('exam-admin').innerHTML = '';
       document.getElementById('t-main').classList.add('hidden');
       document.getElementById('t-login').classList.remove('hidden');
     }

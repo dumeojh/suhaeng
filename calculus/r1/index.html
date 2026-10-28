@@ -224,7 +224,7 @@
         <span>시험 시작하기 (카운트다운 시작)</span>
       </button>
       <a href="../" class="block text-xs text-slate-400 hover:text-indigo-600 hover:underline">← 회차 선택 화면으로</a>
-      <p class="text-[10px] text-slate-300">버전 2026-10-28f · <span class="exam-label"></span></p>
+      <p class="text-[10px] text-slate-300">버전 2026-10-28g · <span class="exam-label"></span></p>
     </div>
 
     <!-- ================= STUDENT WORKSHEET ================= -->
@@ -779,7 +779,12 @@
     let sb = null;
     try {
       if (CFG.SUPABASE_URL && CFG.SUPABASE_ANON_KEY && !CFG.SUPABASE_URL.includes('YOUR-PROJECT')) {
-        sb = window.supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON_KEY);
+        // 교사 로그인은 '이 탭'에서만 유지 (탭·브라우저를 닫으면 자동 로그아웃).
+        // 예전처럼 브라우저에 로그인이 저장되면 다음 교사가 아이디·비번 없이 앞 교사 계정으로 바로 들어가 버림.
+        try { Object.keys(localStorage).forEach(k => { if (/^sb-.+-auth-token/.test(k)) localStorage.removeItem(k); }); } catch (e) { }
+        sb = window.supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON_KEY, {
+          auth: { storage: window.sessionStorage, persistSession: true, autoRefreshToken: true }
+        });
       }
     } catch (e) { console.error(e); }
     const TOKEN_PREFIX = 'calc_token_';     // 이 기기에서 시작했다는 표시
@@ -1245,6 +1250,7 @@
         return;
       }
       document.getElementById('teacher-email').innerText = session.user.email;
+      loadClassFilter(session.user.email);   // 이 교사가 마지막으로 보던 반 탭
       showOnly('teacher-view');
       if (window.ExamAdmin) ExamAdmin.mount(document.getElementById('exam-admin'), sb, {
         examId: EXAM_ID, pageBase: '../',
@@ -1288,6 +1294,10 @@
       stopTeacherPoll();
       await sb.auth.signOut();
       teacherRows = {};
+      inspectStudentKey = null;
+      closeDetailModal();
+      document.getElementById('t-email').value = '';
+      document.getElementById('t-password').value = '';
       showOnly('teacher-login-view');
     }
 
@@ -2418,7 +2428,11 @@
     };
     const CLASS_FILTER_KEY = 'calc_teacher_class';
     let classFilter = 'all';
-    try { classFilter = localStorage.getItem(CLASS_FILTER_KEY) || 'all'; } catch (e) { }
+    let classFilterKey = CLASS_FILTER_KEY;   // 교사마다 따로 기억 (로그인하면 이메일을 붙임)
+    function loadClassFilter(email) {
+      classFilterKey = CLASS_FILTER_KEY + (email ? '_' + email : '');
+      try { classFilter = localStorage.getItem(classFilterKey) || 'all'; } catch (e) { classFilter = 'all'; }
+    }
     let teacherSearch = '';
     let openClasses = [];   // 이 회차가 지금 열려 있는 반 (위 '응시 관리'에서 연 반)
 
@@ -2441,7 +2455,7 @@
     }
     function setClassFilter(f) {
       classFilter = String(f);
-      try { localStorage.setItem(CLASS_FILTER_KEY, classFilter); } catch (e) { }
+      try { localStorage.setItem(classFilterKey, classFilter); } catch (e) { }
       renderTeacherDashboard();
     }
     // 현재 탭 + 검색어에 해당하는 학생 (학년·반·번호 순)
