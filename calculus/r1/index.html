@@ -223,7 +223,7 @@
         <span>시험 시작하기 (카운트다운 시작)</span>
       </button>
       <a href="../" class="block text-xs text-slate-400 hover:text-indigo-600 hover:underline">← 회차 선택 화면으로</a>
-      <p class="text-[10px] text-slate-300">버전 2026-10-28d · <span class="exam-label"></span></p>
+      <p class="text-[10px] text-slate-300">버전 2026-10-28e · <span class="exam-label"></span></p>
     </div>
 
     <!-- ================= STUDENT WORKSHEET ================= -->
@@ -628,6 +628,7 @@
         <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
           <p class="text-xs text-slate-500 font-semibold">접속 학생 수 <span class="filter-label text-indigo-600"></span></p>
           <p id="teacher-total-count" class="text-2xl font-bold text-slate-900 mt-1">0명</p>
+          <p id="teacher-roster-sub" class="text-[11px] mt-0.5"></p>
         </div>
         <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
           <p class="text-xs text-slate-500 font-semibold">제출 완료</p>
@@ -653,6 +654,9 @@
           </div>
         </div>
       </div>
+
+      <!-- 명렬표에 있지만 이 회차에 아직 접속하지 않은 학생 -->
+      <div id="absent-panel" class="hidden"></div>
 
       <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
         <div class="p-4 border-b bg-slate-50 flex justify-between items-center">
@@ -1310,9 +1314,71 @@
       return { columns, points: pts, trend: t, trendMismatch, answerKey, answers };
     }
 
+    // ===== 명렬표 (미접속 학생 확인용) =====
+    let roster = null;          // [{grade, class, num, name}] — 처음 한 번만 불러옴
+    let rosterError = '';
+    async function loadRoster() {
+      const { data, error } = await sb.rpc('calc_roster');
+      if (error) {
+        roster = [];
+        rosterError = String(error.message || '').includes('calc_roster') || error.code === 'PGRST202'
+          ? '미접속 학생을 보려면 수파베이스에서 add_roster.sql을 실행하세요.' : '명렬표를 불러오지 못했습니다.';
+        return;
+      }
+      rosterError = '';
+      roster = (Array.isArray(data) ? data : []).filter(r => CLASS_LIST.includes(Number(r.class)));
+    }
+    const normName = s => String(s ?? '').replace(/\s/g, '');
+    const rosterId = (g, c, n, name) => `${Number(g)}_${Number(c)}_${Number(n)}_${normName(name)}`;
+
+    // 명렬표에 있지만 이 회차에 접속 기록이 없는 학생 (classes: 반 목록, null이면 모든 반)
+    function absentStudents(classes, useSearch) {
+      if (!roster) return [];
+      const seen = new Set(Object.values(teacherRows).map(it => {
+        const i = it.studentInfo || {};
+        return rosterId(i.grade, i.class, i.num, i.name);
+      }));
+      const q = useSearch && teacherSearch ? teacherSearch.replace(/\s/g, '') : '';
+      return roster.filter(r => (!classes || classes.includes(Number(r.class))) &&
+        !seen.has(rosterId(r.grade, r.class, r.num, r.name)) &&
+        (!q || `${r.grade}학년${r.class}반${r.num}번${normName(r.name)}`.includes(q)));
+    }
+    function rosterCount(classes) {
+      return roster ? roster.filter(r => !classes || classes.includes(Number(r.class))).length : 0;
+    }
+
+    function renderAbsentPanel() {
+      const el = document.getElementById('absent-panel');
+      if (rosterError) {
+        el.className = 'p-3 rounded-xl border border-slate-300 bg-slate-50 text-xs text-slate-600';
+        el.innerHTML = `<i class="fa-solid fa-circle-info mr-1"></i>${esc(rosterError)}`;
+        return;
+      }
+      if (!roster) { el.className = 'hidden'; return; }
+      const cls = filterClasses();
+      const list = absentStudents(cls, true);
+      if (!list.length) {
+        el.className = 'p-3 rounded-xl border-2 border-emerald-300 bg-emerald-50 text-sm font-bold text-emerald-700';
+        el.innerHTML = `<i class="fa-solid fa-circle-check mr-1"></i>${esc(filterLabel())} 학생이 모두 접속했습니다.`;
+        return;
+      }
+      const byClass = {};
+      list.forEach(r => (byClass[r.class] = byClass[r.class] || []).push(r));
+      el.className = 'p-4 rounded-xl border-2 border-rose-300 bg-rose-50 space-y-2';
+      el.innerHTML = `<p class="text-sm font-bold text-rose-700"><i class="fa-solid fa-user-clock mr-1"></i>아직 접속하지 않은 학생 ${list.length}명
+          <span class="font-normal text-xs text-rose-600">(${esc(filterLabel())} · 명렬표 기준 · 15초마다 갱신)</span></p>` +
+        Object.keys(byClass).sort((a, b) => a - b).map(c => `
+          <div class="flex flex-wrap items-center gap-1.5">
+            <span class="w-12 text-xs font-bold text-slate-700">${Number(c)}반</span>
+            ${byClass[c].map(r => `<span class="px-2 py-1 rounded-lg bg-white border border-rose-200 text-xs text-slate-800"><b>${Number(r.num)}</b> ${esc(r.name)}</span>`).join('')}
+          </div>`).join('') +
+        `<p class="text-[11px] text-slate-500">결석으로 오늘 응시하지 않는 학생은 나중에 위의 [결석생 개별 응시 허용]으로 응시하게 할 수 있습니다.</p>`;
+    }
+
     async function loadTeacherRows() {
       const sync = document.getElementById('teacher-sync');
       sync.innerText = '불러오는 중...';
+      if (roster === null) await loadRoster();
       // 이 회차의 답안만 불러옴 (다른 회차와 섞이지 않게)
       const { data, error } = await sb.from(TABLE).select('*').eq('exam_id', EXAM_ID).order('grade').order('class_no').order('num');
       if (error) {
@@ -2377,20 +2443,21 @@
       const valid = ['all', ...Object.keys(CLASS_GROUPS), ...allClasses().map(String)];
       if (!valid.includes(classFilter)) classFilter = 'all';
       const items = Object.values(teacherRows);
-      const tab = (key, label, list, wide) => {
+      const tab = (key, label, list, wide, classes = null) => {
         const on = classFilter === key;
         const sub = list.filter(i => i.submitted).length;
         const writing = list.filter(i => examState(i) === 'writing').length;
         const pausedN = list.filter(i => i.paused).length;
+        const absentN = roster ? absentStudents(classes, false).length : 0;
         return `<button type="button" onclick="setClassFilter('${key}')"
           class="px-3 py-1.5 rounded-lg border-2 text-left transition-all ${wide ? 'min-w-[6.5rem]' : 'min-w-[5.2rem]'} ${on ? 'bg-indigo-600 border-indigo-600 text-white shadow' : 'bg-white border-slate-200 text-slate-700 hover:border-indigo-300 hover:bg-indigo-50'}">
           <span class="block text-sm font-bold">${label}</span>
-          <span class="block text-[11px] ${on ? 'text-indigo-100' : 'text-slate-500'}">제출 ${sub}/${list.length}${writing ? ` · <span class="${on ? 'text-amber-200' : 'text-amber-600'} font-bold">응시 중 ${writing}</span>` : ''}${pausedN ? ` · <span class="px-1 rounded bg-red-600 text-white font-bold">중지 ${pausedN}</span>` : ''}</span>
+          <span class="block text-[11px] ${on ? 'text-indigo-100' : 'text-slate-500'}">제출 ${sub}/${list.length}${writing ? ` · <span class="${on ? 'text-amber-200' : 'text-amber-600'} font-bold">응시 중 ${writing}</span>` : ''}${pausedN ? ` · <span class="px-1 rounded bg-red-600 text-white font-bold">중지 ${pausedN}</span>` : ''}${absentN ? ` · <span class="${on ? 'text-rose-200' : 'text-rose-600'} font-bold">미접속 ${absentN}</span>` : ''}</span>
         </button>`;
       };
       const groups = Object.entries(CLASS_GROUPS)
-        .map(([k, g]) => tab(k, g.label, items.filter(i => g.classes.includes(classOf(i))), true)).join('');
-      const classes = allClasses().map(c => tab(String(c), `${c}반`, items.filter(i => classOf(i) === c))).join('');
+        .map(([k, g]) => tab(k, g.label, items.filter(i => g.classes.includes(classOf(i))), true, g.classes)).join('');
+      const classes = allClasses().map(c => tab(String(c), `${c}반`, items.filter(i => classOf(i) === c), false, [c])).join('');
       document.getElementById('class-tabs').innerHTML =
         tab('all', '전체', items, true) + '<span class="w-px h-8 bg-slate-200 mx-1"></span>' + groups +
         '<span class="w-px h-8 bg-slate-200 mx-1"></span>' + classes;
@@ -2404,6 +2471,13 @@
       tbody.innerHTML = '';
       const keys = filteredKeys();
       document.getElementById('teacher-total-count').innerText = `${keys.length}명`;
+      const subEl = document.getElementById('teacher-roster-sub');
+      if (roster && roster.length && !teacherSearch) {
+        const cls = filterClasses(), absentN = absentStudents(cls, false).length;
+        subEl.innerHTML = `명렬 ${rosterCount(cls)}명 중 · ` + (absentN
+          ? `<span class="font-bold text-rose-600">미접속 ${absentN}명</span>` : '<span class="font-bold text-emerald-600">모두 접속</span>');
+      } else subEl.innerHTML = '';
+      renderAbsentPanel();
       if (!keys.length) tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-xs text-slate-400">${teacherSearch ? '검색 결과가 없습니다.' : `${filterLabel()}에 접속한 학생이 아직 없습니다.`}</td></tr>`;
       let submitted = 0;
 
@@ -2781,7 +2855,8 @@
 
     function exportCSV() {
       const keys = filteredKeys();
-      if (!keys.length) { alert('내보낼 학생이 없습니다.'); return; }
+      const absent = absentStudents(filterClasses(), true);   // 미접속 학생도 성적 처리용으로 함께 넣음
+      if (!keys.length && !absent.length) { alert('내보낼 학생이 없습니다.'); return; }
       const ox = g => g ? (g.ok ? 'O' : 'X') : '';
       const head = ['학년', '반', '번호', '이름', '상태', '진행률(%)', '탐구 주제', '추세선 차수', 'R²',
         '자동채점(5문항 중 정답 수)', '2-1 부호 맞은 칸', '2-1 부호 전체 칸', '2-2 극대 x', '2-2 극소 x', '2-3 최댓값 x', '2-3 최솟값 x',
@@ -2804,6 +2879,12 @@
           it.trendMismatch ? '확인 필요' : '', it.pauseCount || 0, pauseHistoryText(it), it.reopenCount || 0, it.startTime || '', it.submittedAt || '',
           '', '', ''
         ].map(csvCell).join(',') + `,=SUM(${colFrom}${row}:${colTo}${row})`);
+      });
+      absent.forEach((r, i) => {
+        const row = keys.length + i + 2;
+        const cells = head.slice(0, -1).map(() => '');
+        cells[0] = Number(r.grade); cells[1] = Number(r.class); cells[2] = Number(r.num); cells[3] = r.name; cells[4] = '미접속';
+        lines.push(cells.map(csvCell).join(',') + `,=SUM(${colFrom}${row}:${colTo}${row})`);
       });
       const d = new Date(), ymd = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
       const blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
