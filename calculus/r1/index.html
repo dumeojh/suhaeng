@@ -224,7 +224,7 @@
         <span>시험 시작하기 (카운트다운 시작)</span>
       </button>
       <a href="../" class="block text-xs text-slate-400 hover:text-indigo-600 hover:underline">← 회차 선택 화면으로</a>
-      <p class="text-[10px] text-slate-300">버전 2026-10-29b · <span class="exam-label"></span></p>
+      <p class="text-[10px] text-slate-300">버전 2026-10-29c · <span class="exam-label"></span></p>
     </div>
 
     <!-- ================= STUDENT WORKSHEET ================= -->
@@ -603,6 +603,7 @@
         <p class="text-xs text-slate-500 mt-1">수파베이스에 등록된 교사 계정으로 로그인하세요.</p>
       </div>
       <div class="space-y-3">
+        <select id="t-email-pick" onchange="syncTeacherPick(true)" class="hidden w-full p-2.5 border rounded-lg text-sm bg-white font-semibold focus:ring-2 focus:ring-indigo-500"></select>
         <input type="email" id="t-email" placeholder="이메일"
           class="w-full p-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500">
         <input type="password" id="t-password" placeholder="비밀번호" onkeydown="if(event.key==='Enter') teacherLogin()"
@@ -1236,6 +1237,7 @@
         return;
       }
       document.getElementById('t-password').value = '';
+      try { localStorage.setItem(LAST_TEACHER_KEY, email.toLowerCase()); } catch (e) { }
       await enterTeacherDashboard(data.session);
     }
 
@@ -1316,6 +1318,7 @@
       inspectStudentKey = null;
       closeDetailModal();
       document.getElementById('t-email').value = '';
+      syncTeacherPick(false);   // 로그아웃 후에도 드롭다운에서 고른 선생님 유지
       document.getElementById('t-password').value = '';
       showOnly('teacher-login-view');
     }
@@ -3052,10 +3055,40 @@
         }
       } catch (e) { }
     }
+    // ===== 교사 로그인: 등록된 선생님을 드롭다운으로 고르기 =====
+    // (수파베이스에 add_login_list.sql을 실행해야 목록이 나옴. 실행 전이거나 오류가 나면 예전처럼 이메일 직접 입력)
+    const LAST_TEACHER_KEY = 'calc_last_teacher';   // 이 컴퓨터에서 마지막으로 로그인한 선생님을 미리 골라 둠
+    async function loadTeacherPicker() {
+      const pick = document.getElementById('t-email-pick');
+      if (!sb || !pick) return;
+      const { data, error } = await sb.rpc('calc_login_list');
+      if (error || !Array.isArray(data) || !data.length) return;
+      let last = '';
+      try { last = localStorage.getItem(LAST_TEACHER_KEY) || ''; } catch (e) { }
+      const label = t => t.role === 'admin' ? '관리자' : (t.classes || []).length ? `${t.classes.join('·')}반 담당` : '담당 반 미선택';
+      pick.innerHTML = '<option value="">선생님을 고르세요</option>' +
+        data.map(t => `<option value="${esc(t.email)}">${esc(label(t))} · ${esc(t.email)}</option>`).join('') +
+        '<option value="__other">목록에 없음 (직접 입력)</option>';
+      pick.value = data.some(t => t.email === last) ? last : '';
+      pick.classList.remove('hidden');
+      syncTeacherPick(false);
+    }
+    // 드롭다운에서 고른 이메일을 로그인 칸에 넣음 ('직접 입력'을 고르면 이메일 칸을 보여 줌)
+    function syncTeacherPick(fromUser) {
+      const pick = document.getElementById('t-email-pick'), input = document.getElementById('t-email');
+      if (!pick || pick.classList.contains('hidden')) return;
+      const other = pick.value === '__other';
+      input.classList.toggle('hidden', !other);
+      if (!other) input.value = pick.value;
+      else if (fromUser) input.value = '';
+      if (fromUser) (other ? input : document.getElementById('t-password')).focus();
+    }
+
     if (window.TEACHER_PAGE) {
       document.title = `[교사] ${EXAM_LABEL} 미적분Ⅰ 수행평가 모니터링`;
       document.getElementById('teacher-badge').classList.remove('hidden');
       switchMode('teacher');
+      loadTeacherPicker();
     }
   </script>
 </body>
