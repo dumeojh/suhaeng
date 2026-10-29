@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- ★ 파일 위치: calculus/r1/index.html  (1회차 시험 페이지 = 문항·채점) ★ -->
+<!-- ★ 파일 위치 : calculus/r1/index.html  (1회차 시험 페이지 = 문항·채점) ★ -->
 <html lang="ko">
 
 <head>
@@ -490,13 +490,13 @@
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
               <label class="block text-xs font-semibold text-slate-500 mb-1">최댓값을 갖는 x의 값</label>
-              <input type="number" step="any" autocomplete="off" id="s2-max-val" oninput="saveStudentData()" placeholder="예: 3"
-                class="test-field w-full p-2 border rounded-lg text-sm">
+              <input type="number" step="any" autocomplete="off" id="s2-max-val" oninput="saveStudentData()"
+                placeholder="예: 3" class="test-field w-full p-2 border rounded-lg text-sm">
             </div>
             <div>
               <label class="block text-xs font-semibold text-slate-500 mb-1">최솟값을 갖는 x의 값</label>
-              <input type="number" step="any" autocomplete="off" id="s2-min-val" oninput="saveStudentData()" placeholder="예: 0"
-                class="test-field w-full p-2 border rounded-lg text-sm">
+              <input type="number" step="any" autocomplete="off" id="s2-min-val" oninput="saveStudentData()"
+                placeholder="예: 0" class="test-field w-full p-2 border rounded-lg text-sm">
             </div>
           </div>
         </div>
@@ -603,7 +603,8 @@
         <p class="text-xs text-slate-500 mt-1">수파베이스에 등록된 교사 계정으로 로그인하세요.</p>
       </div>
       <div class="space-y-3">
-        <select id="t-email-pick" onchange="syncTeacherPick(true)" class="hidden w-full p-2.5 border rounded-lg text-sm bg-white font-semibold focus:ring-2 focus:ring-indigo-500"></select>
+        <select id="t-email-pick" onchange="syncTeacherPick(true)"
+          class="hidden w-full p-2.5 border rounded-lg text-sm bg-white font-semibold focus:ring-2 focus:ring-indigo-500"></select>
         <input type="email" id="t-email" placeholder="이메일"
           class="w-full p-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500">
         <input type="password" id="t-password" placeholder="비밀번호" onkeydown="if(event.key==='Enter') teacherLogin()"
@@ -617,7 +618,8 @@
     <!-- ================= TEACHER VIEW ================= -->
     <div id="teacher-view" class="hidden space-y-6">
       <!-- 이 회차 응시 관리 (반별 열기·닫기, 결석생 개별 허용) -->
-      <div class="flex justify-end -mb-4"><a href="../?teacher" class="text-xs text-indigo-600 font-semibold hover:underline">
+      <div class="flex justify-end -mb-4"><a href="../?teacher"
+          class="text-xs text-indigo-600 font-semibold hover:underline">
           <i class="fa-solid fa-layer-group mr-1"></i>전체 회차 관리로</a></div>
       <div id="exam-admin"></div>
       <!-- 시험 중지 학생 알림 -->
@@ -2533,8 +2535,8 @@
         (openClasses.length
           ? tab('open', `<i class="fa-solid fa-pen-to-square mr-1"></i>시험 중 ${openClasses.join('·')}반`,
             items.filter(i => openClasses.includes(classOf(i))), true, openClasses)
-              .replace('bg-white border-slate-200', 'bg-emerald-50 border-emerald-400') +
-            '<span class="w-px h-8 bg-slate-200 mx-1"></span>'
+            .replace('bg-white border-slate-200', 'bg-emerald-50 border-emerald-400') +
+          '<span class="w-px h-8 bg-slate-200 mx-1"></span>'
           : '') +
         tab('all', IS_ADMIN ? '전체' : '내 반 전체', items, true) + '<span class="w-px h-8 bg-slate-200 mx-1"></span>' +
         (groups ? groups + '<span class="w-px h-8 bg-slate-200 mx-1"></span>' : '') + classes;
@@ -2630,8 +2632,8 @@
       if (error) {
         alert(String(error.message).includes('NOT_MY_CLASS') ? '담당 반 학생이 아니어서 해제할 수 없습니다.'
           : String(error.message).includes('calc_unpause')
-          ? '수파베이스에 중지 해제 기능이 아직 없습니다. add_pause.sql을 SQL Editor에서 실행하세요.'
-          : '해제 실패: ' + error.message);
+            ? '수파베이스에 중지 해제 기능이 아직 없습니다. add_pause.sql을 SQL Editor에서 실행하세요.'
+            : '해제 실패: ' + error.message);
         return;
       }
       await loadTeacherRows();
@@ -2682,8 +2684,8 @@
       if (error) {
         alert(String(error.message).includes('NOT_MY_CLASS') ? '담당 반 학생이 아니어서 응시 재개를 할 수 없습니다.'
           : String(error.message).includes('calc_reopen')
-          ? '수파베이스에 응시 재개 기능이 아직 없습니다. add_reopen.sql을 SQL Editor에서 실행하세요.'
-          : '응시 재개 실패: ' + error.message);
+            ? '수파베이스에 응시 재개 기능이 아직 없습니다. add_reopen.sql을 SQL Editor에서 실행하세요.'
+            : '응시 재개 실패: ' + error.message);
         return;
       }
       if (item.paused) await sb.rpc('calc_unpause', { p_key: inspectStudentKey });
