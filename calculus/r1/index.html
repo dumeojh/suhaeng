@@ -224,7 +224,7 @@
         <span>시험 시작하기 (카운트다운 시작)</span>
       </button>
       <a href="../" class="block text-xs text-slate-400 hover:text-indigo-600 hover:underline">← 회차 선택 화면으로</a>
-      <p class="text-[10px] text-slate-300">버전 2026-10-28j · <span class="exam-label"></span></p>
+      <p class="text-[10px] text-slate-300">버전 2026-10-29b · <span class="exam-label"></span></p>
     </div>
 
     <!-- ================= STUDENT WORKSHEET ================= -->
@@ -490,12 +490,12 @@
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
               <label class="block text-xs font-semibold text-slate-500 mb-1">최댓값을 갖는 x의 값</label>
-              <input type="text" id="s2-max-val" oninput="saveStudentData()" placeholder="예: 3"
+              <input type="number" step="any" autocomplete="off" id="s2-max-val" oninput="saveStudentData()" placeholder="예: 3"
                 class="test-field w-full p-2 border rounded-lg text-sm">
             </div>
             <div>
               <label class="block text-xs font-semibold text-slate-500 mb-1">최솟값을 갖는 x의 값</label>
-              <input type="text" id="s2-min-val" oninput="saveStudentData()" placeholder="예: 0"
+              <input type="number" step="any" autocomplete="off" id="s2-min-val" oninput="saveStudentData()" placeholder="예: 0"
                 class="test-field w-full p-2 border rounded-lg text-sm">
             </div>
           </div>
@@ -1422,7 +1422,10 @@
       sync.innerText = '불러오는 중...';
       if (roster === null) await loadRoster();
       // 이 회차의 답안만 불러옴 (다른 회차와 섞이지 않게)
-      const { data, error } = await sb.from(TABLE).select('*').eq('exam_id', EXAM_ID).order('grade').order('class_no').order('num');
+      // 담당 교사는 자기 반 답안만 불러옴 (관리자는 모든 반)
+      let rq = sb.from(TABLE).select('*').eq('exam_id', EXAM_ID);
+      if (!IS_ADMIN) rq = rq.in('class_no', CLASS_LIST.length ? CLASS_LIST : [-1]);
+      const { data, error } = await rq.order('grade').order('class_no').order('num');
       if (error) {
         sync.innerText = String(error.message || '').includes('exam_id') ? '불러오기 실패 (add_exams.sql 실행 필요)' : '불러오기 실패';
         console.error(error); return;
@@ -1942,7 +1945,14 @@
         const xs = document.querySelectorAll('.dt-x'), ys = document.querySelectorAll('.dt-y');
         item.columns.forEach((c, i) => { xs[i].value = c.x; ys[i].value = c.y; });
       }
-      if (item.answers) FIELD_IDS.forEach(id => { document.getElementById(id).value = item.answers[id] || ''; });
+      if (item.answers) FIELD_IDS.forEach(id => {
+        let v = item.answers[id] || '';
+        if ((id === 's2-max-val' || id === 's2-min-val') && v !== '' && isNaN(Number(v))) {
+          const m = String(v).replace(/[−–]/g, '-').match(/-?\d+(?:\.\d+)?|-?\.\d+/);   // 예전 글자 답에서 수만 꺼냄
+          v = m ? m[0] : '';
+        }
+        document.getElementById(id).value = v;
+      });
       signAnswers = item.answers?.['s2-sign'] || { xs: [], signs: [] };
       setExtExist(item.answers?.['s2-ext-exist'] || '');
       setXRows('maxx', item.answers?.['s2-maxx-list']);
@@ -2127,18 +2137,21 @@
       const d = c.slice(1).map((v, k) => v * (k + 1));       // f'(x) 계수
       const a = points[0].x, b = points[points.length - 1].x;
       const N = 4000, roots = [];
-      let x0 = a, y0 = evalPoly(d, a);
+      // f'(x)=0인 격자점은 건너뛰고, 마지막으로 0이 아니었던 점과 부호를 비교
+      // (예전에는 f'(x)가 격자점에서 정확히 0이면 그 극값을 놓쳤음)
+      let x0 = a, s0 = Math.sign(evalPoly(d, a));
       for (let i = 1; i <= N; i++) {
-        const x1 = a + (b - a) * i / N, y1 = evalPoly(d, x1);
-        if (y0 !== 0 && y1 !== 0 && Math.sign(y0) !== Math.sign(y1)) {
-          let lo = x0, hi = x1, flo = y0;
+        const x1 = a + (b - a) * i / N, s1 = Math.sign(evalPoly(d, x1));
+        if (s1 === 0) continue;
+        if (s0 !== 0 && s1 !== s0) {
+          let lo = x0, hi = x1;
           for (let k = 0; k < 60; k++) {
-            const mid = (lo + hi) / 2, fm = evalPoly(d, mid);
-            if (Math.sign(fm) === Math.sign(flo)) { lo = mid; flo = fm; } else hi = mid;
+            const mid = (lo + hi) / 2;
+            if (Math.sign(evalPoly(d, mid)) === s0) lo = mid; else hi = mid;
           }
-          roots.push({ x: (lo + hi) / 2, type: y0 > 0 ? 'max' : 'min' });
+          roots.push({ x: (lo + hi) / 2, type: s0 > 0 ? 'max' : 'min' });
         }
-        x0 = x1; y0 = y1;
+        x0 = x1; s0 = s1;
       }
       const list = [{ type: 'left', x: a }, ...roots, { type: 'right', x: b }]
         .map(p => ({ ...p, y: evalPoly(c, p.x) }));
@@ -2807,8 +2820,12 @@
       printReports([inspectStudentKey]);
     }
 
-    function printReports(keys) {
+    async function printReports(keys) {
       document.getElementById('print-area').innerHTML = keys.map(reportHTML).join('');
+      // 그래프 이미지가 모두 준비된 뒤 인쇄 (학생이 많을 때 그래프가 빠지는 현상 방지)
+      const imgs = [...document.querySelectorAll('#print-area img')];
+      await Promise.all(imgs.map(img => (img.decode ? img.decode() : Promise.resolve()).catch(() => { })));
+      await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
       window.print();
     }
 
@@ -2975,20 +2992,28 @@
 
     async function clearAllData() {
       const cls = filterClasses();
-      const scope = cls ? `${EXAM_LABEL} ${filterLabel()} 학생` : `${EXAM_LABEL} 모든 반(전체) 학생`;
+      // 지울 반을 항상 명시: '전체' 탭이라도 담당 교사는 자기 반만 지움 (관리자만 반 조건 없이 전체 삭제)
+      const target = cls || (IS_ADMIN ? null : CLASS_LIST);
+      if (target && !target.length) { alert('삭제할 담당 반이 없습니다.'); return; }
+      const scope = cls ? `${EXAM_LABEL} ${filterLabel()} 학생`
+        : IS_ADMIN ? `${EXAM_LABEL} 모든 반(전체) 학생` : `${EXAM_LABEL} 담당 ${CLASS_LIST.join('·')}반 학생`;
       const count = filteredKeysIgnoringSearch().length;
+      if (!count) { alert('삭제할 답안이 없습니다.'); return; }
       // 다른 교실에서 시험 중인 반의 답안을 실수로 지우지 않도록, 열려 있는 반이 포함되면 삭제 금지
-      const busy = (cls || allClasses()).filter(c => openClasses.includes(c));
+      const busy = (target || allClasses()).filter(c => openClasses.includes(c));
       if (busy.length) {
         alert(`지금 시험 중(열림)인 ${busy.join('·')}반이 포함되어 있어 삭제할 수 없습니다.\n먼저 위의 [이 회차 응시 관리]에서 해당 반을 닫은 뒤 다시 시도하세요.`);
         return;
       }
       if (!confirm(`${scope} ${count}명의 답안을 수파베이스에서 영구 삭제합니다. 계속할까요?` +
         '\n\n※ 다른 회차 답안은 삭제되지 않습니다.' +
-        (cls ? '\n※ 다른 반은 삭제되지 않습니다.' : '\n※ 특정 반만 지우려면 위의 반 탭을 먼저 고르세요.'))) return;
-      if (prompt(`정말 삭제하려면 "${filterLabel()} 삭제"라고 입력하세요.`) !== `${filterLabel()} 삭제`) return;
+        (target ? '\n※ 다른 반은 삭제되지 않습니다.' : '\n※ 특정 반만 지우려면 위의 반 탭을 먼저 고르세요.'))) return;
+      // 확인 입력: 가운뎃점(·) 없이 숫자만 입력하도록 (한글 키보드로 입력하기 쉽게)
+      const typed = prompt(`정말 삭제하려면 삭제할 학생 수 ${count}을(를) 숫자로 입력하세요.`);
+      if (typed === null) return;
+      if (typed.replace(/\s|명/g, '') !== String(count)) { alert('입력한 숫자가 달라 삭제하지 않았습니다.'); return; }
       let q = sb.from(TABLE).delete().eq('exam_id', EXAM_ID);
-      if (cls) q = q.in('class_no', cls);
+      if (target) q = q.in('class_no', target);
       const { error } = await q;
       if (error) { alert('삭제 실패: ' + error.message); return; }
       await loadTeacherRows();
@@ -2996,8 +3021,11 @@
 
     async function resetStudentDevice() {
       if (!inspectStudentKey) return;
+      const it = teacherRows[inspectStudentKey];
+      if (!it) return;
+      if (!IS_ADMIN && !CLASS_LIST.includes(classOf(it))) { alert('담당 반 학생이 아니어서 기기 초기화를 할 수 없습니다.'); return; }
       if (!confirm('이 학생이 다른 기기에서 이어서 응시할 수 있도록 기기 등록을 초기화할까요?\n(답안과 남은 시간은 그대로 유지됩니다)')) return;
-      const { error } = await sb.from(TABLE).update({ token: null }).eq('student_key', inspectStudentKey);
+      const { error } = await sb.from(TABLE).update({ token: null }).eq('exam_id', EXAM_ID).eq('student_key', inspectStudentKey);   // 이 회차만
       if (error) { alert('초기화 실패: ' + error.message); return; }
       alert('초기화했습니다. 학생이 새 기기에서 같은 정보로 다시 시작하면 이어서 응시합니다.');
       await loadTeacherRows();
