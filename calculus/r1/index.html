@@ -224,7 +224,7 @@
         <span>시험 시작하기 (카운트다운 시작)</span>
       </button>
       <a href="../" class="block text-xs text-slate-400 hover:text-indigo-600 hover:underline">← 회차 선택 화면으로</a>
-      <p class="text-[10px] text-slate-300">버전 2026-10-29e · <span class="exam-label"></span></p>
+      <p class="text-[10px] text-slate-300">버전 2026-10-29g · <span class="exam-label"></span></p>
     </div>
 
     <!-- ================= STUDENT WORKSHEET ================= -->
@@ -311,7 +311,7 @@
           </div>
           <div>
             <label class="block text-xs font-semibold text-slate-600 mb-1">독립변수 x의 의미 및 단위</label>
-            <input type="text" id="s1-var-x" oninput="saveStudentData()" placeholder="예: 월 (1월 → x=1, 12월 → x=12)"
+            <input type="text" id="s1-var-x" oninput="saveStudentData()" placeholder="예: 시간, 일, 월, 연도 등"
               class="test-field w-full p-2 border rounded-lg text-sm">
           </div>
           <div>
@@ -334,7 +334,7 @@
           </div>
           <div class="p-2.5 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-900">
             <i class="fa-solid fa-circle-info mr-1"></i>
-            x가 연도를 의미하는 경우, x에는 연도(2018, 2019 …)를 그대로 쓰지 말고 첫 시점을 0으로 바꿔 입력하세요. (예: 2018년 → 0, 2019년 → 1)
+            <strong>첫 번째 x 값은 0으로 고정</strong>되어 있습니다. 첫 시점을 x = 0으로 하고 그다음 시점부터 1, 2, 3 … 으로 입력하세요. (예: 2018년 → 0, 2019년 → 1 / 1월 → 0, 2월 → 1)
           </div>
           <div id="data-lock-note"
             class="hidden p-2.5 bg-slate-100 border border-slate-300 rounded-lg text-xs text-slate-700">
@@ -906,6 +906,16 @@
     }
 
     // ================= 데이터 표 =================
+    // 첫 번째 x 값은 모든 학생이 0으로 시작 (수정 불가)
+    function lockFirstX(el) {
+      if (!el) return;
+      el.value = '0';
+      el.readOnly = true;
+      el.tabIndex = -1;
+      el.title = '첫 번째 x 값은 0으로 고정되어 있습니다.';
+      el.classList.add('bg-slate-100', 'font-bold', 'text-slate-600', 'cursor-not-allowed');
+    }
+
     function columnCount() { return document.querySelectorAll('.dt-x').length; }
 
     function addColumn() {
@@ -920,6 +930,7 @@
         td.innerHTML = `<input type="number" step="any" autocomplete="off" class="test-field dt-${k} w-full p-1.5 text-center border-none focus:outline-none" oninput="onDataChanged()">`;
         document.getElementById(`dt-${k}row`).appendChild(td);
         if (isLocked || trendIsLocked()) td.querySelector('input').disabled = true;
+        if (idx === 1 && k === 'x') lockFirstX(td.querySelector('input'));
       });
     }
 
@@ -1956,6 +1967,7 @@
         setColumnCount(Math.max(MIN_POINTS, item.columns.length));
         const xs = document.querySelectorAll('.dt-x'), ys = document.querySelectorAll('.dt-y');
         item.columns.forEach((c, i) => { xs[i].value = c.x; ys[i].value = c.y; });
+        lockFirstX(xs[0]);   // 저장된 답안을 불러와도 첫 번째 x는 0
       }
       if (item.answers) FIELD_IDS.forEach(id => {
         let v = item.answers[id] || '';
