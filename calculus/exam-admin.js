@@ -12,6 +12,7 @@
 
   let sb = null, root = null, opts = {}, exams = [], makeups = [], stats = {};
   let lastSig = '', poll = null;
+  let ownerOpen = null;   // 담당 반 패널을 선생님이 직접 펼치거나 접었으면 그 상태 (null = 자동)
   // 로그인한 교사 (mount의 options.me = { role, classes }). 없으면 예전처럼 모든 반
   let owners = null;   // [{email, role, classes}] — 선생님별 담당 반 (add_teacher_classes.sql 미실행이면 null)
   const isAdmin = () => !opts.me || opts.me.role === 'admin';
@@ -191,7 +192,7 @@
           </select></label>`;
       };
       const none = CLASSES.filter(c => !ownerOf(c));
-      return `<details class="border border-slate-200 rounded-xl p-3 bg-slate-50" ${none.length ? 'open' : ''}>
+      return `<details class="owner-box border border-slate-200 rounded-xl p-3 bg-slate-50" ${(ownerOpen ?? none.length > 0) ? 'open' : ''}>
         <summary class="cursor-pointer text-sm font-bold text-slate-800"><i class="fa-solid fa-user-gear text-indigo-600 mr-1"></i>담당 반 배정 (관리자)
           <span class="font-normal text-xs text-slate-500">— ${teachers.map(t => `${esc(shortEmail(t.email))}: ${(t.classes || []).length ? t.classes.join('·') + '반' : '없음'}`).join(' / ') || '등록된 담당 교사 없음'}
           ${none.length ? ` · <b class="text-rose-600">미지정 ${none.join('·')}반</b>` : ''}</span></summary>
@@ -209,14 +210,30 @@
           class="px-3 py-1.5 rounded-lg border-2 text-sm font-bold ${isMine ? 'bg-indigo-600 border-indigo-600 text-white shadow' : 'bg-white border-slate-300 text-slate-600 hover:border-indigo-400'}">
           ${c}반 <span class="block text-[10px] font-semibold ${isMine ? 'text-indigo-100' : 'text-slate-400'}">${isMine ? '내 반' : '선택 가능'}</span></button>`;
     };
-    return `<div class="border-2 ${mine.length ? 'border-slate-200 bg-slate-50' : 'border-amber-400 bg-amber-50'} rounded-xl p-3 space-y-2">
-      <p class="text-sm font-bold text-slate-800"><i class="fa-solid fa-user-check text-indigo-600 mr-1"></i>내 담당 반
-        <span class="font-normal text-xs text-slate-500">— 눌러서 고르거나 빼세요. 다른 선생님이 고른 반(회색)은 고를 수 없습니다.</span></p>
-      ${mine.length ? '' : '<p class="text-xs font-bold text-amber-800"><i class="fa-solid fa-hand-point-down mr-1"></i>먼저 담당 반을 고르세요. 고른 반의 학생만 보이고 관리할 수 있습니다.</p>'}
-      <div class="flex flex-wrap gap-2">${CLASSES.map(btn).join('')}</div>
-      ${mineChanged() ? '<p class="text-xs font-bold text-rose-600"><i class="fa-solid fa-rotate mr-1"></i>담당 반이 바뀌었습니다. 아래 학생 현황에 반영하려면 페이지를 새로고침하세요.</p>' : ''}
-    </div>`;
+    const changedNote = mineChanged() ? '<p class="text-xs font-bold text-rose-600"><i class="fa-solid fa-rotate mr-1"></i>담당 반이 바뀌었습니다. 아래 학생 현황에 반영하려면 페이지를 새로고침하세요.</p>' : '';
+    const open = !mine.length || (ownerOpen ?? false);   // 담당 반을 정하기 전에는 항상 펼침, 정한 뒤에는 기본으로 접음
+    return `<details class="owner-box border-2 ${mine.length ? 'border-slate-200 bg-slate-50' : 'border-amber-400 bg-amber-50'} rounded-xl px-3 py-2" ${open ? 'open' : ''}>
+      <summary class="cursor-pointer select-none text-sm font-bold text-slate-800 flex flex-wrap items-center gap-2">
+        <span><i class="fa-solid fa-user-check text-indigo-600 mr-1"></i>내 담당 반:
+          ${mine.length ? `<span class="text-indigo-700">${mine.join('·')}반</span>` : '<span class="text-amber-700">아직 고르지 않음</span>'}</span>
+        ${mine.length ? '<span class="px-2 py-0.5 rounded-md border border-slate-300 bg-white text-[11px] font-semibold text-slate-600">변경</span>' : ''}
+      </summary>
+      <div class="mt-2 space-y-2">
+        <p class="text-xs text-slate-500">눌러서 고르거나 빼세요. 다른 선생님이 고른 반(회색)은 고를 수 없습니다.</p>
+        ${mine.length ? '' : '<p class="text-xs font-bold text-amber-800"><i class="fa-solid fa-hand-point-down mr-1"></i>먼저 담당 반을 고르세요. 고른 반의 학생만 보이고 관리할 수 있습니다.</p>'}
+        <div class="flex flex-wrap gap-2">${CLASSES.map(btn).join('')}</div>
+      </div>
+    </details>${changedNote}`;
   }
+  // 회차 모니터링 화면에서는 담당 반 상자를 보여 주지 않음 (담당 반은 첫 화면에서 정함)
+  // 단, 담당 반을 아직 고르지 않은 선생님에게만 첫 화면으로 가는 안내를 보여 줌
+  function noClassNote() {
+    if (!owners || !opts.me || isAdmin() || myClasses().length) return '';
+    return `<div class="p-3 rounded-xl border-2 border-amber-400 bg-amber-50 text-sm font-bold text-amber-800">
+      <i class="fa-solid fa-hand-point-right mr-1"></i>담당 반이 아직 없습니다.
+      <a href="${esc(opts.pageBase || '')}?teacher" class="underline">전체 회차 관리(첫 화면)</a>에서 담당 반을 먼저 고르세요.</div>`;
+  }
+
   // 이 페이지를 연 뒤 담당 반이 바뀌었는지 (관리자가 바꾼 경우)
   function mineChanged() {
     if (isAdmin() || !owners) return false;
@@ -258,7 +275,7 @@
           <h3 class="font-bold text-slate-800"><i class="fa-solid fa-layer-group text-indigo-600 mr-1.5"></i>${opts.examId ? '이 회차 응시 관리' : '회차 관리'}</h3>
           <button type="button" data-act="reload" class="text-xs text-indigo-600 font-semibold hover:underline"><i class="fa-solid fa-rotate mr-0.5"></i>새로고침</button>
         </div>
-        ${ownerPanel()}
+        ${opts.examId ? noClassNote() : ownerPanel()}
         ${exams.length ? exams.map(examCard).join('') : '<p class="text-sm text-slate-400">회차가 없습니다.</p>'}
         ${opts.examId || !isAdmin() ? '' : newExamForm()}
       </div>`;
@@ -430,6 +447,9 @@
       if (!root.dataset.bound) {
         root.addEventListener('click', onClick);
         root.addEventListener('submit', onSubmit);
+        root.addEventListener('toggle', ev => {
+          if (ev.target.classList && ev.target.classList.contains('owner-box')) ownerOpen = ev.target.open;
+        }, true);
         root.addEventListener('change', ev => {
           const sel = ev.target.closest('select.owner-sel');
           if (sel) assign(Number(sel.dataset.class), sel.value);
