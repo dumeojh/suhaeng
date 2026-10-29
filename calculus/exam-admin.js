@@ -13,8 +13,6 @@
   let sb = null, root = null, opts = {}, exams = [], makeups = [], stats = {};
   let lastSig = '', poll = null;
   // 로그인한 교사 (mount의 options.me = { role, classes }). 없으면 예전처럼 모든 반
-  let panelOpen = null;  // 관리자 계정 패널을 펼쳐 둔 상태 기억
-  let accounts = null;   // 관리자: 가입된 계정 목록 [{email, role, classes, has_account, last_sign_in}]
   let owners = null;   // [{email, role, classes}] — 선생님별 담당 반 (add_teacher_classes.sql 미실행이면 null)
   const isAdmin = () => !opts.me || opts.me.role === 'admin';
   const sameEmail = (a, b) => String(a || '').toLowerCase() === String(b || '').toLowerCase();
@@ -51,11 +49,6 @@
     if (opts.examId) mq = mq.eq('exam_id', opts.examId);
     const [ex, mk, ow] = await Promise.all([q, mq, sb.rpc('calc_class_owners')]);
     owners = ow.error ? null : (Array.isArray(ow.data) ? ow.data : []);
-    accounts = null;
-    if (opts.me && isAdmin()) {
-      const ac = await sb.rpc('calc_accounts');
-      accounts = ac.error ? null : (Array.isArray(ac.data) ? ac.data : []);
-    }
     if (ex.error || mk.error) { if (!silent) setupError(ex.error || mk.error); return; }
     exams = ex.data || [];
     makeups = mk.data || [];
@@ -67,7 +60,7 @@
         s.started++; if (r.submitted) s.submitted++;
       });
     }
-    const sig = JSON.stringify([exams, makeups, stats, owners, accounts]);
+    const sig = JSON.stringify([exams, makeups, stats, owners]);
     if (silent && sig === lastSig) return;   // 바뀐 것이 없으면 화면을 다시 그리지 않음
     lastSig = sig;
     render();
@@ -123,7 +116,9 @@
           </div>
           <div class="flex items-center gap-2">
             ${isAdmin() ? `<button type="button" data-act="edit" data-exam="${e.id}" class="px-2.5 py-1 text-xs font-semibold rounded-lg border bg-white hover:bg-slate-50 text-slate-600">
-              <i class="fa-solid fa-pen mr-1"></i>이름·시간 수정</button>` : ''}
+              <i class="fa-solid fa-pen mr-1"></i>이름·시간·폴더 수정</button>` : ''}
+            ${isAdmin() && !opts.examId ? `<button type="button" data-act="del" data-exam="${e.id}" title="응시한 학생이 없는 회차만 삭제할 수 있습니다" class="px-2.5 py-1 text-xs font-semibold rounded-lg border border-red-200 bg-white hover:bg-red-50 text-red-600">
+              <i class="fa-solid fa-trash mr-1"></i>삭제</button>` : ''}
             ${opts.examId ? '' : `<a href="${esc(href)}" class="px-3 py-1 text-xs font-bold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white">
               <i class="fa-solid fa-chalkboard-user mr-1"></i>이 회차 모니터링·채점</a>`}
           </div>
@@ -184,7 +179,26 @@
   // ===== 담당 반 =====
   function ownerPanel() {
     if (!owners || !opts.me) return '';
-    if (isAdmin()) return accountsPanel();
+    if (isAdmin()) {
+      const teachers = owners.filter(o => o.role === 'teacher');
+      const row = c => {
+        const o = ownerOf(c);
+        return `<label class="flex items-center gap-1.5 text-xs">
+          <span class="w-9 font-bold text-slate-700">${c}반</span>
+          <select data-class="${c}" class="owner-sel p-1 border rounded text-xs ${o ? '' : 'text-rose-600 font-bold'}">
+            <option value="">미지정</option>
+            ${teachers.map(t => `<option value="${esc(t.email)}" ${o && sameEmail(o.email, t.email) ? 'selected' : ''}>${esc(t.email)}</option>`).join('')}
+          </select></label>`;
+      };
+      const none = CLASSES.filter(c => !ownerOf(c));
+      return `<details class="border border-slate-200 rounded-xl p-3 bg-slate-50" ${none.length ? 'open' : ''}>
+        <summary class="cursor-pointer text-sm font-bold text-slate-800"><i class="fa-solid fa-user-gear text-indigo-600 mr-1"></i>담당 반 배정 (관리자)
+          <span class="font-normal text-xs text-slate-500">— ${teachers.map(t => `${esc(shortEmail(t.email))}: ${(t.classes || []).length ? t.classes.join('·') + '반' : '없음'}`).join(' / ') || '등록된 담당 교사 없음'}
+          ${none.length ? ` · <b class="text-rose-600">미지정 ${none.join('·')}반</b>` : ''}</span></summary>
+        <div class="mt-3 grid grid-cols-2 md:grid-cols-3 gap-2">${CLASSES.map(row).join('')}</div>
+        <p class="mt-2 text-[11px] text-slate-500">담당 교사는 로그인 후 [내 담당 반]에서 직접 고를 수도 있습니다. 한 반은 한 선생님만 담당합니다. 관리자는 담당과 관계없이 모든 반을 관리합니다.</p>
+      </details>`;
+    }
     const mine = myClasses();
     const btn = c => {
       const o = ownerOf(c), isMine = mine.includes(c);
@@ -203,96 +217,6 @@
       ${mineChanged() ? '<p class="text-xs font-bold text-rose-600"><i class="fa-solid fa-rotate mr-1"></i>담당 반이 바뀌었습니다. 아래 학생 현황에 반영하려면 페이지를 새로고침하세요.</p>' : ''}
     </div>`;
   }
-  // ===== 관리자: 선생님 계정·담당 반 =====
-  const ROLE_TXT = { admin: '관리자', teacher: '담당 교사', '': '권한 없음' };
-  function accountsPanel() {
-    if (!accounts) return legacyAdminPanel();
-    const none = CLASSES.filter(c => !ownerOf(c));
-    const fmt = t => t ? new Date(t).toLocaleDateString() : '로그인 기록 없음';
-    const chip = (a, c) => {
-      const o = ownerOf(c), mine = (a.classes || []).map(Number).includes(c);
-      const other = o && !sameEmail(o.email, a.email);
-      return `<button type="button" data-act="assign" data-email="${esc(a.email)}" data-class="${c}" ${other ? 'disabled' : ''}
-          title="${other ? esc(o.email) + ' 선생님 담당' : mine ? '눌러서 빼기' : '눌러서 담당 지정'}"
-          class="w-9 py-1 rounded border text-[11px] font-bold ${mine ? 'bg-indigo-600 border-indigo-600 text-white'
-          : other ? 'bg-slate-100 border-slate-200 text-slate-300 cursor-not-allowed' : 'bg-white border-slate-300 text-slate-600 hover:border-indigo-400'}">${c}반</button>`;
-    };
-    const row = a => {
-      const role = a.role || '';
-      const me = opts.me && sameEmail(a.email, opts.me.email);
-      return `<tr class="${role ? '' : 'text-slate-400'}">
-        <td class="p-2"><span class="font-semibold ${role ? 'text-slate-800' : ''}">${esc(a.email)}</span>${me ? ' <span class="px-1 rounded bg-indigo-100 text-indigo-700 text-[10px] font-bold">나</span>' : ''}
-          ${a.has_account ? '' : '<span class="block text-[10px] text-rose-600 font-bold">로그인 계정 없음 (Authentication에 가입되지 않은 이메일)</span>'}</td>
-        <td class="p-2"><select data-email="${esc(a.email)}" class="role-sel p-1 border rounded text-xs ${role === 'admin' ? 'font-bold text-indigo-700' : role === 'teacher' ? 'font-bold text-emerald-700' : ''}" ${me ? 'disabled title="내 계정의 관리자 권한은 여기서 바꿀 수 없습니다"' : ''}>
-          ${['', 'teacher', 'admin'].map(r => `<option value="${r || 'none'}" ${role === r ? 'selected' : ''}>${ROLE_TXT[r]}</option>`).join('')}</select></td>
-        <td class="p-2">${role === 'teacher' ? `<div class="flex flex-wrap gap-1">${CLASSES.map(c => chip(a, c)).join('')}</div>`
-          : role === 'admin' ? '<span class="text-indigo-700 font-semibold">모든 반</span>' : '-'}</td>
-        <td class="p-2 text-slate-500 whitespace-nowrap">${a.has_account ? fmt(a.last_sign_in) : ''}</td></tr>`;
-    };
-    const teachers = accounts.filter(a => a.role === 'teacher');
-    const open = panelOpen === null ? (none.length > 0 || !teachers.length) : panelOpen;
-    return `<details class="acct-panel border border-slate-200 rounded-xl p-3 bg-slate-50" ${open ? 'open' : ''}>
-      <summary class="cursor-pointer text-sm font-bold text-slate-800"><i class="fa-solid fa-user-gear text-indigo-600 mr-1"></i>선생님 계정·담당 반 (관리자)
-        <span class="font-normal text-xs text-slate-500">— ${teachers.map(t => `${esc(shortEmail(t.email))}: ${(t.classes || []).length ? t.classes.join('·') + '반' : '없음'}`).join(' / ') || '담당 교사 없음'}
-        ${none.length ? ` · <b class="text-rose-600">미지정 ${none.join('·')}반</b>` : ''}</span></summary>
-      <div class="mt-3 overflow-x-auto bg-white rounded-lg border">
-        <table class="w-full text-left text-xs border-collapse">
-          <thead class="bg-slate-100 text-slate-600"><tr><th class="p-2">계정(이메일)</th><th class="p-2">권한</th><th class="p-2">담당 반</th><th class="p-2">최근 로그인</th></tr></thead>
-          <tbody class="divide-y divide-slate-100">${accounts.map(row).join('')}</tbody></table></div>
-      <p class="mt-2 text-[11px] text-slate-500 leading-relaxed">
-        · 수파베이스 <b>Authentication &gt; Users</b>에 가입된 계정이 모두 나옵니다. 새 선생님은 거기서 계정을 만든 뒤 여기서 <b>담당 교사</b>로 바꾸세요.<br>
-        · 담당 반은 여기서 눌러 정하거나, 선생님이 로그인해서 [내 담당 반]에서 직접 고를 수 있습니다. 한 반은 한 선생님만 담당합니다.<br>
-        · <b>관리자</b>는 모든 반 + 새 회차·제한 시간·명렬표를 관리합니다. <b>권한 없음</b> 계정은 교사 화면에 들어올 수 없습니다.</p>
-    </details>`;
-  }
-
-  // add_teacher_accounts.sql 실행 전: 담당 교사 목록만으로 반 배정
-  function legacyAdminPanel() {
-    const teachers = owners.filter(o => o.role === 'teacher');
-    const row = c => {
-      const o = ownerOf(c);
-      return `<label class="flex items-center gap-1.5 text-xs"><span class="w-9 font-bold text-slate-700">${c}반</span>
-        <select data-class="${c}" class="owner-sel p-1 border rounded text-xs ${o ? '' : 'text-rose-600 font-bold'}">
-          <option value="">미지정</option>
-          ${teachers.map(t => `<option value="${esc(t.email)}" ${o && sameEmail(o.email, t.email) ? 'selected' : ''}>${esc(t.email)}</option>`).join('')}
-        </select></label>`;
-    };
-    return `<div class="border border-slate-200 rounded-xl p-3 bg-slate-50 space-y-2">
-      <p class="text-sm font-bold text-slate-800"><i class="fa-solid fa-user-gear text-indigo-600 mr-1"></i>담당 반 배정 (관리자)</p>
-      <div class="grid grid-cols-2 md:grid-cols-3 gap-2">${CLASSES.map(row).join('')}</div>
-      <p class="text-[11px] text-amber-700">가입된 계정을 보고 권한을 정하려면 수파베이스에서 add_teacher_accounts.sql을 실행하세요.</p></div>`;
-  }
-
-  async function setRole(email, role) {
-    const a = accounts.find(x => sameEmail(x.email, email));
-    const label = { none: '권한 없음', teacher: '담당 교사', admin: '관리자' }[role];
-    const warn = role === 'none' ? '\n※ 이 계정은 교사 화면에 들어올 수 없게 되고, 담당 반도 비워집니다.'
-      : role === 'admin' ? '\n※ 관리자는 모든 반과 새 회차·제한 시간·명렬표를 관리할 수 있습니다. 담당 반은 비워집니다.' : '';
-    if (!confirm(`${email} 계정을 '${label}'(으)로 바꿀까요?` + warn +
-      (a && !a.has_account ? '\n※ 이 이메일은 아직 Authentication에 가입되어 있지 않아 로그인할 수 없습니다.' : ''))) return load();
-    const { error } = await sb.rpc('calc_set_role', { p_email: email, p_role: role });
-    if (error) {
-      const m = String(error.message || '');
-      alert(m.includes('SELF_DEMOTE') ? '내 계정의 관리자 권한은 스스로 바꿀 수 없습니다. 다른 관리자 계정에서 바꾸세요.'
-        : m.includes('LAST_ADMIN') ? '관리자가 최소 1명은 있어야 합니다.' : '권한 변경 실패: ' + errMsg(error));
-    }
-    load();
-  }
-
-  async function toggleAssign(email, c) {
-    const a = accounts.find(x => sameEmail(x.email, email));
-    if (!a) return;
-    const has = (a.classes || []).map(Number).includes(c);
-    const next = has ? a.classes.filter(x => Number(x) !== c) : [...new Set([...(a.classes || []), c])].sort((x, y) => x - y);
-    if (has) {
-      const openIn = exams.filter(e => (e.open_classes || []).includes(c)).map(e => `${e.id}회차`);
-      if (openIn.length && !confirm(`${c}반은 지금 ${openIn.join('·')}에 열려 있습니다. ${email} 선생님의 담당에서 뺄까요?`)) return;
-    }
-    const { error } = await sb.rpc('calc_admin_set_classes', { p_email: a.email, p_classes: next });
-    if (error) alert('담당 반 변경 실패: ' + errMsg(error));
-    load();
-  }
-
   // 이 페이지를 연 뒤 담당 반이 바뀌었는지 (관리자가 바꾼 경우)
   function mineChanged() {
     if (isAdmin() || !owners) return false;
@@ -338,8 +262,6 @@
         ${exams.length ? exams.map(examCard).join('') : '<p class="text-sm text-slate-400">회차가 없습니다.</p>'}
         ${opts.examId || !isAdmin() ? '' : newExamForm()}
       </div>`;
-    const ap = root.querySelector('details.acct-panel');
-    if (ap) ap.addEventListener('toggle', () => { panelOpen = ap.open; });
     exams.forEach(async e => {
       const dup = await overlapWarning(e);
       const el = root.querySelector(`.overlap-note[data-exam="${e.id}"]`);
@@ -367,6 +289,29 @@
     await load();
   }
 
+  // 문항 폴더가 사이트에 실제로 올라가 있는지 확인 (없으면 학생이 빈 페이지(404)를 보게 됨)
+  const pageOk = {};
+  async function pageExists(page) {
+    if (pageOk[page]) return true;
+    try {
+      const r = await fetch(`${opts.pageBase || ''}${page}/`, { method: 'HEAD', cache: 'no-store' });
+      if (r.ok) pageOk[page] = true;
+      return r.ok;
+    } catch (e) { return null; }   // 인터넷 문제 등으로 확인하지 못하면 막지 않음
+  }
+  async function confirmPage(page, what) {
+    if ((await pageExists(page)) !== false) return true;
+    return confirm(`문항 폴더 calculus/${page}/ 가 아직 사이트에 없습니다.\n` +
+      `(깃허브에 방금 올렸다면 1~2분 뒤 다시 시도하세요)\n\n` +
+      `이대로 ${what} 학생은 빈 페이지(404)를 보게 됩니다. 그래도 계속할까요?`);
+  }
+
+  // 이 회차의 응시 기록 수 (확인하지 못하면 null)
+  async function responseCount(id) {
+    const { count, error } = await sb.from('calculus_submissions').select('student_key', { count: 'exact', head: true }).eq('exam_id', id);
+    return error ? null : (count || 0);
+  }
+
   async function freshOpen(id) {
     const { data } = await sb.from('calc_exams').select('open_classes').eq('id', id).single();
     return (data && data.open_classes) || [];
@@ -379,17 +324,18 @@
     const e = exams.find(x => x.id === id);
     if (act === 'reload') return load();
     if (act === 'claim') return claim(Number(b.dataset.class));
-    if (act === 'assign') return toggleAssign(b.dataset.email, Number(b.dataset.class));
     if (!e) return;
     if (act === 'toggle') {
       // 화면에 보이는 상태의 반대로 바꿈 (열림 → 닫기, 닫힘 → 열기)
       const c = Number(b.dataset.class), isOpen = (e.open_classes || []).includes(c);
       if (!myClasses().includes(c)) { alert(NOT_MINE); return; }
+      if (!isOpen && !(await confirmPage(e.page, `${c}반에 열면`))) return;
       return setClasses(id, [c], !isOpen);
     }
     if (act === 'all-open') {
       const mc = myClasses();
       if (!confirm(`${id}회차를 ${isAdmin() ? '모든 반' : '내 담당 반'}(${mc.join('·')}반)에 열까요?`)) return;
+      if (!(await confirmPage(e.page, '반을 열면'))) return;
       return setClasses(id, mc, true);
     }
     if (act === 'all-close') {
@@ -411,8 +357,29 @@
       if (min === null) return;
       const m = parseInt(min, 10);
       if (!title.trim() || !(m >= 1 && m <= 180)) { alert('이름과 1~180 사이의 시간을 입력하세요.'); return; }
-      const { error } = await sb.from('calc_exams').update({ title: title.trim(), limit_minutes: m }).eq('id', id);
+      const pg = prompt(`${id}회차 문항 폴더 (calculus/ 아래 폴더 이름, 예: r${id})\n※ 바꾸면 학생은 새 폴더의 문항 페이지로 들어갑니다.`, e.page);
+      if (pg === null) return;
+      const page = pg.trim();
+      if (!PAGE_RE.test(page)) { alert('문항 폴더 이름은 영문·숫자·-·_ 만 쓸 수 있습니다. (예: r2)'); return; }
+      if (page !== e.page) {
+        const n = await responseCount(id);
+        if (n && !confirm(`${id}회차에는 이미 응시 기록이 ${n}건 있습니다.\n폴더를 ${e.page} → ${page}(으)로 바꾸면, 이어서 응시하는 학생도 새 폴더의 문항 페이지로 들어갑니다. 계속할까요?`)) return;
+        if (!(await confirmPage(page, '폴더를 바꾸면'))) return;
+      }
+      const { error } = await sb.from('calc_exams').update({ title: title.trim(), limit_minutes: m, page }).eq('id', id);
       if (error) alert('수정 실패: ' + error.message);
+      return load();
+    }
+    if (act === 'del') {
+      if (!isAdmin()) { alert('회차 삭제는 관리자 계정만 할 수 있습니다.'); return; }
+      const now = await freshOpen(id);
+      if (now.length) { alert(`${id}회차가 지금 ${now.join('·')}반에 열려 있습니다.\n먼저 모든 반을 닫은 뒤 삭제하세요.`); return load(); }
+      const n = await responseCount(id);
+      if (n === null) { alert('응시 기록을 확인하지 못해 삭제하지 않았습니다. 잠시 뒤 다시 시도하세요.'); return; }
+      if (n > 0) { alert(`${id}회차에는 응시 기록이 ${n}건 있어 삭제할 수 없습니다.\n(답안을 지키기 위해 응시한 학생이 없는 회차만 삭제할 수 있습니다)`); return; }
+      if (!confirm(`${id}회차 "${e.title}"를 삭제할까요?\n· 이 회차의 결석생 개별 허용 목록도 함께 지워집니다.\n· 깃허브의 문항 폴더(calculus/${e.page}/) 파일은 그대로 남습니다.`)) return;
+      const { error } = await sb.from('calc_exams').delete().eq('id', id);
+      if (error) alert('삭제 실패: ' + (/foreign key|violates/i.test(String(error.message)) ? '이 회차에 응시 기록이 있어 삭제할 수 없습니다.' : error.message));
       return load();
     }
     if (act === 'mk-del') {
@@ -450,6 +417,7 @@
       if (exams.some(x => x.id === id)) { alert(`${id}회차가 이미 있습니다.`); return; }
       if (!PAGE_RE.test(page)) { alert('문항 폴더 이름은 영문·숫자·-·_ 만 쓸 수 있습니다. (예: r2)'); return; }
       if (!(m >= 1 && m <= 180)) { alert('제한 시간은 1~180분입니다.'); return; }
+      if (!(await confirmPage(page, '회차를 만들고 반을 열면'))) return;
       const { error } = await sb.from('calc_exams').insert({ id, title, page, limit_minutes: m, open_classes: [] });
       if (error) { alert('만들기 실패: ' + error.message); return; }
       return load();
@@ -465,8 +433,6 @@
         root.addEventListener('change', ev => {
           const sel = ev.target.closest('select.owner-sel');
           if (sel) assign(Number(sel.dataset.class), sel.value);
-          const rs = ev.target.closest('select.role-sel');
-          if (rs) setRole(rs.dataset.email, rs.value);
         });
         root.dataset.bound = '1';
       }
