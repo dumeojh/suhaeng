@@ -224,7 +224,7 @@
         <span>시험 시작하기 (카운트다운 시작)</span>
       </button>
       <a href="../" class="block text-xs text-slate-400 hover:text-indigo-600 hover:underline">← 회차 선택 화면으로</a>
-      <p class="text-[10px] text-slate-300">버전 2026-10-29c · <span class="exam-label"></span></p>
+      <p class="text-[10px] text-slate-300">버전 2026-10-29d · <span class="exam-label"></span></p>
     </div>
 
     <!-- ================= STUDENT WORKSHEET ================= -->
@@ -1145,7 +1145,7 @@
 
     function queueServerSave(payload) {
       pendingPayload = payload;
-      try { localStorage.setItem(backupKey(), JSON.stringify(payload)); } catch (e) { }
+      try { localStorage.setItem(backupKey(), JSON.stringify({ ...payload, token: studentToken })); } catch (e) { }   // 어느 응시의 백업인지 토큰도 함께 저장
       setSaveStatus('pending', '<i class="fa-solid fa-pen mr-0.5"></i>저장 대기');
       clearTimeout(saveTimer);
       saveTimer = setTimeout(() => flushSave(), 1200);
@@ -1485,7 +1485,8 @@
       let saved = res.data || {};
       try {
         const bk = JSON.parse(localStorage.getItem(backupKey()) || 'null');
-        if (!res.submitted && bk && bk.data && (bk.data.clientSavedAt || 0) > (saved.clientSavedAt || 0)) saved = bk.data;
+        if (!res.submitted && bk && bk.data && bk.token === res.token && (bk.data.clientSavedAt || 0) > (saved.clientSavedAt || 0)) saved = bk.data;
+        else if (bk && bk.token !== res.token) localStorage.removeItem(backupKey());   // 지워진 예전 응시의 백업은 버림
       } catch (e) { }
 
       document.getElementById('stu-info-tag').innerText = `${g}학년 ${c}반 ${n}번 ${name}`;
@@ -1566,8 +1567,9 @@
     }
 
     function activeFlagKey() { return ACTIVE_PREFIX + activeStudentKey; }
-    function setActiveFlag(on) { try { on ? localStorage.setItem(activeFlagKey(), '1') : localStorage.removeItem(activeFlagKey()); } catch (e) { } }
-    function hadActiveFlag() { try { return localStorage.getItem(activeFlagKey()) === '1'; } catch (e) { return false; } }
+    // 값으로 응시 토큰을 저장: 교사가 답안을 지운 뒤 새로 시작하면 예전 표시 때문에 바로 중지되는 일이 없음
+    function setActiveFlag(on) { try { on ? localStorage.setItem(activeFlagKey(), String(studentToken)) : localStorage.removeItem(activeFlagKey()); } catch (e) { } }
+    function hadActiveFlag() { try { const v = localStorage.getItem(activeFlagKey()); return !!v && v === String(studentToken); } catch (e) { return false; } }
 
     function setFieldsPaused(on) {
       if (on) {
