@@ -224,7 +224,7 @@
         <span>시험 시작하기 (카운트다운 시작)</span>
       </button>
       <a href="../" class="block text-xs text-slate-400 hover:text-indigo-600 hover:underline">← 회차 선택 화면으로</a>
-      <p class="text-[10px] text-slate-300">버전 2026-10-29i · <span class="exam-label"></span></p>
+      <p class="text-[10px] text-slate-300">버전 2026-10-30a · <span class="exam-label"></span></p>
     </div>
 
     <!-- ================= STUDENT WORKSHEET ================= -->
@@ -1727,6 +1727,8 @@
       proctorOn = false;
       examPaused = false;
       pausePending = null;
+      fsRestore = false;
+      clearTimeout(blurCheck);
       stopPausePoll();
       if (activeStudentKey) setActiveFlag(false);
       hideOverlay();
@@ -1793,17 +1795,78 @@
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'hidden') triggerPause('다른 탭·창으로 이동');
     });
+    // ===== 화면 키보드(태블릿 가상 키보드) 대응 =====
+    // 태블릿에서는 답안 칸을 눌러 키보드가 올라오거나 내려갈 때 브라우저가
+    // 잠깐 포커스를 잃거나(blur) 전체화면을 풀어 버리는 경우가 있음 → 이것은 부정행위로 보지 않음.
+    // 단, 다른 앱·탭으로 이동(visibilitychange)은 지금처럼 바로 중지.
+    const IS_TOUCH = (() => {
+      try {
+        return matchMedia('(pointer: coarse)').matches ||
+          (navigator.maxTouchPoints > 1 && /Macintosh/.test(navigator.userAgent));   // 아이패드
+      } catch (e) { return false; }
+    })();
+    const KB_GRACE = 1500;      // 키보드가 오르내린 뒤 이 시간(ms) 안의 포커스·전체화면 변화는 키보드 때문으로 봄
+    let kbAt = 0, escAt = 0, fsRestore = false, fsToastShown = false, blurCheck = null;
+    const isEditable = el => !!el && (el.tagName === 'TEXTAREA' || el.isContentEditable ||
+      (el.tagName === 'INPUT' && !['button', 'radio', 'checkbox', 'submit', 'reset'].includes(el.type)));
+    document.addEventListener('focusin', e => { if (isEditable(e.target)) kbAt = Date.now(); }, true);
+    document.addEventListener('focusout', e => { if (isEditable(e.target)) kbAt = Date.now(); }, true);
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') escAt = Date.now(); }, true);
+    // 지금 화면 키보드가 화면을 가리고 있는지 (보이는 영역이 창보다 확 줄어듦)
+    function keyboardOpenNow() {
+      const vv = window.visualViewport;
+      return IS_TOUCH && !!vv && vv.height * (vv.scale || 1) < window.innerHeight * 0.85;
+    }
+    // 방금 일어난 변화가 화면 키보드 때문일 가능성이 큰지 (Esc를 누른 경우는 제외)
+    function keyboardLikely() {
+      if (!IS_TOUCH || Date.now() - escAt < KB_GRACE) return false;
+      return isEditable(document.activeElement) || Date.now() - kbAt < KB_GRACE || keyboardOpenNow();
+    }
+
     // 다른 프로그램·창을 클릭
+    // 키보드 때문에 잠깐 포커스를 잃은 경우는 기다렸다가, 그래도 포커스가 돌아오지 않을 때만 중지
+    function checkFocusLost(waited) {
+      clearTimeout(blurCheck);
+      if (!proctorOn || examPaused || isLocked || document.hasFocus()) return;
+      if (document.visibilityState === 'hidden') { triggerPause('다른 탭·창으로 이동'); return; }
+      // 키보드가 아직 떠 있으면 조금 더 지켜봄 (최대 30초)
+      if (keyboardOpenNow() && Date.now() - escAt >= KB_GRACE && waited < 30000) {
+        blurCheck = setTimeout(() => checkFocusLost(waited + 1000), 1000);
+        return;
+      }
+      triggerPause('다른 프로그램·창 클릭');
+    }
     window.addEventListener('blur', () => {
-      setTimeout(() => { if (!document.hasFocus()) triggerPause('다른 프로그램·창 클릭'); }, 150);
+      clearTimeout(blurCheck);
+      const wait = keyboardLikely() ? KB_GRACE : 150;
+      blurCheck = setTimeout(() => checkFocusLost(wait), wait);
     });
+    window.addEventListener('focus', () => clearTimeout(blurCheck));
+
     // 전체화면 나가기 (알림창 때문에 풀린 경우는 다시 전체화면으로만 안내)
     function onFullscreenChange() {
-      if (isFullscreen() && document.getElementById('proctor-overlay').dataset.mode === 'fullscreen') { hideOverlay(); return; }
-      if (isFullscreen() || !proctorOn || examPaused || isLocked) return;
-      if (inDialog()) showOverlay('fullscreen');
-      else triggerPause('전체화면 나가기');
+      if (isFullscreen()) {
+        fsRestore = false;
+        if (document.getElementById('proctor-overlay').dataset.mode === 'fullscreen') hideOverlay();
+        return;
+      }
+      if (!proctorOn || examPaused || isLocked) return;
+      if (inDialog()) { showOverlay('fullscreen'); return; }
+      if (keyboardLikely()) {
+        // 화면 키보드 때문에 풀린 전체화면: 중지하지 않고, 키보드를 내린 뒤 빈 곳을 누르면 다시 전체화면
+        fsRestore = true;
+        if (!fsToastShown) { fsToastShown = true; showToast('키보드 때문에 전체화면이 잠시 풀렸습니다. 빈 곳을 누르면 다시 전체화면이 됩니다.'); }
+        return;
+      }
+      triggerPause('전체화면 나가기');
     }
+    // 키보드 때문에 풀린 전체화면 되돌리기: 답안 칸이 아닌 곳을 누를 때 (누르는 동작이 있어야 전체화면 요청 가능)
+    document.addEventListener('click', e => {
+      if (!fsRestore || !proctorOn || examPaused || isLocked || isFullscreen()) return;
+      if (isEditable(e.target) || keyboardOpenNow()) return;
+      if (e.target.closest && e.target.closest('#proctor-overlay, #ui-dialog')) return;
+      enterFullscreen();
+    }, true);
     document.addEventListener('fullscreenchange', onFullscreenChange);
     document.addEventListener('webkitfullscreenchange', onFullscreenChange);
 
