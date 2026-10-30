@@ -223,7 +223,7 @@
         <span>시험 시작하기 (카운트다운 시작)</span>
       </button>
       <a href="../" class="block text-xs text-slate-400 hover:text-indigo-600 hover:underline">← 회차 선택 화면으로</a>
-      <p class="text-[10px] text-slate-300">버전 2026-10-30b · <span class="exam-label"></span></p>
+      <p class="text-[10px] text-slate-300">버전 2026-10-30d · <span class="exam-label"></span></p>
     </div>
 
     <!-- ================= STUDENT WORKSHEET ================= -->
@@ -1868,17 +1868,48 @@
           (navigator.maxTouchPoints > 1 && /Macintosh/.test(navigator.userAgent));   // 아이패드
       } catch (e) { return false; }
     })();
-    const KB_GRACE = 1500;      // 키보드가 오르내린 뒤 이 시간(ms) 안의 포커스·전체화면 변화는 키보드 때문으로 봄
+    const KB_GRACE = 2000;      // 키보드가 오르내린 뒤 이 시간(ms) 안의 포커스·전체화면 변화는 키보드 때문으로 봄
     let kbAt = 0, escAt = 0, fsRestore = false, fsToastShown = false, blurCheck = null;
     const isEditable = el => !!el && (el.tagName === 'TEXTAREA' || el.isContentEditable ||
       (el.tagName === 'INPUT' && !['button', 'radio', 'checkbox', 'submit', 'reset'].includes(el.type)));
     document.addEventListener('focusin', e => { if (isEditable(e.target)) kbAt = Date.now(); }, true);
     document.addEventListener('focusout', e => { if (isEditable(e.target)) kbAt = Date.now(); }, true);
     document.addEventListener('keydown', e => { if (e.key === 'Escape') escAt = Date.now(); }, true);
-    // 지금 화면 키보드가 화면을 가리고 있는지 (보이는 영역이 창보다 확 줄어듦)
+    // 키보드 자체가 오르내리는 것도 감지: 보이는 영역(visualViewport)만 크게 줄거나 늘고 창 높이는 그대로일 때
+    // (키보드의 [키보드 내리기] 버튼을 눌러 답안 칸에서 커서가 빠지지 않는 경우까지 잡기 위함.
+    //  전체화면이 풀릴 때는 창 높이도 함께 바뀌므로 여기에 해당하지 않음)
+    if (IS_TOUCH && window.visualViewport) {
+      let vvH = visualViewport.height, vvW = visualViewport.width;
+      visualViewport.addEventListener('resize', () => {
+        // 가로폭은 그대로인데 높이만 크게(150px 넘게) 바뀜 = 키보드가 올라오거나 내려감
+        // (전체화면이 풀릴 때 생기는 주소창 높이 변화는 이보다 작음, 화면 회전은 가로폭이 바뀜)
+        const dv = Math.abs(visualViewport.height - vvH), dwid = Math.abs(visualViewport.width - vvW);
+        if (dv > 150 && dwid < 2 && (visualViewport.scale || 1) < 1.05) kbAt = Date.now();
+        vvH = visualViewport.height; vvW = visualViewport.width;
+        if (!isEditable(document.activeElement)) updateVvBase();
+      });
+      window.addEventListener('load', updateVvBase);
+      setTimeout(updateVvBase, 0);
+    }
+    // 지금 화면 키보드가 화면을 가리고 있는지
+    // 기준: 같은 화면 방향에서 '키보드가 없을 때 보이던 높이'보다 25% 넘게 줄었으면 키보드가 떠 있는 것으로 봄
+    // (창 높이 innerHeight와 비교하면, 내용이 화면보다 넓은 페이지에서 키보드가 없어도 떠 있다고 잘못 판단함)
+    const vvBase = {};
+    // 화면 방향 구분: 보이는 영역의 가로폭으로 구분 (키보드가 올라와도 가로폭은 그대로, 기기를 돌리면 바뀜)
+    // screen.width/height(아이패드는 돌려도 그대로)나 screen.orientation(기기·모드에 따라 틀림)은 믿을 수 없어 쓰지 않음
+    const orientKey = () => String(Math.round(window.visualViewport.width * Math.max(1, window.visualViewport.scale || 1) / 40));
+    const vvNow = () => window.visualViewport.height * Math.max(1, window.visualViewport.scale || 1);   // 확대(핀치)는 보정
+    function updateVvBase() {
+      if (!IS_TOUCH || !window.visualViewport) return;
+      const k = orientKey();
+      // 답안 칸에 커서가 없을 때(키보드가 없을 가능성이 큰 때)의 높이만 기준으로 삼음
+      if (!isEditable(document.activeElement) || !vvBase[k]) vvBase[k] = Math.max(vvBase[k] || 0, vvNow());
+    }
     function keyboardOpenNow() {
-      const vv = window.visualViewport;
-      return IS_TOUCH && !!vv && vv.height * (vv.scale || 1) < window.innerHeight * 0.85;
+      if (!IS_TOUCH || !window.visualViewport) return false;
+      updateVvBase();
+      const base = vvBase[orientKey()];
+      return !!base && vvNow() < base * 0.75;
     }
     // 방금 일어난 변화가 화면 키보드 때문일 가능성이 큰지 (Esc를 누른 경우는 제외)
     function keyboardLikely() {
