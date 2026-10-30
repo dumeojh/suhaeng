@@ -223,7 +223,7 @@
         <span>시험 시작하기 (카운트다운 시작)</span>
       </button>
       <a href="../" class="block text-xs text-slate-400 hover:text-indigo-600 hover:underline">← 회차 선택 화면으로</a>
-      <p class="text-[10px] text-slate-300">버전 2026-10-30d · <span class="exam-label"></span></p>
+      <p class="text-[10px] text-slate-300">버전 2026-10-30e · <span class="exam-label"></span></p>
     </div>
 
     <!-- ================= STUDENT WORKSHEET ================= -->
@@ -1911,6 +1911,20 @@
       const base = vvBase[orientKey()];
       return !!base && vvNow() < base * 0.75;
     }
+    // ===== 화면 회전(가로↔세로) 대응 =====
+    // 태블릿을 돌리면 브라우저가 전체화면을 풀거나 포커스를 잠깐 잃는 경우가 있음 → 부정행위로 보지 않음.
+    // 회전 판정: 화면이 실제로 가로→세로(또는 반대)로 바뀐 경우만. 전체화면을 나가는 것만으로는 방향이 바뀌지 않음.
+    const ROT_GRACE = 2500;
+    let rotAt = 0, lastLand = window.innerWidth > window.innerHeight;
+    function noteRotate() {
+      const land = window.innerWidth > window.innerHeight;
+      if (land !== lastLand) { lastLand = land; rotAt = Date.now(); }
+    }
+    window.addEventListener('resize', noteRotate);
+    window.addEventListener('orientationchange', () => { rotAt = Date.now(); setTimeout(noteRotate, 300); });
+    try { if (screen.orientation) screen.orientation.addEventListener('change', () => { rotAt = Date.now(); }); } catch (e) { }
+    const rotatingNow = () => IS_TOUCH && Date.now() - rotAt < ROT_GRACE && Date.now() - escAt >= KB_GRACE;
+
     // 방금 일어난 변화가 화면 키보드 때문일 가능성이 큰지 (Esc를 누른 경우는 제외)
     function keyboardLikely() {
       if (!IS_TOUCH || Date.now() - escAt < KB_GRACE) return false;
@@ -1923,6 +1937,8 @@
       clearTimeout(blurCheck);
       if (!proctorOn || examPaused || isLocked || document.hasFocus()) return;
       if (document.visibilityState === 'hidden') { triggerPause('다른 탭·창으로 이동'); return; }
+      // 화면을 돌리는 중이면 회전이 끝날 때까지 조금 더 지켜봄 (회전 직전에 포커스가 먼저 빠지는 기기 대비)
+      if (rotatingNow() && waited < 5000) { blurCheck = setTimeout(() => checkFocusLost(waited + 500), 500); return; }
       // 키보드가 아직 떠 있으면 조금 더 지켜봄 (최대 30초)
       if (keyboardOpenNow() && Date.now() - escAt >= KB_GRACE && waited < 30000) {
         blurCheck = setTimeout(() => checkFocusLost(waited + 1000), 1000);
@@ -1932,7 +1948,7 @@
     }
     window.addEventListener('blur', () => {
       clearTimeout(blurCheck);
-      const wait = keyboardLikely() ? KB_GRACE : 150;
+      const wait = (keyboardLikely() || rotatingNow()) ? KB_GRACE : 150;
       blurCheck = setTimeout(() => checkFocusLost(wait), wait);
     });
     window.addEventListener('focus', () => clearTimeout(blurCheck));
@@ -1946,10 +1962,10 @@
       }
       if (!proctorOn || examPaused || isLocked) return;
       if (inDialog()) { showOverlay('fullscreen'); return; }
-      if (keyboardLikely()) {
-        // 화면 키보드 때문에 풀린 전체화면: 중지하지 않고, 키보드를 내린 뒤 빈 곳을 누르면 다시 전체화면
+      if (keyboardLikely() || rotatingNow()) {
+        // 화면 키보드·화면 회전 때문에 풀린 전체화면: 중지하지 않고, 키보드를 내린 뒤 빈 곳을 누르면 다시 전체화면
         fsRestore = true;
-        if (!fsToastShown) { fsToastShown = true; showToast('키보드 때문에 전체화면이 잠시 풀렸습니다. 빈 곳을 누르면 다시 전체화면이 됩니다.'); }
+        if (!fsToastShown) { fsToastShown = true; showToast('키보드·화면 회전 때문에 전체화면이 잠시 풀렸습니다. 빈 곳을 누르면 다시 전체화면이 됩니다.'); }
         return;
       }
       triggerPause('전체화면 나가기');
