@@ -223,7 +223,7 @@
         <span>시험 시작하기 (카운트다운 시작)</span>
       </button>
       <a href="../" class="block text-xs text-slate-400 hover:text-indigo-600 hover:underline">← 회차 선택 화면으로</a>
-      <p class="text-[10px] text-slate-300">버전 2026-10-30e · <span class="exam-label"></span></p>
+      <p class="text-[10px] text-slate-300">버전 2026-10-30g · <span class="exam-label"></span></p>
     </div>
 
     <!-- ================= STUDENT WORKSHEET ================= -->
@@ -1768,8 +1768,7 @@
       cheatShownAt = Date.now();
       clearInterval(cheatTimer);
       cheatTimer = setInterval(() => {
-        // 아직 다른 창·탭에 있으면 2초를 세지 않음 (돌아와서 경고를 볼 수 있게)
-        if (document.visibilityState !== 'visible' || !document.hasFocus()) { cheatShownAt = Date.now(); return; }
+        // 감지된 순간부터 2초 뒤 무조건 사라짐
         const left = Math.ceil((CHEAT_SHOW_MS - (Date.now() - cheatShownAt)) / 1000);
         if (left > 0) { document.getElementById('po-count').innerText = cheatCountText(left); return; }
         endCheatWarning();
@@ -1923,6 +1922,12 @@
     window.addEventListener('resize', noteRotate);
     window.addEventListener('orientationchange', () => { rotAt = Date.now(); setTimeout(noteRotate, 300); });
     try { if (screen.orientation) screen.orientation.addEventListener('change', () => { rotAt = Date.now(); }); } catch (e) { }
+    // ===== 손가락으로 화면 끌기(스크롤) 대응 =====
+    // 태블릿은 전체화면에서 화면을 쓸어내리면 브라우저가 전체화면을 풀기도 함 → 부정행위로 보지 않음
+    let touchAt = 0;
+    if (IS_TOUCH) ['touchstart', 'touchmove', 'touchend', 'scroll'].forEach(ev =>
+      window.addEventListener(ev, () => { touchAt = Date.now(); }, { capture: true, passive: true }));
+    const touchingNow = () => IS_TOUCH && Date.now() - touchAt < KB_GRACE && Date.now() - escAt >= KB_GRACE;
     const rotatingNow = () => IS_TOUCH && Date.now() - rotAt < ROT_GRACE && Date.now() - escAt >= KB_GRACE;
 
     // 방금 일어난 변화가 화면 키보드 때문일 가능성이 큰지 (Esc를 누른 경우는 제외)
@@ -1937,6 +1942,9 @@
       clearTimeout(blurCheck);
       if (!proctorOn || examPaused || isLocked || document.hasFocus()) return;
       if (document.visibilityState === 'hidden') { triggerPause('다른 탭·창으로 이동'); return; }
+      // 태블릿·휴대폰: 포커스를 잃은 뒤에도 학생이 시험 화면을 만지고(끌기·터치) 있으면 다른 앱을 쓰는 것이 아님
+      // (아이폰은 키보드를 내리거나 화면을 끌면 '포커스 없음' 상태로 남는 경우가 있음)
+      if (IS_TOUCH && touchAt > blurAt) return;
       // 화면을 돌리는 중이면 회전이 끝날 때까지 조금 더 지켜봄 (회전 직전에 포커스가 먼저 빠지는 기기 대비)
       if (rotatingNow() && waited < 5000) { blurCheck = setTimeout(() => checkFocusLost(waited + 500), 500); return; }
       // 키보드가 아직 떠 있으면 조금 더 지켜봄 (최대 30초)
@@ -1946,9 +1954,19 @@
       }
       triggerPause('다른 프로그램·창 클릭');
     }
+    let blurAt = 0;
     window.addEventListener('blur', () => {
       clearTimeout(blurCheck);
-      const wait = (keyboardLikely() || rotatingNow()) ? KB_GRACE : 150;
+      blurAt = Date.now();
+      if (IS_TOUCH) {
+        // 태블릿·휴대폰: 키보드를 올리고 내리거나 화면을 돌릴 때 생긴 포커스 빠짐은 무시
+        // (아이폰은 키보드를 내리면 포커스가 빠진 채로 남아서, 나중에 다시 확인해도 계속 '포커스 없음'으로 나옴)
+        const kbRecent = Date.now() - kbAt < KB_GRACE || keyboardOpenNow();
+        if ((kbRecent || rotatingNow()) && Date.now() - escAt >= KB_GRACE) return;
+        blurCheck = setTimeout(() => checkFocusLost(KB_GRACE), KB_GRACE);
+        return;
+      }
+      const wait = (keyboardLikely() || rotatingNow() || touchingNow()) ? KB_GRACE : 150;
       blurCheck = setTimeout(() => checkFocusLost(wait), wait);
     });
     window.addEventListener('focus', () => clearTimeout(blurCheck));
@@ -1962,10 +1980,11 @@
       }
       if (!proctorOn || examPaused || isLocked) return;
       if (inDialog()) { showOverlay('fullscreen'); return; }
-      if (keyboardLikely() || rotatingNow()) {
-        // 화면 키보드·화면 회전 때문에 풀린 전체화면: 중지하지 않고, 키보드를 내린 뒤 빈 곳을 누르면 다시 전체화면
+      if (keyboardLikely() || rotatingNow() || touchingNow() || (IS_TOUCH && Date.now() - escAt >= KB_GRACE)) {
+        // 태블릿: 키보드·화면 회전·손가락 끌기 때문에 저절로 풀린 전체화면은 부정행위로 세지 않음
+        // (다른 앱·탭으로 이동하면 그쪽 감지로 기록됨). 빈 곳을 누르면 다시 전체화면
         fsRestore = true;
-        if (!fsToastShown) { fsToastShown = true; showToast('키보드·화면 회전 때문에 전체화면이 잠시 풀렸습니다. 빈 곳을 누르면 다시 전체화면이 됩니다.'); }
+        if (!fsToastShown) { fsToastShown = true; showToast('전체화면이 잠시 풀렸습니다. 빈 곳을 누르면 다시 전체화면이 됩니다.'); }
         return;
       }
       triggerPause('전체화면 나가기');
