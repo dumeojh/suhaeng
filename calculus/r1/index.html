@@ -44,6 +44,7 @@
     .teacher-page #student-view,
     html:not(.teacher-page) #teacher-login-view,
     html:not(.teacher-page) #teacher-view,
+    .teacher-page #exam-end-view,
     html:not(.teacher-page) #detail-modal {
       display: none !important;
     }
@@ -223,7 +224,16 @@
         <span>시험 시작하기 (카운트다운 시작)</span>
       </button>
       <a href="../" class="block text-xs text-slate-400 hover:text-indigo-600 hover:underline">← 회차 선택 화면으로</a>
-      <p class="text-[10px] text-slate-300">버전 2026-10-30g · <span class="exam-label"></span></p>
+      <p class="text-[10px] text-slate-300">버전 2026-11-02a · <span class="exam-label"></span></p>
+    </div>
+
+    <!-- ================= 시험 종료 화면 (문항은 보이지 않음) ================= -->
+    <div id="exam-end-view"
+      class="hidden max-w-md mx-auto my-16 bg-white p-8 rounded-2xl shadow-lg border border-slate-200 text-center space-y-4">
+      <div id="end-icon" class="w-16 h-16 rounded-full flex items-center justify-center mx-auto text-3xl"></div>
+      <h2 id="end-title" class="text-xl font-extrabold text-slate-900"></h2>
+      <p id="end-who" class="text-sm font-bold text-indigo-700"></p>
+      <p id="end-desc" class="text-sm text-slate-600 whitespace-pre-line leading-relaxed"></p>
     </div>
 
     <!-- ================= STUDENT WORKSHEET ================= -->
@@ -1205,7 +1215,7 @@
     // ================= 모드 전환 =================
 
     function showOnly(id) {
-      ['student-login-view', 'student-view', 'teacher-login-view', 'teacher-view']
+      ['student-login-view', 'student-view', 'exam-end-view', 'teacher-login-view', 'teacher-view']
         .forEach(v => document.getElementById(v).classList.toggle('hidden', v !== id));
     }
 
@@ -2066,6 +2076,19 @@
           document.getElementById('lock-title').innerText = `시험 시간이 종료되었습니다 (${TEST_MINUTES}분 경과)`;
           document.getElementById('lock-desc').innerText = '더 이상 문항을 수정할 수 없습니다. 마감 직전까지 작성한 내용은 저장되었습니다. (선생님이 응시 재개를 해 주면 새로고침 후 다시 시작하세요)';
         }
+      }
+
+      // 제출·시간 종료 후에는 문항과 답안을 숨기고 종료 화면만 보여 줌 (다른 반에 문항이 새지 않게)
+      if (reason === 'submitted' || reason === 'time') {
+        const done = reason === 'submitted';
+        document.getElementById('end-icon').className = 'w-16 h-16 rounded-full flex items-center justify-center mx-auto text-3xl ' +
+          (done ? 'fa-solid fa-circle-check bg-emerald-100 text-emerald-600' : 'fa-solid fa-clock bg-red-100 text-red-600');
+        document.getElementById('end-title').innerText = done ? '수행평가가 종료되었습니다' : `시험 시간이 종료되었습니다 (${TEST_MINUTES}분)`;
+        document.getElementById('end-who').innerText = `${EXAM_LABEL} · ` + document.getElementById('stu-info-tag').innerText;
+        document.getElementById('end-desc').innerText = (done ? '답안이 정상적으로 제출되었습니다.' : '마감 직전까지 작성한 내용은 저장되었습니다.') +
+          '\n수고했습니다. 선생님의 안내를 기다리세요.\n\n(선생님이 응시 재개를 해 주면 새로고침 후 다시 시작하세요)';
+        document.getElementById('timer-banner').classList.add('hidden');
+        if (activeStudentKey && !window.TEACHER_PAGE) showOnly('exam-end-view');
       }
     }
 
