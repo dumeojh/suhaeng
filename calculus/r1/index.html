@@ -205,7 +205,8 @@
       </div>
       <div class="p-3 bg-red-50 border border-red-200 rounded-lg text-xs text-red-800 text-left leading-relaxed">
         <p class="font-bold mb-1"><i class="fa-solid fa-shield-halved mr-1"></i>부정행위 방지 안내</p>
-        · 시험은 <strong>전체화면</strong>으로 진행됩니다.<br>
+        · 시험은 <strong>전체화면</strong>으로 진행됩니다. <strong>아이패드·태블릿은 화면을 꽉 채운 상태</strong>로만 응시할 수 있습니다.<br>
+        · 시험 중 <strong>화면 나누기(분할 화면)·작은 창</strong>으로 화면 크기를 조정하면 <strong>부정행위로 기록</strong>되고 <strong>5초 동안</strong> 시험이 멈춥니다.<br>
         · 시험 중 <strong>다른 탭·창·프로그램으로 이동</strong>하거나 <strong>전체화면을 나가면(Esc)</strong> <strong>부정행위로 기록</strong>되고, 경고 화면이 2초 동안 표시됩니다.<br>
         · 부정행위 횟수는 <strong>선생님 화면에 기록</strong>되며, 2초 뒤 시험은 자동으로 계속됩니다.<br>
         · 답안 칸에 <strong>붙여넣기</strong>는 사용할 수 없습니다.
@@ -224,7 +225,7 @@
         <span>시험 시작하기 (카운트다운 시작)</span>
       </button>
       <a href="../" class="block text-xs text-slate-400 hover:text-indigo-600 hover:underline">← 회차 선택 화면으로</a>
-      <p class="text-[10px] text-slate-300">버전 2026-11-02d · <span class="exam-label"></span></p>
+      <p class="text-[10px] text-slate-300">버전 2026-11-02e · <span class="exam-label"></span></p>
     </div>
 
     <!-- ================= 시험 종료 화면 (문항은 보이지 않음) ================= -->
@@ -1634,19 +1635,26 @@
       paused: { bg: 'bg-red-900/95', icon: 'fa-solid fa-hand bg-red-100 text-red-600', btn: '' },
       released: { bg: 'bg-emerald-900/90', icon: 'fa-solid fa-circle-check bg-emerald-100 text-emerald-600', btn: 'bg-emerald-600 hover:bg-emerald-700' },
       fullscreen: { bg: 'bg-indigo-950/90', icon: 'fa-solid fa-expand bg-indigo-100 text-indigo-600', btn: 'bg-indigo-600 hover:bg-indigo-700' },
-      cheat: { bg: 'bg-red-900/90', icon: 'fa-solid fa-triangle-exclamation bg-red-100 text-red-600', btn: '' }
+      cheat: { bg: 'bg-red-900/90', icon: 'fa-solid fa-triangle-exclamation bg-red-100 text-red-600', btn: '' },
+      narrow: { bg: 'bg-amber-900/95', icon: 'fa-solid fa-up-right-and-down-left-from-center bg-amber-100 text-amber-600', btn: '' }
     };
-    function showOverlay(mode, reason) {
+    function showOverlay(mode, reason, text) {
       const ov = document.getElementById('proctor-overlay'), st = PO_STYLE[mode];
       ov.className = `fixed inset-0 z-[60] flex items-center justify-center p-4 ${st.bg}`;
       ov.dataset.mode = mode;
       document.getElementById('po-icon').className = `w-16 h-16 rounded-full flex items-center justify-center mx-auto text-3xl ${st.icon}`;
       const title = document.getElementById('po-title'), desc = document.getElementById('po-desc'), btn = document.getElementById('po-btn');
       if (mode === 'cheat') {
-        title.innerText = '부정행위가 감지되었습니다';
+        title.innerText = (text && text.title) || '부정행위가 감지되었습니다';
         desc.innerText = (reason ? `사유: ${reason}\n\n` : '') +
-          '시험 화면을 벗어나면 부정행위로 기록됩니다.\n잠시 후 시험이 자동으로 계속됩니다.';
+          ((text && text.desc) || '시험 화면을 벗어나면 부정행위로 기록됩니다.\n잠시 후 시험이 자동으로 계속됩니다.');
         btn.classList.add('hidden');
+      } else if (mode === 'narrow') {
+        title.innerText = '시험 화면을 꽉 차게 해 주세요';
+        desc.innerText = '화면 나누기(분할 화면)나 작은 창 상태에서는 시험을 볼 수 없습니다.\n' +
+          '다른 앱을 닫고 시험 화면이 화면 전체를 채우게 하세요.\n(아이패드: 화면 위쪽 가운데 ··· 를 눌러 [전체 화면] 선택)\n\n화면이 꽉 차면 자동으로 시험이 계속됩니다.';
+        btn.classList.add('hidden');
+        setFieldsPaused(true);
       } else if (mode === 'paused') {
         title.innerText = '시험이 중지되었습니다';
         desc.innerText = (reason ? `사유: ${reason}\n\n` : '이전에 중지된 상태입니다.\n\n') +
@@ -1675,7 +1683,7 @@
     }
     function hideOverlay() {
       const ov = document.getElementById('proctor-overlay');
-      const wasFullscreenGuide = ov.dataset.mode === 'fullscreen';
+      const wasFullscreenGuide = ov.dataset.mode === 'fullscreen' || ov.dataset.mode === 'narrow';
       ov.className = 'hidden';
       ov.dataset.mode = '';
       setOverlayBlock(false);
@@ -1741,6 +1749,7 @@
       const reloaded = hadActiveFlag();
       setActiveFlag(true);
       if (reloaded) { triggerPause('시험 중 새로고침 또는 창 닫기'); return; }   // 2초 경고 뒤 화면을 누르면 전체화면
+      if (IS_TOUCH && !windowFull()) { showOverlay('narrow'); return; }   // 태블릿: 처음부터 화면을 꽉 채워야 시작
       if (fsSupported() && !isFullscreen()) showOverlay('fullscreen');
     }
     function enterPausedFromServer() {
@@ -1775,29 +1784,31 @@
     // 감지되면 경고 화면을 2초 보여 준 뒤 자동으로 시험 계속.
     // 학생이 다른 창에 가 있는 동안은 경고를 유지하고, 시험 화면으로 돌아온 뒤 2초를 셈.
     // 한 번 벗어난 것(탭 이동 + 창 포커스 잃음 + 전체화면 풀림이 함께 일어나도)은 1회로 셈.
-    const CHEAT_SHOW_MS = 2000;
-    let cheatShowing = false, cheatTimer = null, cheatShownAt = 0;
+    const CHEAT_SHOW_MS = 2000;      // 보통 부정행위: 2초 경고
+    const RESIZE_SHOW_MS = 5000;     // 화면 크기 조정: 5초 멈춤
+    let cheatShowing = false, cheatTimer = null, cheatShownAt = 0, cheatMs = CHEAT_SHOW_MS;
     let cheatQueue = [], cheatSending = false, cheatRetry = null, cheatNoServer = false;
 
     function cheatCountText(leftSec) {
-      return `부정행위 횟수: ${pauseCount}회 (선생님 화면에 기록됨)` + (leftSec ? ` · ${leftSec}초 후 계속` : '');
+      return `부정행위 횟수: ${pauseCount}회 (선생님 화면에 기록됨)` + (leftSec ? ` · ${leftSec}초 후 시험 가능` : '');
     }
 
-    function triggerPause(reason) {
+    function triggerPause(reason, ms, text) {
       if (!proctorReady || !proctorOn || examPaused || isLocked || window.TEACHER_PAGE) return;
       if (cheatShowing) return;
       cheatShowing = true;
+      cheatMs = ms || CHEAT_SHOW_MS;
       clearTimeout(blurCheck);
       pauseCount++;
       setFieldsPaused(true);
-      showOverlay('cheat', reason);
+      showOverlay('cheat', reason, text);
       cheatQueue.push(reason);
       sendCheats();
       cheatShownAt = Date.now();
       clearInterval(cheatTimer);
       cheatTimer = setInterval(() => {
         // 감지된 순간부터 2초 뒤 무조건 사라짐
-        const left = Math.ceil((CHEAT_SHOW_MS - (Date.now() - cheatShownAt)) / 1000);
+        const left = Math.ceil((cheatMs - (Date.now() - cheatShownAt)) / 1000);
         if (left > 0) { document.getElementById('po-count').innerText = cheatCountText(left); return; }
         endCheatWarning();
       }, 200);
@@ -1809,10 +1820,39 @@
       cheatShowing = false;
       if (document.getElementById('proctor-overlay').dataset.mode === 'cheat') hideOverlay();
       if (isLocked) return;
+      // 5초가 지나도 아직 화면이 줄어 있으면, 꽉 차게 할 때까지 안내 화면 유지 (횟수는 더 늘리지 않음)
+      if (IS_TOUCH && !windowFull()) { showOverlay('narrow'); return; }
       setFieldsPaused(false);
       // 전체화면이 풀렸으면: 화면을 한 번 누르면 다시 전체화면 (누르는 동작이 있어야 전체화면 요청 가능)
       if (fsSupported() && !isFullscreen()) { fsRestore = true; showToast('화면을 한 번 누르면 다시 전체화면이 됩니다.'); }
     }
+
+    // ===== 화면 크기 조정 감지 (아이패드·태블릿) =====
+    // 아이패드는 웹 페이지가 전체화면을 강제할 수 없으므로, 시험 화면의 폭이 기기 화면 폭보다
+    // 눈에 띄게 줄어들면(화면 나누기·작은 창·Stage Manager) 화면 크기 조정으로 봄.
+    // 화면 키보드는 높이만 바꾸고, 확대(핀치)는 페이지 폭을 바꾸지 않으므로 여기에 걸리지 않음.
+    function windowFull() {
+      const sw = screen.width, sh = screen.height;
+      if (!sw || !sh) return true;
+      const land = typeof window.orientation === 'number' ? Math.abs(window.orientation) === 90 : window.innerWidth > window.innerHeight;
+      const expected = land ? Math.max(sw, sh) : Math.min(sw, sh);
+      return document.documentElement.clientWidth >= expected * 0.9;
+    }
+    let resizeCheck = null;
+    function checkWindowSize() {
+      if (window.TEACHER_PAGE || !IS_TOUCH || !proctorOn || examPaused || isLocked || cheatShowing) return;
+      const mode = document.getElementById('proctor-overlay').dataset.mode;
+      if (windowFull()) {
+        if (mode === 'narrow') { hideOverlay(); setFieldsPaused(false); }
+        return;
+      }
+      if (mode === 'narrow') return;   // 이미 안내 중
+      triggerPause('화면 크기 조정 (화면 나누기·작은 창)', RESIZE_SHOW_MS,
+        { title: '화면 크기를 조정하면 안 됩니다', desc: '시험 화면은 꽉 찬 상태로만 응시할 수 있습니다.\n5초 후 시험이 가능합니다.' });
+    }
+    // 화면을 돌리는 중에는 크기가 잠깐 이상하게 나오므로, 움직임이 멈춘 뒤 확인
+    window.addEventListener('resize', () => { clearTimeout(resizeCheck); resizeCheck = setTimeout(checkWindowSize, 700); });
+    window.addEventListener('orientationchange', () => { clearTimeout(resizeCheck); resizeCheck = setTimeout(checkWindowSize, 1200); });
 
     // 서버에 부정행위 기록 (네트워크 오류면 4초 뒤 다시 시도)
     async function sendCheats() {
