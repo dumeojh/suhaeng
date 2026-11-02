@@ -225,7 +225,7 @@
         <span>시험 시작하기 (카운트다운 시작)</span>
       </button>
       <a href="../" class="block text-xs text-slate-400 hover:text-indigo-600 hover:underline">← 회차 선택 화면으로</a>
-      <p class="text-[10px] text-slate-300">버전 2026-11-02g · <span class="exam-label"></span></p>
+      <p class="text-[10px] text-slate-300">버전 2026-11-02h · <span class="exam-label"></span></p>
     </div>
 
     <!-- ================= 시험 종료 화면 (문항은 보이지 않음) ================= -->
@@ -617,6 +617,7 @@
           </button>
         </div>
       </section>
+      <div id="calc-spacer" aria-hidden="true" style="height:0px"></div>
     </div>
 
     <!-- ================= TEACHER LOGIN ================= -->
@@ -2085,6 +2086,15 @@
     document.addEventListener('fullscreenchange', onFullscreenChange);
     document.addEventListener('webkitfullscreenchange', onFullscreenChange);
 
+    // 손가락·마우스로 누른 버튼에는 포커스를 남기지 않음
+    // → 외장 키보드의 스페이스바·Enter로 화면을 내릴 때, 방금 누른 부호 상자(+/−)나 계산기 버튼이 다시 눌리는 일을 막음
+    //   (키보드 Tab으로 버튼을 골라 누른 경우는 그대로 둠: e.detail이 0)
+    document.addEventListener('click', e => {
+      if (window.TEACHER_PAGE || !e.detail) return;
+      const b = e.target && e.target.closest && e.target.closest('#student-view button');
+      if (b && document.activeElement === b) b.blur();
+    }, true);
+
     // 답안 칸 붙여넣기·끌어다 놓기 차단
     function showToast(msg) {
       const t = document.getElementById('toast');
@@ -2196,6 +2206,7 @@
     function showStep(n) {
       currentStep = n;
       document.querySelectorAll('.step-section').forEach(sec => sec.classList.toggle('hidden', sec.id !== `step-${n}`));
+      if (window.updateCalcSpace) updateCalcSpace();
       updateStepTabs();
       renderCharts();   // 숨겨져 있던 그래프를 보이는 크기에 맞춰 다시 그림
       document.getElementById('step-tabs').scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -2809,6 +2820,14 @@
       const show = open === undefined ? p.classList.contains('hidden') : open;
       p.classList.toggle('hidden', !show);
       document.getElementById('calc-fab-txt').innerText = show ? '계산기 닫기' : '계산기';
+      updateCalcSpace();
+    }
+    // 계산기 버튼·창이 화면 아래쪽 답안 칸과 [최종 제출] 버튼을 가리지 않도록, 3단계에서는 아래 여백을 더 줌
+    // (계산기를 열면 창 높이만큼 더 내려서 가려진 칸을 볼 수 있음)
+    function updateCalcSpace() {
+      const open = !document.getElementById('calc-panel').classList.contains('hidden');
+      const sp = document.getElementById('calc-spacer');
+      if (sp) sp.style.height = currentStep !== 3 ? '0px' : open ? '26rem' : '5rem';
     }
 
     // 키보드(컴퓨터)로도 입력: 답안 칸에 커서가 없을 때만
