@@ -224,7 +224,7 @@
         <span>시험 시작하기 (카운트다운 시작)</span>
       </button>
       <a href="../" class="block text-xs text-slate-400 hover:text-indigo-600 hover:underline">← 회차 선택 화면으로</a>
-      <p class="text-[10px] text-slate-300">버전 2026-11-02a · <span class="exam-label"></span></p>
+      <p class="text-[10px] text-slate-300">버전 2026-11-02b · <span class="exam-label"></span></p>
     </div>
 
     <!-- ================= 시험 종료 화면 (문항은 보이지 않음) ================= -->
@@ -533,6 +533,23 @@
           </h2>
         </div>
 
+        <!-- 3단계 전용 계산기 (화면 안 계산기: 다른 앱을 열면 화면 이탈로 기록되므로) -->
+        <button type="button" id="calc-fab" onclick="toggleCalc()"
+          class="test-field fixed bottom-5 right-5 z-40 px-4 py-3 rounded-full bg-amber-500 hover:bg-amber-600 text-white font-bold shadow-xl flex items-center gap-2">
+          <i class="fa-solid fa-calculator text-lg"></i><span id="calc-fab-txt">계산기</span>
+        </button>
+        <div id="calc-panel" class="hidden fixed bottom-20 right-5 z-40 w-72 bg-slate-800 rounded-2xl shadow-2xl p-3 space-y-2 select-none">
+          <div class="flex items-center justify-between text-xs text-slate-300 px-1">
+            <span><i class="fa-solid fa-calculator mr-1"></i>계산기 <span class="text-slate-400">(^ 는 거듭제곱: 11^3)</span></span>
+            <button type="button" onclick="toggleCalc(false)" class="test-field text-slate-400 hover:text-white px-1" title="닫기"><i class="fa-solid fa-xmark"></i></button>
+          </div>
+          <div class="bg-slate-100 rounded-xl px-3 py-2 text-right">
+            <div id="calc-prev" class="text-xs text-slate-500 min-h-[1rem] break-all"></div>
+            <div id="calc-disp" class="text-2xl font-bold text-slate-900 break-all min-h-[2rem] font-mono">0</div>
+          </div>
+          <div id="calc-keys" class="grid grid-cols-5 gap-1.5"></div>
+        </div>
+
         <!-- 참고: 2단계 그래프와 증감표 (보기 전용) -->
         <details id="s3-ref-panel" open
           ontoggle="if (this.open && window.renderCharts && activeStudentKey) renderCharts()"
@@ -578,6 +595,7 @@
                 class="test-field w-full p-2 border rounded-lg text-sm">
             </div>
           </div>
+          <p class="text-xs text-amber-700 font-semibold"><i class="fa-solid fa-calculator mr-1"></i>11³ 같은 큰 수 계산은 화면 오른쪽 아래 <b>[계산기]</b>를 누르세요. (다른 앱의 계산기를 열면 부정행위로 기록됩니다)</p>
           <div>
             <label class="block text-xs font-semibold text-slate-700 mb-1">(3) 현재 시점의 순간 변화율 해석 및 전망 예측하기</label>
             <textarea id="s3-essay" rows="5" oninput="saveStudentData()"
@@ -2660,6 +2678,92 @@
           </table>
         </div>`;
     }
+
+    // ================= 3단계 계산기 =================
+    // eval을 쓰지 않고 직접 계산 (+ − × ÷ ^ 괄호). ^ 는 거듭제곱이며 -2^2 = -4 처럼 수학 규칙대로 계산
+    let calcExpr = '', calcJustDone = false;
+    const CALC_KEYS = [
+      ['C', 'clear', 'bg-rose-500 text-white'], ['⌫', 'back', 'bg-slate-500 text-white'], ['(', '('], [')', ')'], ['÷', '/', 'bg-amber-500 text-white'],
+      ['7', '7'], ['8', '8'], ['9', '9'], ['xʸ', '^', 'bg-indigo-500 text-white'], ['×', '*', 'bg-amber-500 text-white'],
+      ['4', '4'], ['5', '5'], ['6', '6'], ['x²', '^2', 'bg-indigo-500 text-white'], ['−', '-', 'bg-amber-500 text-white'],
+      ['1', '1'], ['2', '2'], ['3', '3'], ['x³', '^3', 'bg-indigo-500 text-white'], ['+', '+', 'bg-amber-500 text-white'],
+      ['0', '0', '', 2], ['.', '.'], ['=', 'eq', 'bg-emerald-500 text-white', 2]
+    ];
+    (function buildCalc() {
+      document.getElementById('calc-keys').innerHTML = CALC_KEYS.map(([label, v, cls, span]) =>
+        `<button type="button" data-v="${v}" class="test-field h-11 rounded-lg text-lg font-bold active:scale-95 ${cls || 'bg-white text-slate-800'} ${span ? 'col-span-' + span : ''}">${label}</button>`).join('');
+      document.getElementById('calc-keys').addEventListener('click', e => {
+        const b = e.target.closest('button[data-v]');
+        if (b && !b.disabled) calcPress(b.dataset.v);
+      });
+    })();
+
+    function calcShow(s) { return s.replace(/\*/g, '×').replace(/\//g, '÷').replace(/-/g, '−'); }
+    function calcRender() { document.getElementById('calc-disp').innerText = calcExpr ? calcShow(calcExpr) : '0'; }
+
+    function calcPress(v) {
+      if (isLocked || examPaused) return;
+      if (v === 'clear') { calcExpr = ''; calcJustDone = false; document.getElementById('calc-prev').innerText = ''; }
+      else if (v === 'back') { calcExpr = calcJustDone ? '' : calcExpr.slice(0, -1); calcJustDone = false; }
+      else if (v === 'eq') {
+        if (!calcExpr) return;
+        const r = calcEval(calcExpr);
+        document.getElementById('calc-prev').innerText = calcShow(calcExpr) + ' =';
+        if (r === null) { document.getElementById('calc-disp').innerText = '식 오류'; calcExpr = ''; calcJustDone = false; return; }
+        calcExpr = calcFmt(r); calcJustDone = true;
+      } else {
+        // 계산 직후 숫자를 누르면 새 식, 연산자를 누르면 결과에 이어서 계산
+        if (calcJustDone && /^[0-9.(]/.test(v)) calcExpr = '';
+        calcJustDone = false;
+        if (calcExpr.length < 60) calcExpr += v;
+      }
+      calcRender();
+    }
+
+    function calcFmt(v) {
+      if (!isFinite(v)) return 'NaN';
+      const r = Number(v.toPrecision(12));
+      let s = String(Object.is(r, -0) ? 0 : r);
+      if (s.includes('e')) s = Math.abs(r) >= 1 ? r.toLocaleString('fullwide', { useGrouping: false }) : r.toFixed(12).replace(/0+$/, '').replace(/\.$/, '');
+      return s;
+    }
+
+    function calcEval(src) {
+      const toks = src.match(/\d*\.?\d+|\d+\.|[-+*/^()]/g);
+      if (!toks || toks.join('') !== src) return null;
+      let i = 0;
+      const peek = () => toks[i], next = () => toks[i++];
+      function expr() { let v = term(); while (peek() === '+' || peek() === '-') { const o = next(); const w = term(); v = o === '+' ? v + w : v - w; } return v; }
+      function term() { let v = unary(); while (peek() === '*' || peek() === '/') { const o = next(); const w = unary(); v = o === '*' ? v * w : v / w; } return v; }
+      function unary() { if (peek() === '-') { next(); return -unary(); } if (peek() === '+') { next(); return unary(); } return power(); }
+      function power() { const b = primary(); if (peek() === '^') { next(); return Math.pow(b, unary()); } return b; }
+      function primary() {
+        const t = next();
+        if (t === '(') { const v = expr(); if (next() !== ')') throw 0; return v; }
+        if (t !== undefined && /^[\d.]/.test(t)) return parseFloat(t);
+        throw 0;
+      }
+      try { const v = expr(); if (i !== toks.length || !isFinite(v)) return null; return v; } catch (e) { return null; }
+    }
+
+    function toggleCalc(open) {
+      const p = document.getElementById('calc-panel');
+      const show = open === undefined ? p.classList.contains('hidden') : open;
+      p.classList.toggle('hidden', !show);
+      document.getElementById('calc-fab-txt').innerText = show ? '계산기 닫기' : '계산기';
+    }
+
+    // 키보드(컴퓨터)로도 입력: 답안 칸에 커서가 없을 때만
+    document.addEventListener('keydown', e => {
+      if (window.TEACHER_PAGE || isLocked || examPaused) return;
+      if (document.getElementById('calc-panel').classList.contains('hidden') || currentStep !== 3) return;
+      if (isEditable(e.target) || document.getElementById('proctor-overlay').dataset.mode) return;
+      const map = { Enter: 'eq', '=': 'eq', Backspace: 'back', Delete: 'clear', x: '*', X: '*' };
+      const v = map[e.key] || (/^[0-9.+\-*/^()]$/.test(e.key) ? e.key : null);
+      if (!v) return;
+      e.preventDefault();
+      calcPress(v);
+    });
 
     // ================= 기타 학생 기능 =================
 
