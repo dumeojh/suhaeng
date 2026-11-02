@@ -224,7 +224,7 @@
         <span>시험 시작하기 (카운트다운 시작)</span>
       </button>
       <a href="../" class="block text-xs text-slate-400 hover:text-indigo-600 hover:underline">← 회차 선택 화면으로</a>
-      <p class="text-[10px] text-slate-300">버전 2026-11-02b · <span class="exam-label"></span></p>
+      <p class="text-[10px] text-slate-300">버전 2026-11-02c · <span class="exam-label"></span></p>
     </div>
 
     <!-- ================= 시험 종료 화면 (문항은 보이지 않음) ================= -->
@@ -2684,10 +2684,10 @@
     let calcExpr = '', calcJustDone = false;
     const CALC_KEYS = [
       ['C', 'clear', 'bg-rose-500 text-white'], ['⌫', 'back', 'bg-slate-500 text-white'], ['(', '('], [')', ')'], ['÷', '/', 'bg-amber-500 text-white'],
-      ['7', '7'], ['8', '8'], ['9', '9'], ['xʸ', '^', 'bg-indigo-500 text-white'], ['×', '*', 'bg-amber-500 text-white'],
-      ['4', '4'], ['5', '5'], ['6', '6'], ['x²', '^2', 'bg-indigo-500 text-white'], ['−', '-', 'bg-amber-500 text-white'],
-      ['1', '1'], ['2', '2'], ['3', '3'], ['x³', '^3', 'bg-indigo-500 text-white'], ['+', '+', 'bg-amber-500 text-white'],
-      ['0', '0', '', 2], ['.', '.'], ['=', 'eq', 'bg-emerald-500 text-white', 2]
+      ['7', '7'], ['8', '8'], ['9', '9'], ['x²', '^2', 'bg-indigo-500 text-white'], ['×', '*', 'bg-amber-500 text-white'],
+      ['4', '4'], ['5', '5'], ['6', '6'], ['x³', '^3', 'bg-indigo-500 text-white'], ['−', '-', 'bg-amber-500 text-white'],
+      ['1', '1'], ['2', '2'], ['3', '3'], ['x⁴', '^4', 'bg-indigo-500 text-white'], ['+', '+', 'bg-amber-500 text-white'],
+      ['0', '0'], ['.', '.'], ['xʸ', '^', 'bg-indigo-500 text-white'], ['=', 'eq', 'bg-emerald-500 text-white', 2]
     ];
     (function buildCalc() {
       document.getElementById('calc-keys').innerHTML = CALC_KEYS.map(([label, v, cls, span]) =>
