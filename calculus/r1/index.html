@@ -225,7 +225,7 @@
         <span>시험 시작하기 (카운트다운 시작)</span>
       </button>
       <a href="../" class="block text-xs text-slate-400 hover:text-indigo-600 hover:underline">← 회차 선택 화면으로</a>
-      <p class="text-[10px] text-slate-300">버전 2026-11-02f · <span class="exam-label"></span></p>
+      <p class="text-[10px] text-slate-300">버전 2026-11-02g · <span class="exam-label"></span></p>
     </div>
 
     <!-- ================= 시험 종료 화면 (문항은 보이지 않음) ================= -->
@@ -1936,8 +1936,12 @@
     // 단, 다른 앱·탭으로 이동(visibilitychange)은 바로 부정행위로 기록.
     const IS_TOUCH = (() => {
       try {
+        const ua = navigator.userAgent, touchPts = navigator.maxTouchPoints || 0;
         return matchMedia('(pointer: coarse)').matches ||
-          (navigator.maxTouchPoints > 1 && /Macintosh/.test(navigator.userAgent));   // 아이패드
+          (touchPts > 1 && /Macintosh/.test(ua)) ||   // 아이패드 (데스크톱 모드)
+          // 안드로이드 태블릿: 키보드 커버의 터치패드·마우스를 연결하면 브라우저가 'PC'로 알려 주므로 따로 확인
+          (touchPts > 0 && /Android/.test(ua)) ||
+          (touchPts > 1 && /Linux/.test(ua) && !/Windows|CrOS/.test(ua));   // 안드로이드 크롬 '데스크톱 사이트' 모드
       } catch (e) { return false; }
     })();
     const KB_GRACE = 2000;      // 키보드가 오르내린 뒤 이 시간(ms) 안의 포커스·전체화면 변화는 키보드 때문으로 봄
