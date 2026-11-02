@@ -225,7 +225,7 @@
         <span>시험 시작하기 (카운트다운 시작)</span>
       </button>
       <a href="../" class="block text-xs text-slate-400 hover:text-indigo-600 hover:underline">← 회차 선택 화면으로</a>
-      <p class="text-[10px] text-slate-300">버전 2026-11-02e · <span class="exam-label"></span></p>
+      <p class="text-[10px] text-slate-300">버전 2026-11-02f · <span class="exam-label"></span></p>
     </div>
 
     <!-- ================= 시험 종료 화면 (문항은 보이지 않음) ================= -->
@@ -1839,14 +1839,19 @@
       return document.documentElement.clientWidth >= expected * 0.9;
     }
     let resizeCheck = null;
+    const fullW = {};   // 방향(가로·세로)별로 시험 화면이 꽉 찼을 때의 폭
+    const landNow = () => typeof window.orientation === 'number' ? Math.abs(window.orientation) === 90 : window.innerWidth > window.innerHeight;
     function checkWindowSize() {
       if (window.TEACHER_PAGE || !IS_TOUCH || !proctorOn || examPaused || isLocked || cheatShowing) return;
       const mode = document.getElementById('proctor-overlay').dataset.mode;
+      const k = landNow() ? 'L' : 'P', cw = document.documentElement.clientWidth;
       if (windowFull()) {
+        fullW[k] = Math.max(fullW[k] || 0, cw);
         if (mode === 'narrow') { hideOverlay(); setFieldsPaused(false); }
         return;
       }
       if (mode === 'narrow') return;   // 이미 안내 중
+      if (fullW[k] && cw >= fullW[k] * 0.9) return;   // 꽉 찼던 폭에서 거의 줄지 않았으면 크기 조정이 아님
       triggerPause('화면 크기 조정 (화면 나누기·작은 창)', RESIZE_SHOW_MS,
         { title: '화면 크기를 조정하면 안 됩니다', desc: '시험 화면은 꽉 찬 상태로만 응시할 수 있습니다.\n5초 후 시험이 가능합니다.' });
     }
@@ -1995,6 +2000,13 @@
     let touchAt = 0;
     if (IS_TOUCH) ['touchstart', 'touchmove', 'touchend', 'scroll'].forEach(ev =>
       window.addEventListener(ev, () => { touchAt = Date.now(); }, { capture: true, passive: true }));
+    // 학생이 시험 화면을 실제로 쓰고 있다는 신호 (포커스가 빠진 뒤에도 이것이 오면 다른 앱을 쓰는 것이 아님)
+    // · 키보드 입력·글자 입력·클릭: 다른 앱을 쓰는 동안에는 이 페이지로 절대 오지 않음 (아이패드 외장 키보드 대응)
+    // · 휠·스크롤·터치: 태블릿만 인정 (윈도 PC는 다른 창을 쓰면서도 마우스 휠로 뒤쪽 창을 스크롤할 수 있으므로 제외)
+    let activityAt = 0;
+    ['keydown', 'beforeinput', 'compositionstart', 'compositionupdate', 'pointerdown', 'mousedown']
+      .concat(IS_TOUCH ? ['wheel', 'scroll', 'touchstart', 'touchmove'] : [])
+      .forEach(ev => window.addEventListener(ev, () => { activityAt = Date.now(); }, { capture: true, passive: true }));
     const touchingNow = () => IS_TOUCH && Date.now() - touchAt < KB_GRACE && Date.now() - escAt >= KB_GRACE;
     const rotatingNow = () => IS_TOUCH && Date.now() - rotAt < ROT_GRACE && Date.now() - escAt >= KB_GRACE;
 
@@ -2013,6 +2025,8 @@
       // 태블릿·휴대폰: 포커스를 잃은 뒤에도 학생이 시험 화면을 만지고(끌기·터치) 있으면 다른 앱을 쓰는 것이 아님
       // (아이폰은 키보드를 내리거나 화면을 끌면 '포커스 없음' 상태로 남는 경우가 있음)
       if (IS_TOUCH && touchAt > blurAt) return;
+      // 포커스가 빠진 뒤에 키보드 입력·클릭(태블릿은 스크롤도)이 이 페이지로 들어왔으면 시험 화면을 쓰는 중
+      if (activityAt > blurAt) return;
       // 화면을 돌리는 중이면 회전이 끝날 때까지 조금 더 지켜봄 (회전 직전에 포커스가 먼저 빠지는 기기 대비)
       if (rotatingNow() && waited < 5000) { blurCheck = setTimeout(() => checkFocusLost(waited + 500), 500); return; }
       // 키보드가 아직 떠 있으면 조금 더 지켜봄 (최대 30초)
