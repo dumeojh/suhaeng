@@ -224,7 +224,7 @@
         <span>시험 시작하기 (카운트다운 시작)</span>
       </button>
       <a href="../" class="block text-xs text-slate-400 hover:text-indigo-600 hover:underline">← 회차 선택 화면으로</a>
-      <p class="text-[10px] text-slate-300">버전 2026-11-02c · <span class="exam-label"></span></p>
+      <p class="text-[10px] text-slate-300">버전 2026-11-02d · <span class="exam-label"></span></p>
     </div>
 
     <!-- ================= 시험 종료 화면 (문항은 보이지 않음) ================= -->
@@ -3338,6 +3338,67 @@
       return Object.keys(teacherRows).filter(k => !cls || cls.includes(classOf(teacherRows[k])));
     }
 
+    // 비밀번호 다시 묻기 (가려진 입력 칸이 있는 화면 안 창)
+    function askPassword(msg) {
+      return new Promise(resolve => {
+        const wrap = document.createElement('div');
+        wrap.className = 'fixed inset-0 z-[80] bg-black/50 flex items-center justify-center p-4';
+        wrap.innerHTML = `<div class="bg-white rounded-2xl max-w-sm w-full p-6 space-y-3 shadow-2xl">
+            <p class="text-sm font-bold text-slate-900"><i class="fa-solid fa-lock text-red-600 mr-1"></i>비밀번호 확인</p>
+            <p class="text-xs text-slate-600 whitespace-pre-line"></p>
+            <input type="password" autocomplete="current-password" placeholder="교사 비밀번호"
+              class="w-full p-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-red-500">
+            <div class="flex justify-end gap-2">
+              <button type="button" data-a="no" class="px-4 py-2 rounded-lg border bg-white hover:bg-slate-50 text-slate-700 text-sm font-bold">취소</button>
+              <button type="button" data-a="ok" class="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-bold">확인</button>
+            </div></div>`;
+        wrap.querySelector('p.text-xs').innerText = msg;
+        const input = wrap.querySelector('input');
+        const done = v => { wrap.remove(); resolve(v); };
+        wrap.querySelector('[data-a="ok"]').onclick = () => done(input.value);
+        wrap.querySelector('[data-a="no"]').onclick = () => done(null);
+        input.addEventListener('keydown', e => { if (e.key === 'Enter') done(input.value); if (e.key === 'Escape') done(null); });
+        document.body.appendChild(wrap);
+        input.focus();
+      });
+    }
+
+    function downloadFile(name, text, type) {
+      const url = URL.createObjectURL(new Blob([text], { type }));
+      const link = document.createElement('a');
+      link.href = url; link.download = name;
+      document.body.appendChild(link); link.click(); link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+    }
+
+    // 삭제 직전 백업: ① 엑셀로 열어 볼 수 있는 CSV ② 그대로 되살릴 수 있는 원본 JSON
+    function saveDeleteBackup(rows, scopeTxt, email) {
+      const d = new Date(), p2 = n => String(n).padStart(2, '0');
+      const stamp = `${d.getFullYear()}${p2(d.getMonth() + 1)}${p2(d.getDate())}-${p2(d.getHours())}${p2(d.getMinutes())}`;
+      const base = `삭제전백업_미적분Ⅰ_${EXAM_LABEL}_${scopeTxt.replace(/[·\s/\\:*?"<>|()]/g, '-')}_${stamp}`;
+      const ans = r => (r.data && r.data.answers) || {};
+      const head = ['학년', '반', '번호', '이름', '제출', '진행률(%)', '시작 시각', '제출 시각', '부정행위 횟수', '추세선 차수',
+        '탐구 주제', '데이터 출처', '독립변수 x', '종속변수 y', '데이터(x,y)', '2-2 극대·극소 존재', '2-2 극대 x', '2-2 극소 x',
+        '2-2 판단 근거', '2-3 최댓값 x', '2-3 최솟값 x', '3-1', '3-2 (1) 현재 x', '3-2 (2) 순간변화율', '3-2 (3) 해석·전망'];
+      const lines = [head.map(csvCell).join(',')];
+      rows.forEach(r => {
+        const a = ans(r), pts = Array.isArray(r.data?.points) ? r.data.points : [];
+        lines.push([Number(r.grade) || '', Number(r.class_no) || '', Number(r.num) || '', r.name || '',
+          r.submitted ? '제출' : '미제출', Number(r.progress) || 0, fmtTime(r.start_time), fmtTime(r.submitted_at), Number(r.pause_count) || 0,
+          r.data?.trend?.degree || '', a['s1-topic'] || '', a['s1-source'] || '', a['s1-var-x'] || '', a['s1-var-y'] || '',
+          pts.map(q => `(${q.x}, ${q.y})`).join(' '),
+          a['s2-ext-exist'] === 'yes' ? '존재' : a['s2-ext-exist'] === 'no' ? '존재하지 않음' : '',
+          (a['s2-maxx-list'] || []).filter(v => v !== '').join(', '), (a['s2-minx-list'] || []).filter(v => v !== '').join(', '),
+          a['s2-ext-reason'] || '', a['s2-max-val'] || '', a['s2-min-val'] || '',
+          a['s3-interval'] || '', a['s3-curr-x'] || '', a['s3-curr-dfx'] || '', a['s3-essay'] || ''].map(csvCell).join(','));
+      });
+      downloadFile(base + '.csv', '﻿' + lines.join('\r\n'), 'text/csv;charset=utf-8');
+      const json = JSON.stringify({ kind: 'calculus_submissions_backup', exam_id: EXAM_ID, exam_label: EXAM_LABEL,
+        scope: scopeTxt, saved_at: d.toISOString(), saved_by: email, count: rows.length, rows }, null, 1);
+      setTimeout(() => downloadFile(base + '_원본(복원용).json', json, 'application/json'), 600);
+      return base;
+    }
+
     async function clearAllData() {
       const cls = filterClasses();
       // 지울 반을 항상 명시: '전체' 탭이라도 담당 교사는 자기 반만 지움 (관리자만 반 조건 없이 전체 삭제)
@@ -3345,6 +3406,7 @@
       if (target && !target.length) { alert('삭제할 담당 반이 없습니다.'); return; }
       const scope = cls ? `${EXAM_LABEL} ${filterLabel()} 학생`
         : IS_ADMIN ? `${EXAM_LABEL} 모든 반(전체) 학생` : `${EXAM_LABEL} 담당 ${CLASS_LIST.join('·')}반 학생`;
+      const scopeTxt = cls ? filterLabel() : IS_ADMIN ? '전체' : `${CLASS_LIST.join('·')}반`;
       const count = filteredKeysIgnoringSearch().length;
       if (!count) { alert('삭제할 답안이 없습니다.'); return; }
       // 다른 교실에서 시험 중인 반의 답안을 실수로 지우지 않도록, 열려 있는 반이 포함되면 삭제 금지
@@ -3353,18 +3415,52 @@
         alert(`지금 시험 중(열림)인 ${busy.join('·')}반이 포함되어 있어 삭제할 수 없습니다.\n먼저 위의 [이 회차 응시 관리]에서 해당 반을 닫은 뒤 다시 시도하세요.`);
         return;
       }
-      if (!confirm(`${scope} ${count}명의 답안을 수파베이스에서 영구 삭제합니다. 계속할까요?` +
+      // [1단계] 범위 확인
+      if (!confirm(`[삭제 1/4] ${scope} ${count}명의 답안을 수파베이스에서 영구 삭제합니다. 계속할까요?` +
         '\n\n※ 다른 회차 답안은 삭제되지 않습니다.' +
-        (target ? '\n※ 다른 반은 삭제되지 않습니다.' : '\n※ 특정 반만 지우려면 위의 반 탭을 먼저 고르세요.'))) return;
-      // 확인 입력: 가운뎃점(·) 없이 숫자만 입력하도록 (한글 키보드로 입력하기 쉽게)
-      const typed = prompt(`정말 삭제하려면 삭제할 학생 수 ${count}을(를) 숫자로 입력하세요.`);
+        (target ? '\n※ 다른 반은 삭제되지 않습니다.' : '\n※ 특정 반만 지우려면 위의 반 탭을 먼저 고르세요.') +
+        '\n※ 삭제하기 전에 백업 파일이 자동으로 저장됩니다.')) return;
+      // [2단계] 학생 수 입력: 가운뎃점(·) 없이 숫자만 입력하도록 (한글 키보드로 입력하기 쉽게)
+      const typed = prompt(`[삭제 2/4] 정말 삭제하려면 삭제할 학생 수 ${count}을(를) 숫자로 입력하세요.`);
       if (typed === null) return;
       if (typed.replace(/\s|명/g, '') !== String(count)) { alert('입력한 숫자가 달라 삭제하지 않았습니다.'); return; }
-      let q = sb.from(TABLE).delete().eq('exam_id', EXAM_ID);
+      // [3단계] 교사 비밀번호 다시 확인
+      const { data: ses } = await sb.auth.getSession();
+      const email = ses && ses.session && ses.session.user.email;
+      if (!email) { alert('로그인이 끊겼습니다. 다시 로그인한 뒤 시도하세요.'); return; }
+      const pw = await askPassword(`[삭제 3/4] ${email}\n이 계정의 비밀번호를 다시 입력하세요.`);
+      if (pw === null) return;
+      if (!pw) { alert('비밀번호를 입력하지 않아 삭제하지 않았습니다.'); return; }
+      const { error: authErr } = await sb.auth.signInWithPassword({ email, password: pw });
+      if (authErr) { alert('비밀번호가 맞지 않아 삭제하지 않았습니다.'); return; }
+      // 지울 답안을 서버에서 새로 불러와 백업 (화면에 보이는 것이 아니라 실제로 지워질 행 그대로)
+      let q = sb.from(TABLE).select('*').eq('exam_id', EXAM_ID);
       if (target) q = q.in('class_no', target);
-      const { error } = await q;
-      if (error) { alert('삭제 실패: ' + error.message); return; }
+      const { data: rows, error: readErr } = await q.order('class_no').order('num');
+      if (readErr) { alert('백업할 답안을 불러오지 못해 삭제하지 않았습니다.\n' + readErr.message); return; }
+      if (!rows.length) { alert('삭제할 답안이 없습니다.'); await loadTeacherRows(); return; }
+      const base = saveDeleteBackup(rows, scopeTxt, email);
+      // [4단계] 백업 파일 저장을 확인한 뒤 최종 삭제
+      await new Promise(r => setTimeout(r, 1200));   // 두 파일이 다 내려받아질 시간
+      if (!confirm(`[삭제 4/4] 백업 파일 2개를 저장했습니다. (다운로드 폴더)\n` +
+        `· ${base}.csv  ← 엑셀로 열어 볼 수 있음\n· ${base}_원본(복원용).json  ← 되살릴 때 필요\n\n` +
+        `파일이 저장된 것을 확인했으면 [확인]을 눌러 ${rows.length}명의 답안을 삭제합니다.\n` +
+        `(브라우저가 '여러 파일 다운로드 허용'을 물으면 [허용]을 누른 뒤 확인하세요)`)) {
+        alert('삭제를 취소했습니다. 답안은 그대로 있습니다.'); return;
+      }
+      // 백업한 학생만 정확히 삭제 (백업 뒤에 새로 들어온 답안은 지우지 않음), 실제로 지워진 수를 확인
+      const keys = rows.map(r => r.student_key);
+      let deleted = 0;
+      for (let i = 0; i < keys.length; i += 40) {
+        let dq = sb.from(TABLE).delete().eq('exam_id', EXAM_ID).in('student_key', keys.slice(i, i + 40));
+        if (target) dq = dq.in('class_no', target);
+        const { data: del, error } = await dq.select('student_key');
+        if (error) { alert(`삭제 중 오류가 났습니다. (${deleted}명 삭제됨)\n` + error.message); await loadTeacherRows(); return; }
+        deleted += (del || []).length;
+      }
       await loadTeacherRows();
+      alert(deleted === rows.length ? `${deleted}명의 답안을 삭제했습니다.\n백업 파일은 다운로드 폴더에 있습니다.`
+        : `${rows.length}명 중 ${deleted}명만 삭제되었습니다.\n담당 반이 아닌 학생은 삭제 권한이 없습니다.`);
     }
 
     async function resetStudentDevice() {
