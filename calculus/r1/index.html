@@ -12,10 +12,10 @@
     // id는 교사 회차 관리 화면의 '회차 번호'와 같아야 합니다.
     window.EXAM = { id: 1, label: '1회차' };
   </script>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.6.1/dist/chart.umd.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js"></script>
   <script src="../config.js"></script>
   <script src="../exam-admin.js"></script>
   <script>
@@ -24,7 +24,7 @@
     if (window.TEACHER_PAGE) document.documentElement.classList.add('teacher-page');
   </script>
   <style>
-    @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+    @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css');
 
     body {
       font-family: 'Pretendard', sans-serif;
@@ -240,7 +240,7 @@
         <span>시험 시작하기 (카운트다운 시작)</span>
       </button>
       <a href="../" class="block text-xs text-slate-400 hover:text-indigo-600 hover:underline">← 회차 선택 화면으로</a>
-      <p class="text-[10px] text-slate-300">버전 2026-11-03a · <span class="exam-label"></span></p>
+      <p class="text-[10px] text-slate-300">버전 2026-11-03c · <span class="exam-label"></span></p>
     </div>
 
     <!-- ================= 시험 종료 화면 (문항은 보이지 않음) ================= -->
@@ -2160,7 +2160,10 @@
     const BULK_CHARS = 30;
     const lastVal = new WeakMap();
     const isTextField = el => !!el && (el.tagName === 'TEXTAREA' || (el.tagName === 'INPUT' && el.type === 'text'));
-    document.addEventListener('focusin', e => { if (isTextField(e.target)) lastVal.set(e.target, e.target.value); }, true);
+    // 입력 직전 값을 기억 (focusin + 매 입력 직전 beforeinput → 프로그램이 값을 바꾼 경우에도 기준이 어긋나지 않음)
+    ['focusin', 'beforeinput'].forEach(ev => document.addEventListener(ev, e => {
+      if (isTextField(e.target) && !(ev === 'beforeinput' && e.defaultPrevented)) lastVal.set(e.target, e.target.value);
+    }, true));
     document.addEventListener('input', e => {
       const el = e.target;
       if (!inStudentView(e) || !isTextField(el)) return;
