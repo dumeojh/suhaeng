@@ -7,7 +7,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>[미적분Ⅰ] 1회차 실세계 데이터 기반 다항함수 모델링 수행평가 시스템</title>
   <script>
-    // ===== 이 페이지의 회차 =====
+    // ===== 이 페이지의    회차 =====
     // 새 회차 페이지를 만들 때는 이 폴더를 복사(예: r2)하고 아래 두 줄과 문항만 바꾸면 됩니다.
     // id는 교사 회차 관리 화면의 '회차 번호'와 같아야 합니다.
     window.EXAM = { id: 1, label: '1회차' };
@@ -198,31 +198,37 @@
         <div class="grid grid-cols-3 gap-2">
           <div>
             <label class="block text-xs font-semibold text-slate-600 mb-1">학년</label>
-            <input type="number" id="login-grade" name="stu-grade" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="예: 2"
+            <input type="number" id="login-grade" name="stu-grade" autocomplete="off" autocapitalize="off"
+              spellcheck="false" placeholder="예: 2"
               class="w-full p-2.5 border rounded-lg text-center font-bold text-sm focus:ring-2 focus:ring-indigo-500">
           </div>
           <div>
             <label class="block text-xs font-semibold text-slate-600 mb-1">반</label>
-            <input type="number" id="login-class" name="stu-class" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="예: 3"
+            <input type="number" id="login-class" name="stu-class" autocomplete="off" autocapitalize="off"
+              spellcheck="false" placeholder="예: 3"
               class="w-full p-2.5 border rounded-lg text-center font-bold text-sm focus:ring-2 focus:ring-indigo-500">
           </div>
           <div>
             <label class="block text-xs font-semibold text-slate-600 mb-1">번호</label>
-            <input type="number" id="login-num" name="stu-num" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="예: 15"
+            <input type="number" id="login-num" name="stu-num" autocomplete="off" autocapitalize="off"
+              spellcheck="false" placeholder="예: 15"
               class="w-full p-2.5 border rounded-lg text-center font-bold text-sm focus:ring-2 focus:ring-indigo-500">
           </div>
         </div>
         <div>
           <label class="block text-xs font-semibold text-slate-600 mb-1">이름</label>
-          <input type="text" id="login-name" name="stu-name" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="성명을 입력하세요"
+          <input type="text" id="login-name" name="stu-name" autocomplete="off" autocapitalize="off" spellcheck="false"
+            placeholder="성명을 입력하세요"
             class="w-full p-2.5 border rounded-lg text-center font-bold text-sm focus:ring-2 focus:ring-indigo-500">
         </div>
       </div>
       <div class="p-3 bg-red-50 border border-red-200 rounded-lg text-xs text-red-800 text-left leading-relaxed">
         <p class="font-bold mb-1"><i class="fa-solid fa-shield-halved mr-1"></i>부정행위 방지 안내</p>
         · 시험은 <strong>전체화면</strong>으로 진행됩니다. <strong>아이패드·태블릿은 화면을 꽉 채운 상태</strong>로만 응시할 수 있습니다.<br>
-        · 시험 중 <strong>화면 나누기(분할 화면)·작은 창</strong>으로 화면 크기를 조정하면 <strong>부정행위로 기록</strong>되고 <strong>5초 동안</strong> 시험이 멈춥니다.<br>
-        · 시험 중 <strong>다른 탭·창·프로그램으로 이동</strong>하거나 <strong>전체화면을 나가면(Esc)</strong> <strong>부정행위로 기록</strong>되고, 경고 화면이 2초 동안 표시됩니다.<br>
+        · 시험 중 <strong>화면 나누기(분할 화면)·작은 창</strong>으로 화면 크기를 조정하면 <strong>부정행위로 기록</strong>되고 <strong>5초 동안</strong> 시험이
+        멈춥니다.<br>
+        · 시험 중 <strong>다른 탭·창·프로그램으로 이동</strong>하거나 <strong>전체화면을 나가면(Esc)</strong> <strong>부정행위로 기록</strong>되고, 경고 화면이
+        2초 동안 표시됩니다.<br>
         · 부정행위 횟수는 <strong>선생님 화면에 기록</strong>되며, 2초 뒤 시험은 자동으로 계속됩니다.<br>
         · 답안 칸에 <strong>붙여넣기</strong>는 사용할 수 없습니다.
       </div>
@@ -359,7 +365,8 @@
           </div>
           <div class="p-2.5 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-900">
             <i class="fa-solid fa-circle-info mr-1"></i>
-            <strong>첫 번째 x 값은 0으로 고정</strong>되어 있습니다. 첫 시점을 x = 0으로 하고 그다음 시점부터 1, 2, 3 … 으로 입력하세요. (예: 2018년 → 0, 2019년 → 1 / 1월 → 0, 2월 → 1)
+            <strong>첫 번째 x 값은 0으로 고정</strong>되어 있습니다. 첫 시점을 x = 0으로 하고 그다음 시점부터 1, 2, 3 … 으로 입력하세요. (예: 2018년 → 0, 2019년
+            → 1 / 1월 → 0, 2월 → 1)
           </div>
           <div id="data-lock-note"
             class="hidden p-2.5 bg-slate-100 border border-slate-300 rounded-lg text-xs text-slate-700">
@@ -515,13 +522,13 @@
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
               <label class="block text-xs font-semibold text-slate-500 mb-1">최댓값을 갖는 x의 값</label>
-              <input type="number" step="any" autocomplete="off" id="s2-max-val" oninput="saveStudentData()" placeholder="예: 3"
-                class="test-field w-full p-2 border rounded-lg text-sm">
+              <input type="number" step="any" autocomplete="off" id="s2-max-val" oninput="saveStudentData()"
+                placeholder="예: 3" class="test-field w-full p-2 border rounded-lg text-sm">
             </div>
             <div>
               <label class="block text-xs font-semibold text-slate-500 mb-1">최솟값을 갖는 x의 값</label>
-              <input type="number" step="any" autocomplete="off" id="s2-min-val" oninput="saveStudentData()" placeholder="예: 0"
-                class="test-field w-full p-2 border rounded-lg text-sm">
+              <input type="number" step="any" autocomplete="off" id="s2-min-val" oninput="saveStudentData()"
+                placeholder="예: 0" class="test-field w-full p-2 border rounded-lg text-sm">
             </div>
           </div>
         </div>
@@ -554,10 +561,13 @@
           class="test-field fixed bottom-5 right-5 z-40 px-4 py-3 rounded-full bg-amber-500 hover:bg-amber-600 text-white font-bold shadow-xl flex items-center gap-2">
           <i class="fa-solid fa-calculator text-lg"></i><span id="calc-fab-txt">계산기</span>
         </button>
-        <div id="calc-panel" class="hidden fixed bottom-20 right-5 z-40 w-72 bg-slate-800 rounded-2xl shadow-2xl p-3 space-y-2 select-none">
+        <div id="calc-panel"
+          class="hidden fixed bottom-20 right-5 z-40 w-72 bg-slate-800 rounded-2xl shadow-2xl p-3 space-y-2 select-none">
           <div class="flex items-center justify-between text-xs text-slate-300 px-1">
-            <span><i class="fa-solid fa-calculator mr-1"></i>계산기 <span class="text-slate-400">(^ 는 거듭제곱: 11^3)</span></span>
-            <button type="button" onclick="toggleCalc(false)" class="test-field text-slate-400 hover:text-white px-1" title="닫기"><i class="fa-solid fa-xmark"></i></button>
+            <span><i class="fa-solid fa-calculator mr-1"></i>계산기 <span class="text-slate-400">(^ 는 거듭제곱:
+                11^3)</span></span>
+            <button type="button" onclick="toggleCalc(false)" class="test-field text-slate-400 hover:text-white px-1"
+              title="닫기"><i class="fa-solid fa-xmark"></i></button>
           </div>
           <div class="bg-slate-100 rounded-xl px-3 py-2 text-right">
             <div id="calc-prev" class="text-xs text-slate-500 min-h-[1rem] break-all"></div>
@@ -611,7 +621,8 @@
                 class="test-field w-full p-2 border rounded-lg text-sm">
             </div>
           </div>
-          <p class="text-xs text-amber-700 font-semibold"><i class="fa-solid fa-calculator mr-1"></i>11³ 같은 큰 수 계산은 화면 오른쪽 아래 <b>[계산기]</b>를 누르세요. (다른 앱의 계산기를 열면 부정행위로 기록됩니다)</p>
+          <p class="text-xs text-amber-700 font-semibold"><i class="fa-solid fa-calculator mr-1"></i>11³ 같은 큰 수 계산은 화면
+            오른쪽 아래 <b>[계산기]</b>를 누르세요. (다른 앱의 계산기를 열면 부정행위로 기록됩니다)</p>
           <div>
             <label class="block text-xs font-semibold text-slate-700 mb-1">(3) 현재 시점의 순간 변화율 해석 및 전망 예측하기</label>
             <textarea id="s3-essay" rows="5" oninput="saveStudentData()"
@@ -647,7 +658,8 @@
         <p class="text-xs text-slate-500 mt-1">수파베이스에 등록된 교사 계정으로 로그인하세요.</p>
       </div>
       <div class="space-y-3">
-        <select id="t-email-pick" onchange="syncTeacherPick(true)" class="hidden w-full p-2.5 border rounded-lg text-sm bg-white font-semibold focus:ring-2 focus:ring-indigo-500"></select>
+        <select id="t-email-pick" onchange="syncTeacherPick(true)"
+          class="hidden w-full p-2.5 border rounded-lg text-sm bg-white font-semibold focus:ring-2 focus:ring-indigo-500"></select>
         <input type="email" id="t-email" placeholder="이메일"
           class="w-full p-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500">
         <input type="password" id="t-password" placeholder="비밀번호" onkeydown="if(event.key==='Enter') teacherLogin()"
@@ -661,7 +673,8 @@
     <!-- ================= TEACHER VIEW ================= -->
     <div id="teacher-view" class="hidden space-y-6">
       <!-- 이 회차 응시 관리 (반별 열기·닫기, 결석생 개별 허용) -->
-      <div class="flex justify-end -mb-4"><a href="../?teacher" class="text-xs text-indigo-600 font-semibold hover:underline">
+      <div class="flex justify-end -mb-4"><a href="../?teacher"
+          class="text-xs text-indigo-600 font-semibold hover:underline">
           <i class="fa-solid fa-layer-group mr-1"></i>전체 회차 관리로</a></div>
       <div id="exam-admin"></div>
       <!-- 시험 중지 학생 알림 -->
@@ -3014,8 +3027,8 @@
         (openClasses.length
           ? tab('open', `<i class="fa-solid fa-pen-to-square mr-1"></i>시험 중 ${openClasses.join('·')}반`,
             items.filter(i => openClasses.includes(classOf(i))), true, openClasses)
-              .replace('bg-white border-slate-200', 'bg-emerald-50 border-emerald-400') +
-            '<span class="w-px h-8 bg-slate-200 mx-1"></span>'
+            .replace('bg-white border-slate-200', 'bg-emerald-50 border-emerald-400') +
+          '<span class="w-px h-8 bg-slate-200 mx-1"></span>'
           : '') +
         tab('all', IS_ADMIN ? '전체' : '내 반 전체', items, true) + '<span class="w-px h-8 bg-slate-200 mx-1"></span>' +
         (groups ? groups + '<span class="w-px h-8 bg-slate-200 mx-1"></span>' : '') + classes;
@@ -3111,8 +3124,8 @@
       if (error) {
         alert(String(error.message).includes('NOT_MY_CLASS') ? '담당 반 학생이 아니어서 해제할 수 없습니다.'
           : String(error.message).includes('calc_unpause')
-          ? '수파베이스에 중지 해제 기능이 아직 없습니다. add_pause.sql을 SQL Editor에서 실행하세요.'
-          : '해제 실패: ' + error.message);
+            ? '수파베이스에 중지 해제 기능이 아직 없습니다. add_pause.sql을 SQL Editor에서 실행하세요.'
+            : '해제 실패: ' + error.message);
         return;
       }
       await loadTeacherRows();
@@ -3164,8 +3177,8 @@
       if (error) {
         alert(String(error.message).includes('NOT_MY_CLASS') ? '담당 반 학생이 아니어서 응시 재개를 할 수 없습니다.'
           : String(error.message).includes('calc_reopen')
-          ? '수파베이스에 응시 재개 기능이 아직 없습니다. add_reopen.sql을 SQL Editor에서 실행하세요.'
-          : '응시 재개 실패: ' + error.message);
+            ? '수파베이스에 응시 재개 기능이 아직 없습니다. add_reopen.sql을 SQL Editor에서 실행하세요.'
+            : '응시 재개 실패: ' + error.message);
         return;
       }
       if (item.paused) await sb.rpc('calc_unpause', { p_key: inspectStudentKey });
@@ -3523,17 +3536,19 @@
       rows.forEach(r => {
         const a = ans(r), pts = Array.isArray(r.data?.points) ? r.data.points : [];
         lines.push([Number(r.grade) || '', Number(r.class_no) || '', Number(r.num) || '', r.name || '',
-          r.submitted ? '제출' : '미제출', Number(r.progress) || 0, fmtTime(r.start_time), fmtTime(r.submitted_at), Number(r.pause_count) || 0,
-          r.data?.trend?.degree || '', a['s1-topic'] || '', a['s1-source'] || '', a['s1-var-x'] || '', a['s1-var-y'] || '',
-          pts.map(q => `(${q.x}, ${q.y})`).join(' '),
-          a['s2-ext-exist'] === 'yes' ? '존재' : a['s2-ext-exist'] === 'no' ? '존재하지 않음' : '',
-          (a['s2-maxx-list'] || []).filter(v => v !== '').join(', '), (a['s2-minx-list'] || []).filter(v => v !== '').join(', '),
-          a['s2-ext-reason'] || '', a['s2-max-val'] || '', a['s2-min-val'] || '',
-          a['s3-interval'] || '', a['s3-curr-x'] || '', a['s3-curr-dfx'] || '', a['s3-essay'] || ''].map(csvCell).join(','));
+        r.submitted ? '제출' : '미제출', Number(r.progress) || 0, fmtTime(r.start_time), fmtTime(r.submitted_at), Number(r.pause_count) || 0,
+        r.data?.trend?.degree || '', a['s1-topic'] || '', a['s1-source'] || '', a['s1-var-x'] || '', a['s1-var-y'] || '',
+        pts.map(q => `(${q.x}, ${q.y})`).join(' '),
+        a['s2-ext-exist'] === 'yes' ? '존재' : a['s2-ext-exist'] === 'no' ? '존재하지 않음' : '',
+        (a['s2-maxx-list'] || []).filter(v => v !== '').join(', '), (a['s2-minx-list'] || []).filter(v => v !== '').join(', '),
+        a['s2-ext-reason'] || '', a['s2-max-val'] || '', a['s2-min-val'] || '',
+        a['s3-interval'] || '', a['s3-curr-x'] || '', a['s3-curr-dfx'] || '', a['s3-essay'] || ''].map(csvCell).join(','));
       });
       downloadFile(base + '.csv', '﻿' + lines.join('\r\n'), 'text/csv;charset=utf-8');
-      const json = JSON.stringify({ kind: 'calculus_submissions_backup', exam_id: EXAM_ID, exam_label: EXAM_LABEL,
-        scope: scopeTxt, saved_at: d.toISOString(), saved_by: email, count: rows.length, rows }, null, 1);
+      const json = JSON.stringify({
+        kind: 'calculus_submissions_backup', exam_id: EXAM_ID, exam_label: EXAM_LABEL,
+        scope: scopeTxt, saved_at: d.toISOString(), saved_by: email, count: rows.length, rows
+      }, null, 1);
       setTimeout(() => downloadFile(base + '_원본(복원용).json', json, 'application/json'), 600);
       return base;
     }
