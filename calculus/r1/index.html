@@ -49,6 +49,21 @@
       display: none !important;
     }
 
+    /* 학생 시험 화면: 문제 글자를 길게 눌러 선택·복사하지 못하게 함 (아이패드 사파리·안드로이드 크롬 공통)
+       답안 칸(입력칸·글상자)은 자기 답을 고칠 수 있도록 선택은 허용하되, 복사·잘라내기는 스크립트에서 막음 */
+    html:not(.teacher-page) #student-view {
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-touch-callout: none;
+    }
+
+    html:not(.teacher-page) #student-view input,
+    html:not(.teacher-page) #student-view textarea {
+      -webkit-user-select: text;
+      user-select: text;
+      -webkit-touch-callout: default;
+    }
+
     /* 문항 2-1: f'(x) 부호 선택 상자 — 크게, 눈에 띄게 */
     .sign-sel {
       min-width: 4.2rem;
@@ -225,7 +240,7 @@
         <span>시험 시작하기 (카운트다운 시작)</span>
       </button>
       <a href="../" class="block text-xs text-slate-400 hover:text-indigo-600 hover:underline">← 회차 선택 화면으로</a>
-      <p class="text-[10px] text-slate-300">버전 2026-11-02h · <span class="exam-label"></span></p>
+      <p class="text-[10px] text-slate-300">버전 2026-11-03a · <span class="exam-label"></span></p>
     </div>
 
     <!-- ================= 시험 종료 화면 (문항은 보이지 않음) ================= -->
@@ -2114,6 +2129,50 @@
         showToast('시험 중에는 붙여넣기를 사용할 수 없습니다. 직접 입력하세요.');
       }
     }, true));
+
+    // 복사·잘라내기 차단 (길게 눌러 나온 메뉴의 [복사], 외장 키보드 ⌘C·Ctrl+C, 세 손가락 복사 동작 모두 여기로 옴)
+    const inStudentView = e => {
+      if (window.TEACHER_PAGE || !activeStudentKey || !e.target) return false;
+      const t = e.target.nodeType === 3 ? e.target.parentElement : e.target;   // 글자 노드면 그 부모 요소로
+      return !!(t && t.closest && t.closest('#student-view'));
+    };
+    ['copy', 'cut'].forEach(ev => document.addEventListener(ev, e => {
+      if (!inStudentView(e)) return;
+      e.preventDefault();
+      try { e.clipboardData && e.clipboardData.setData('text/plain', ''); } catch (err) { }
+      showToast(ev === 'copy' ? '시험 중에는 복사할 수 없습니다.' : '시험 중에는 잘라내기를 사용할 수 없습니다.');
+    }, true));
+    // 문제 글자 선택 시작 차단 (CSS의 user-select를 지원하지 않는 예전 브라우저 대비, 답안 칸은 제외)
+    document.addEventListener('selectstart', e => {
+      if (!inStudentView(e) || isEditable(e.target.nodeType === 3 ? e.target.parentElement : e.target)) return;
+      e.preventDefault();
+    }, true);
+    // 붙여넣기로 분류되는 입력(일부 키보드의 [붙여넣기] 버튼 포함) 차단
+    document.addEventListener('beforeinput', e => {
+      if (!inStudentView(e)) return;
+      if (/^insertFrom(Paste|PasteAsQuotation|Drop|Yank)$/.test(e.inputType || '')) {
+        e.preventDefault();
+        showToast('시험 중에는 붙여넣기를 사용할 수 없습니다. 직접 입력하세요.');
+      }
+    }, true);
+    // 안드로이드 키보드(Gboard·삼성 키보드)의 '클립보드'에서 글을 눌러 넣으면 붙여넣기가 아니라
+    // 타자 입력으로 들어와서 위 차단을 통과함 → 한 번에 긴 글이 들어오면 입력 전 상태로 되돌림
+    const BULK_CHARS = 30;
+    const lastVal = new WeakMap();
+    const isTextField = el => !!el && (el.tagName === 'TEXTAREA' || (el.tagName === 'INPUT' && el.type === 'text'));
+    document.addEventListener('focusin', e => { if (isTextField(e.target)) lastVal.set(e.target, e.target.value); }, true);
+    document.addEventListener('input', e => {
+      const el = e.target;
+      if (!inStudentView(e) || !isTextField(el)) return;
+      const prev = lastVal.has(el) ? lastVal.get(el) : el.value;
+      if (el.value.length - prev.length >= BULK_CHARS) {
+        const pos = Math.min(el.selectionStart || 0, prev.length);
+        el.value = prev;
+        try { el.setSelectionRange(pos, pos); } catch (err) { }
+        showToast('한 번에 긴 글이 들어와 입력을 취소했습니다. 직접 입력하세요.');
+      }
+      lastVal.set(el, el.value);
+    }, true);
 
     function initCountdownTimer(startTime) {
       if (timerInterval) clearInterval(timerInterval);
