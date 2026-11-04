@@ -26,6 +26,7 @@
   <script>window.supabase || document.write('<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js"><\/script>')</script>
   <script src="../config.js"></script>
   <script src="../exam-admin.js"></script>
+  <script src="../leave-status.js"></script>
   <script>
     // 주소 뒤에 ?teacher 를 붙이면 교사용 페이지 (예: …/calculus/r1/?teacher)
     window.TEACHER_PAGE = new URLSearchParams(location.search).has('teacher');
@@ -722,6 +723,7 @@
 
       <!-- 명렬표에 있지만 이 회차에 아직 접속하지 않은 학생 -->
       <div id="absent-panel" class="hidden"></div>
+      <div id="leave-panel" class="hidden"></div>
 
       <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
         <div class="p-4 border-b bg-slate-50 flex justify-between items-center">
@@ -1450,6 +1452,7 @@
     let roster = null;          // [{grade, class, num, name}] — 처음 한 번만 불러옴
     let rosterError = '';
     async function loadRoster() {
+      if (window.LeaveStatus) await LeaveStatus.load(sb);   // 전출·자퇴 표시 (add_student_leave.sql)
       const { data, error } = await sb.rpc('calc_roster');
       if (error) {
         roster = [];
@@ -1471,12 +1474,54 @@
         return rosterId(i.grade, i.class, i.num, i.name);
       }));
       const q = useSearch && teacherSearch ? teacherSearch.replace(/\s/g, '') : '';
-      return roster.filter(r => (!classes || classes.includes(Number(r.class))) &&
+      return roster.filter(r => (!classes || classes.includes(Number(r.class))) && !isLeft(r) &&
         !seen.has(rosterId(r.grade, r.class, r.num, r.name)) &&
         (!q || `${r.grade}학년${r.class}반${r.num}번${normName(r.name)}`.includes(q)));
     }
     function rosterCount(classes) {
-      return roster ? roster.filter(r => !classes || classes.includes(Number(r.class))).length : 0;
+      return roster ? roster.filter(r => (!classes || classes.includes(Number(r.class))) && !isLeft(r)).length : 0;
+    }
+    // 전출·자퇴로 표시한 학생 (목록·제출 수·미접속 수에서 빠짐, 답안은 그대로 보관)
+    const isLeft = info => !!(window.LeaveStatus && LeaveStatus.get(info));
+
+    function openLeaveManager(pick) {
+      if (!window.LeaveStatus) { alert('leave-status.js 파일을 찾지 못했습니다.'); return; }
+      LeaveStatus.open({ sb, roster: roster || [], classes: CLASS_LIST, pick, onChange: () => renderTeacherDashboard() });
+    }
+
+    function renderLeavePanel() {
+      const el = document.getElementById('leave-panel');
+      if (!el) return;
+      if (!window.LeaveStatus || !roster || rosterError) { el.className = 'hidden'; el.innerHTML = ''; return; }
+      const cls = filterClasses();
+      const list = LeaveStatus.list(cls || CLASS_LIST);
+      // 답안이 있는 학생은 눌러서 답안을 볼 수 있게
+      const keyOf = {};
+      Object.keys(teacherRows).forEach(k => {
+        const i = teacherRows[k].studentInfo || {};
+        keyOf[rosterId(i.grade, i.class, i.num, i.name)] = k;
+      });
+      el.className = 'px-4 py-3 rounded-xl border border-slate-300 bg-slate-50 space-y-2';
+      el.innerHTML = `<div class="flex flex-wrap items-center gap-2">
+          <p class="text-sm font-bold text-slate-600"><i class="fa-solid fa-user-slash mr-1"></i>전출·자퇴 학생 ${list.length}명
+            <span class="font-normal text-xs text-slate-500">(${esc(filterLabel())} · 목록과 인원 수에서 제외 · 답안은 보관)</span></p>
+          <span class="flex-1"></span>
+          <button type="button" id="leave-manage-btn" class="px-3 py-1.5 rounded-lg bg-white border border-slate-300 hover:bg-slate-100 text-xs font-bold text-slate-700">
+            <i class="fa-solid fa-pen mr-1"></i>전출·자퇴 표시하기</button>
+        </div>` + (list.length ? `<div class="flex flex-wrap gap-1.5">${list.map(r => {
+          const k = keyOf[rosterId(r.grade, r.class, r.num, r.name)];
+          const inner = `<span class="px-1 mr-1 rounded bg-slate-500 text-white text-[10px] font-bold">${esc(LeaveStatus.label(r))}</span>${Number(r.class)}반 <b>${Number(r.num)}</b> ${esc(r.name)}`;
+          return k
+            ? `<button type="button" data-leave-open="${esc(k)}" title="눌러서 답안 보기" class="px-2 py-1 rounded-lg bg-white border border-slate-300 hover:border-indigo-400 text-xs text-slate-500 line-through decoration-slate-400">${inner} <i class="fa-solid fa-file-lines ml-0.5 text-indigo-400 no-underline"></i></button>`
+            : `<span class="px-2 py-1 rounded-lg bg-white border border-slate-200 text-xs text-slate-500 line-through decoration-slate-400" title="이 회차 답안 없음">${inner}</span>`;
+        }).join('')}</div>` : '');
+      el.querySelector('#leave-manage-btn').addEventListener('click', () => openLeaveManager());
+      el.querySelectorAll('[data-leave-open]').forEach(b => b.addEventListener('click', () => openDetailModal(b.dataset.leaveOpen)));
+      // 미접속 학생 이름을 누르면 바로 전출·자퇴 표시 창
+      document.querySelectorAll('#absent-panel [data-leave-pick]').forEach(b => b.addEventListener('click', () => {
+        const r = (roster || []).find(x => rosterId(x.grade, x.class, x.num, x.name) === b.dataset.leavePick);
+        if (r) openLeaveManager(r);
+      }));
     }
 
     function renderAbsentPanel() {
@@ -1502,7 +1547,7 @@
         Object.keys(byClass).sort((a, b) => a - b).map(c => `
           <div class="flex flex-wrap items-center gap-1.5">
             <span class="w-12 text-xs font-bold text-slate-700">${Number(c)}반</span>
-            ${byClass[c].map(r => `<span class="px-2 py-1 rounded-lg bg-white border border-rose-200 text-xs text-slate-800"><b>${Number(r.num)}</b> ${esc(r.name)}</span>`).join('')}
+            ${byClass[c].map(r => `<button type="button" data-leave-pick="${esc(rosterId(r.grade, r.class, r.num, r.name))}" title="전출·자퇴 학생이면 눌러서 표시" class="px-2 py-1 rounded-lg bg-white border border-rose-200 hover:border-slate-400 text-xs text-slate-800"><b>${Number(r.num)}</b> ${esc(r.name)}</button>`).join('')}
           </div>`).join('') +
         `<p class="text-[11px] text-slate-500">결석으로 오늘 응시하지 않는 학생은 나중에 위의 [결석생 개별 응시 허용]으로 응시하게 할 수 있습니다.</p>`;
     }
@@ -3107,6 +3152,7 @@
       return Object.keys(teacherRows).filter(k => {
         const it = teacherRows[k];
         if (cls && !cls.includes(classOf(it))) return false;
+        if (isLeft(it.studentInfo)) return false;   // 전출·자퇴 학생은 아래 칸에 따로
         if (teacherSearch && !studentLabel(it.studentInfo || {}).replace(/\s/g, '').includes(teacherSearch.replace(/\s/g, ''))) return false;
         return true;
       });
@@ -3116,7 +3162,7 @@
       const valid = ['all', ...(IS_ADMIN ? Object.keys(CLASS_GROUPS) : []), ...allClasses().map(String)];
       if (openClasses.length) valid.push('open');
       if (!valid.includes(classFilter)) classFilter = 'all';
-      const items = Object.values(teacherRows);
+      const items = Object.values(teacherRows).filter(i => !isLeft(i.studentInfo));   // 전출·자퇴 제외
       const tab = (key, label, list, wide, classes = null) => {
         const on = classFilter === key;
         const sub = list.filter(i => i.submitted).length;
@@ -3158,6 +3204,7 @@
           ? `<span class="font-bold text-rose-600">미접속 ${absentN}명</span>` : '<span class="font-bold text-emerald-600">모두 접속</span>');
       } else subEl.innerHTML = '';
       renderAbsentPanel();
+      renderLeavePanel();
       if (!keys.length) tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-xs text-slate-400">${teacherSearch ? '검색 결과가 없습니다.' : `${filterLabel()}에 접속한 학생이 아직 없습니다.`}</td></tr>`;
       let submitted = 0;
 
@@ -3587,6 +3634,12 @@
         const cells = head.slice(0, -1).map(() => '');
         cells[0] = Number(r.grade); cells[1] = Number(r.class); cells[2] = Number(r.num); cells[3] = r.name; cells[4] = '미접속';
         lines.push(cells.map(csvCell).join(',') + `,=SUM(${colFrom}${row}:${colTo}${row})`);
+      });
+      // 전출·자퇴 학생: 맨 아래에 상태만 (점수 칸은 비움)
+      if (window.LeaveStatus) LeaveStatus.list(filterClasses() || CLASS_LIST).forEach(r => {
+        const cells = head.map(() => '');
+        cells[0] = Number(r.grade); cells[1] = Number(r.class); cells[2] = Number(r.num); cells[3] = r.name; cells[4] = LeaveStatus.csvLabel(r);
+        lines.push(cells.map(csvCell).join(','));
       });
       const d = new Date(), ymd = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
       const blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });

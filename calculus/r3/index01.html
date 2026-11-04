@@ -1,0 +1,1880 @@
+<!DOCTYPE html>
+<!-- ★ 파일 위치: calculus/r3/index.html  (대수 후속 탐구 독서 활동지) ★ -->
+<html lang="ko">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>[대수] 후속 탐구 독서 활동지</title>
+  <script>
+    // ===== 이 페이지의 회차 =====
+    // id는 교사 회차 관리 화면의 '회차 번호'와 같아야 합니다. (회차 관리에서 3회차, 문항 폴더 r3 로 만들기)
+    window.EXAM = { id: 3, label: '3회차' };
+  </script>
+  <!-- 학교망 필터·외부 서버 장애에도 열리도록 라이브러리는 이 사이트의 lib 폴더에서 불러옴 (없을 때만 외부에서 받음) -->
+  <link rel="stylesheet" href="../lib/tailwind.css">
+  <link rel="stylesheet" href="../lib/fontawesome/css/all.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" media="print" onload="this.media='all'">
+  <script src="https://cdn.tailwindcss.com/3.4.17" async></script>
+  <script src="../lib/supabase.js"></script>
+  <script>window.supabase || document.write('<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js"><\/script>')</script>
+  <script src="../config.js"></script>
+  <script src="../exam-admin.js"></script>
+  <script>
+    // 주소 뒤에 ?teacher 를 붙이면 교사용 페이지 (예: …/calculus/r3/?teacher)
+    window.TEACHER_PAGE = new URLSearchParams(location.search).has('teacher');
+    if (window.TEACHER_PAGE) document.documentElement.classList.add('teacher-page');
+  </script>
+  <style>
+    body {
+      font-family: 'Pretendard', sans-serif;
+    }
+
+    #print-area {
+      display: none;
+    }
+
+    /* 교사용 페이지(?teacher)에서는 학생 화면을, 학생용 페이지에서는 교사 화면을 처음부터 숨김 */
+    .teacher-page #student-login-view,
+    .teacher-page #student-view,
+    html:not(.teacher-page) #teacher-login-view,
+    html:not(.teacher-page) #teacher-view,
+    .teacher-page #exam-end-view,
+    html:not(.teacher-page) #detail-modal {
+      display: none !important;
+    }
+
+    /* 인쇄 및 PDF 저장 (A4) */
+    @media print {
+      body>*:not(#print-area) {
+        display: none !important;
+      }
+
+      body {
+        background: white !important;
+      }
+
+      #print-area {
+        display: block;
+        color: black;
+        font-size: 10pt;
+      }
+
+      .print-page {
+        page-break-after: always;
+        break-after: page;
+      }
+
+      .print-page:last-child {
+        page-break-after: auto;
+        break-after: auto;
+      }
+
+      .print-box {
+        break-inside: avoid;
+      }
+
+      @page {
+        size: A4 portrait;
+        margin: 12mm;
+      }
+    }
+  </style>
+</head>
+
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+
+  <!-- Navigation Header -->
+  <header class="bg-teal-700 text-white shadow-md sticky top-0 z-40">
+    <div class="max-w-5xl mx-auto px-4 py-3 flex justify-between items-center">
+      <div class="flex items-center space-x-3">
+        <i class="fa-solid fa-book-open-reader text-2xl text-teal-200"></i>
+        <div>
+          <h1 class="font-bold text-lg md:text-xl">대수 후속 탐구 독서 활동지 <span
+              class="exam-label ml-1 px-2 py-0.5 rounded bg-white/20 text-sm align-middle"></span></h1>
+          <p class="text-xs text-teal-100">지수함수·로그함수·삼각함수 개념을 독서와 연계하여 탐구하는 후속 활동</p>
+        </div>
+      </div>
+
+      <div class="flex items-center space-x-3">
+        <div id="timer-banner"
+          class="hidden bg-teal-900/80 px-3 py-1.5 rounded-lg flex items-center space-x-2 text-sm border border-teal-400/30">
+          <i class="fa-solid fa-clock text-amber-300"></i>
+          <span class="text-xs text-teal-100">남은 시간:</span>
+          <span id="timer-display" class="font-mono font-bold text-amber-300">--:--</span>
+        </div>
+        <span id="teacher-badge"
+          class="hidden px-3 py-1.5 rounded-lg text-sm font-semibold bg-white text-teal-700 shadow">
+          <i class="fa-solid fa-chalkboard-user mr-1"></i> 교사 확인
+        </span>
+      </div>
+    </div>
+  </header>
+
+  <main class="flex-grow max-w-5xl w-full mx-auto p-4 md:p-6">
+    <!-- ================= STUDENT LOGIN ================= -->
+    <div id="student-login-view"
+      class="max-w-md mx-auto my-12 bg-white p-8 rounded-2xl shadow-lg border border-slate-200 text-center space-y-6">
+      <div
+        class="w-16 h-16 bg-teal-100 text-teal-600 rounded-full flex items-center justify-center mx-auto text-2xl">
+        <i class="fa-solid fa-id-card"></i>
+      </div>
+      <div>
+        <h2 class="text-xl font-bold text-slate-900"><span class="exam-label text-teal-600"></span> 독서 활동지 인적사항 입력</h2>
+        <p class="text-xs text-slate-500 mt-1">인적사항과 <strong>비밀번호</strong>를 입력한 후<br>[활동지 작성 시작하기]를 누르세요.</p>
+      </div>
+      <div class="space-y-3 text-left">
+        <div class="grid grid-cols-3 gap-2">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">학년</label>
+            <input type="number" id="login-grade" name="stu-grade" autocomplete="off" autocapitalize="off"
+              spellcheck="false" placeholder="예: 2"
+              class="w-full p-2.5 border rounded-lg text-center font-bold text-sm focus:ring-2 focus:ring-teal-500">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">반</label>
+            <input type="number" id="login-class" name="stu-class" autocomplete="off" autocapitalize="off"
+              spellcheck="false" placeholder="예: 3"
+              class="w-full p-2.5 border rounded-lg text-center font-bold text-sm focus:ring-2 focus:ring-teal-500">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">번호</label>
+            <input type="number" id="login-num" name="stu-num" autocomplete="off" autocapitalize="off"
+              spellcheck="false" placeholder="예: 15"
+              class="w-full p-2.5 border rounded-lg text-center font-bold text-sm focus:ring-2 focus:ring-teal-500">
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">이름</label>
+          <input type="text" id="login-name" name="stu-name" autocomplete="off" autocapitalize="off" spellcheck="false"
+            placeholder="성명을 입력하세요"
+            class="w-full p-2.5 border rounded-lg text-center font-bold text-sm focus:ring-2 focus:ring-teal-500">
+        </div>
+      </div>
+      <div class="space-y-2 text-left">
+        <label for="login-pin" class="block text-xs font-semibold text-slate-600">비밀번호 (숫자 4자리)</label>
+        <input type="password" id="login-pin" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off"
+          placeholder="숫자 4자리" onkeydown="if(event.key==='Enter') startStudentTest()"
+          class="w-full p-2.5 border rounded-lg text-center font-bold text-lg tracking-widest focus:ring-2 focus:ring-teal-500">
+        <div id="pin2-box" class="hidden space-y-1.5 p-3 rounded-lg bg-amber-50 border border-amber-300">
+          <p class="text-xs font-bold text-amber-900"><i class="fa-solid fa-key mr-1"></i>처음 들어왔습니다. 위에 쓴 비밀번호를 한 번 더 입력하면 이 비밀번호로 정해집니다.</p>
+          <input type="password" id="login-pin2" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off"
+            placeholder="비밀번호 확인" onkeydown="if(event.key==='Enter') startStudentTest()"
+            class="w-full p-2.5 border rounded-lg text-center font-bold text-lg tracking-widest focus:ring-2 focus:ring-amber-500">
+        </div>
+        <p id="pin-error" class="hidden text-xs font-bold text-rose-600"></p>
+      </div>
+      <div class="p-3 bg-teal-50 border border-teal-200 rounded-lg text-xs text-teal-900 text-left leading-relaxed">
+        <p class="font-bold mb-1"><i class="fa-solid fa-circle-info mr-1"></i>작성 안내</p>
+        · <strong>처음 들어올 때 비밀번호(숫자 4자리)를 정합니다.</strong> 다음에 다시 들어올 때 필요하니 꼭 기억하세요. 잊어버리면 선생님께 초기화를 요청하세요.<br>
+        · 쓰는 내용은 <strong>자동으로 저장</strong>됩니다. 화면 위쪽에 '저장됨'이 보이는지 확인하세요.<br>
+        · 다 쓰면 맨 아래 <strong>[활동지 제출하기]</strong>를 누르세요.<br>
+        · 선생님이 정한 <strong>마감 일시 전까지는</strong> 다른 기기에서도 비밀번호로 다시 들어와 이어 쓰거나 고칠 수 있습니다. (제출한 뒤에도)
+      </div>
+      <div id="config-warning"
+        class="hidden p-3 bg-red-50 border border-red-300 rounded-lg text-xs text-red-700 text-left">
+        <i class="fa-solid fa-plug-circle-xmark mr-1"></i> 수파베이스 연결 설정(config.js)이 없습니다. 설치 가이드의 config.js 단계를 확인하세요.
+      </div>
+      <div id="prefill-note"
+        class="hidden p-3 bg-emerald-50 border border-emerald-300 rounded-lg text-sm text-emerald-800 font-semibold">
+        <i class="fa-solid fa-circle-check mr-1"></i>인적사항이 입력되었습니다. 확인한 뒤 아래 버튼을 누르세요.
+      </div>
+      <button id="btn-start" onclick="startStudentTest()"
+        class="w-full py-3 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl shadow-md transition-all flex items-center justify-center space-x-2">
+        <i class="fa-solid fa-play"></i>
+        <span>활동지 작성 시작하기</span>
+      </button>
+      <a href="../" class="block text-xs text-slate-400 hover:text-indigo-600 hover:underline">← 회차 선택 화면으로</a>
+      <p class="text-[10px] text-slate-300">버전 2026-11-04r3c · <span class="exam-label"></span></p>
+    </div>
+
+    <!-- ================= 종료 화면 ================= -->
+    <div id="exam-end-view"
+      class="hidden max-w-md mx-auto my-16 bg-white p-8 rounded-2xl shadow-lg border border-slate-200 text-center space-y-4">
+      <div id="end-icon" class="w-16 h-16 rounded-full flex items-center justify-center mx-auto text-3xl"></div>
+      <h2 id="end-title" class="text-xl font-extrabold text-slate-900"></h2>
+      <p id="end-who" class="text-sm font-bold text-indigo-700"></p>
+      <p id="end-desc" class="text-sm text-slate-600 whitespace-pre-line leading-relaxed"></p>
+    </div>
+
+    <!-- ================= STUDENT WORKSHEET ================= -->
+    <div id="student-view" class="hidden space-y-5 pb-10">
+
+      <div
+        class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-wrap gap-4 items-center justify-between">
+        <div class="flex items-center space-x-3">
+          <span class="font-bold text-teal-900 border-l-4 border-teal-600 pl-2 text-sm">학생 정보:</span>
+          <span id="stu-info-tag"
+            class="px-3 py-1 bg-teal-50 text-teal-700 rounded-lg font-bold text-sm border border-teal-100"></span>
+        </div>
+        <div class="text-xs text-slate-500 flex items-center space-x-2">
+          <span>작성 진행률:</span>
+          <div class="w-32 bg-slate-200 rounded-full h-2.5">
+            <div id="student-progress-bar" class="bg-teal-600 h-2.5 rounded-full" style="width: 0%"></div>
+          </div>
+          <span id="student-progress-text" class="font-bold text-teal-700">0%</span>
+          <span id="save-status"
+            class="ml-3 px-2 py-0.5 rounded text-[11px] font-semibold bg-slate-100 text-slate-500">저장 대기</span>
+        </div>
+      </div>
+
+      <!-- Lock Banner (time over / submitted) -->
+      <div id="lock-banner" class="hidden p-4 border-2 rounded-xl flex items-center space-x-3">
+        <i id="lock-icon" class="text-2xl"></i>
+        <div>
+          <h4 id="lock-title" class="font-bold text-sm"></h4>
+          <p id="lock-desc" class="text-xs"></p>
+        </div>
+      </div>
+
+      <section class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 space-y-4">
+        <div class="text-center space-y-2 border-b pb-4">
+          <h2 class="text-2xl font-extrabold text-slate-900">&lt;대수 후속 탐구 독서 활동지&gt;</h2>
+          <p class="text-sm text-slate-600 leading-relaxed">2학년 대수 교과의 지수함수, 로그함수, 삼각함수 개념을 바탕으로, 수업 중 평소 가졌던
+            수학적 의문이나 진로 관련 호기심을 독서와 연계하여 탐구하는 후속 활동지입니다.</p>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div id="slot-career"></div>
+          <div id="slot-book-title"></div>
+          <div id="slot-book-author"></div>
+        </div>
+      </section>
+
+      <section class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 space-y-3">
+        <h3 class="text-lg font-bold text-slate-900">[문항 1] 탐구의 출발점 및 도서 선택 이유</h3>
+        <div id="slot-q1"></div>
+      </section>
+
+      <section class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 space-y-3">
+        <h3 class="text-lg font-bold text-slate-900">[문항 2] 책 속에서 찾은 수학적 원리와 개념적 확장</h3>
+        <div id="slot-q2"></div>
+      </section>
+
+      <section class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 space-y-3">
+        <h3 class="text-lg font-bold text-slate-900">[문항 3] 함수 개념의 진로 융합 및 가치 성찰</h3>
+        <div id="slot-q3"></div>
+      </section>
+
+      <section class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 space-y-5">
+        <div>
+          <h3 class="text-lg font-bold text-slate-900">[문항 4] 지적 호기심의 확장 및 후속 연계 탐구 설계</h3>
+          <p class="text-sm text-slate-500 mt-1">▶ 이번 독서 탐구를 바탕으로 아래 안내에 따라 향후 도전하고 싶은 나만의 후속 탐구 계획을 설계해 보세요.</p>
+        </div>
+        <div id="slot-q4s1"></div>
+        <div id="slot-q4s2"></div>
+        <div id="slot-q4s3"></div>
+      </section>
+
+      <div class="flex justify-end">
+        <button id="btn-submit" onclick="submitWorksheet()"
+          class="test-field px-6 py-3 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl shadow-md flex items-center space-x-2">
+          <i class="fa-solid fa-paper-plane"></i>
+          <span>활동지 제출하기</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- ================= TEACHER LOGIN ================= -->
+    <div id="teacher-login-view"
+      class="hidden max-w-md mx-auto my-12 bg-white p-8 rounded-2xl shadow-lg border border-slate-200 space-y-5">
+      <div class="text-center">
+        <div
+          class="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mx-auto text-2xl">
+          <i class="fa-solid fa-chalkboard-user"></i>
+        </div>
+        <h2 class="text-xl font-bold text-slate-900 mt-3">교사 로그인</h2>
+        <p class="text-xs text-slate-500 mt-1">수파베이스에 등록된 교사 계정으로 로그인하세요.</p>
+      </div>
+      <div class="space-y-3">
+        <select id="t-email-pick" onchange="syncTeacherPick(true)"
+          class="hidden w-full p-2.5 border rounded-lg text-sm bg-white font-semibold focus:ring-2 focus:ring-indigo-500"></select>
+        <input type="email" id="t-email" placeholder="이메일"
+          class="w-full p-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500">
+        <input type="password" id="t-password" placeholder="비밀번호" onkeydown="if(event.key==='Enter') teacherLogin()"
+          class="w-full p-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500">
+        <p id="t-error" class="hidden text-xs text-red-600 font-semibold"></p>
+      </div>
+      <button id="btn-teacher-login" onclick="teacherLogin()"
+        class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md">로그인</button>
+    </div>
+
+    <!-- ================= TEACHER VIEW ================= -->
+    <div id="teacher-view" class="hidden space-y-6">
+      <!-- 이 회차 응시 관리 (반별 열기·닫기, 결석생 개별 허용) -->
+      <div class="flex justify-end -mb-4"><a href="../?teacher"
+          class="text-xs text-indigo-600 font-semibold hover:underline">
+          <i class="fa-solid fa-layer-group mr-1"></i>전체 회차 관리로</a></div>
+      <div id="exam-admin"></div>
+      <!-- 활동지 마감 일시 (관리자가 정함) -->
+      <div id="deadline-panel" class="bg-white p-4 rounded-xl shadow-sm border border-slate-200"></div>
+      <!-- AI 세특 요청문 설정 -->
+      <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-2">
+        <div class="flex flex-wrap items-center gap-3 text-sm">
+          <span class="font-bold text-slate-800"><i class="fa-solid fa-wand-magic-sparkles text-violet-600 mr-1"></i>AI 세특 요청문</span>
+          <label class="flex items-center gap-1 text-xs text-slate-600">분량
+            <input id="st-chars" type="number" min="100" max="1000" step="50" value="500" onchange="saveSeteukOpts()"
+              class="w-20 p-1 border rounded text-center text-sm">자 이내 (공백 포함)</label>
+          <label class="flex items-center gap-1 text-xs text-slate-600"><input id="st-book" type="checkbox" checked onchange="saveSeteukOpts()">도서명·저자 넣기</label>
+          <label class="flex items-center gap-1 text-xs text-slate-600"><input id="st-two" type="checkbox" checked onchange="saveSeteukOpts()">초안 2가지 받기</label>
+          <button type="button" onclick="exportSeteukPrompts()"
+            class="ml-auto px-3 py-1.5 bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold rounded-lg"
+            title="현재 목록 학생들의 요청문을 한 파일(.txt)로 저장">
+            <i class="fa-solid fa-file-lines mr-1"></i>현재 목록 요청문 일괄 저장</button>
+        </div>
+        <p class="text-[11px] text-slate-500 leading-relaxed">학생의 활동지 내용을 넣어 AI(챗GPT·Claude 등)에게 미적분Ⅰ 세특 초안을 요청하는 글을 만듭니다.
+          학생 [활동지 보기] 창의 <b>[AI 세특 요청문 복사]</b>를 누르고 AI 대화창에 붙여 넣으세요.
+          요청문에는 <b>학생 이름·학번을 넣지 않습니다.</b> AI가 쓴 초안은 반드시 학생 활동지와 대조하고, 학교 기재요령(도서명 기재 여부, 분량 등)에 맞게 고쳐 쓰세요.</p>
+      </div>
+      <!-- 반 선택 탭 -->
+      <div class="bg-white p-3 rounded-xl shadow-sm border border-slate-200">
+        <div id="class-tabs" class="flex flex-wrap items-center gap-2"></div>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+          <p class="text-xs text-slate-500 font-semibold">접속 학생 수 <span class="filter-label text-indigo-600"></span></p>
+          <p id="teacher-total-count" class="text-2xl font-bold text-slate-900 mt-1">0명</p>
+          <p id="teacher-roster-sub" class="text-[11px] mt-0.5"></p>
+        </div>
+        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+          <p class="text-xs text-slate-500 font-semibold">제출 완료</p>
+          <p id="teacher-submitted-count" class="text-2xl font-bold text-emerald-600 mt-1">0명</p>
+        </div>
+        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+          <p class="text-xs text-slate-500 font-semibold">미제출 <span class="text-[11px] font-normal">(작성 중·시간 종료)</span>
+          </p>
+          <p id="teacher-progress-count" class="text-2xl font-bold text-amber-500 mt-1">0명</p>
+        </div>
+        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between">
+          <div>
+            <p class="text-xs text-slate-500 font-semibold">수파베이스 동기화</p>
+            <span id="teacher-sync" class="text-xs font-bold text-slate-700">-</span>
+            <p id="teacher-email" class="text-[11px] text-slate-400 mt-0.5"></p>
+          </div>
+          <div class="flex flex-col items-end space-y-1">
+            <button onclick="loadTeacherRows(true)" class="text-xs text-indigo-600 font-semibold hover:underline"><i
+                class="fa-solid fa-rotate mr-0.5"></i>새로고침</button>
+            <button onclick="teacherLogout()" class="text-xs text-slate-500 hover:underline">로그아웃</button>
+            <button onclick="clearAllData()" class="text-xs text-red-500 hover:underline">데이터 초기화 <span
+                class="filter-label"></span></button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 명렬표에 있지만 이 회차에 아직 접속하지 않은 학생 -->
+      <div id="absent-panel" class="hidden"></div>
+
+      <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div class="p-4 border-b bg-slate-50 flex justify-between items-center">
+          <h3 class="font-bold text-slate-800 flex items-center">
+            <i class="fa-solid fa-list-check mr-2 text-indigo-600"></i> 학생별 작성 현황 <span
+              class="filter-label ml-1 text-indigo-600"></span>
+          </h3>
+          <div class="flex flex-wrap items-center gap-2">
+            <input id="teacher-search" type="search" placeholder="이름·번호 검색"
+              oninput="teacherSearch = this.value.trim(); renderTeacherDashboard();"
+              class="px-2.5 py-1.5 border rounded-lg text-xs w-36 focus:ring-2 focus:ring-indigo-500">
+            <button onclick="exportCSV()"
+              class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg"
+              title="현재 목록 학생의 활동지 내용 전체를 엑셀에서 열 수 있는 CSV로 저장 (세특 작성용)">
+              <i class="fa-solid fa-file-excel mr-1"></i>엑셀(CSV) 내보내기</button>
+            <button onclick="printFilteredReports()"
+              class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg"
+              title="현재 목록의 모든 학생 활동지를 A4로 한꺼번에 출력">
+              <i class="fa-solid fa-print mr-1"></i>PDF 일괄 출력</button>
+          </div>
+        </div>
+        <p class="px-4 py-2 text-[11px] text-slate-500 border-b">학생을 클릭하면 산출물을 검토할 수 있습니다. 검토 창에서 ◀ ▶ 버튼(또는 키보드 ← →)으로
+          같은 목록의 다음 학생으로 넘어갑니다.</p>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse text-sm">
+            <thead>
+              <tr class="bg-slate-100 text-slate-600 border-b text-xs">
+                <th class="p-3">학번/이름</th>
+                <th class="p-3">선택 도서 · 저자</th>
+                <th class="p-3">진로 희망</th>
+                <th class="p-3">작성 글자 수</th>
+                <th class="p-3">진행률</th>
+                <th class="p-3">제출 상태</th>
+                <th class="p-3 text-center">활동지 보기</th>
+              </tr>
+            </thead>
+            <tbody id="teacher-student-tbody" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- TEACHER DETAIL MODAL -->
+  <div id="detail-modal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto p-6 space-y-4 shadow-2xl">
+      <div class="flex justify-between items-center border-b pb-3">
+        <h3 id="modal-title" class="text-lg font-bold text-slate-900">학생 활동지 검토</h3>
+        <div class="flex items-center space-x-2">
+          <div class="flex items-center space-x-1 mr-1">
+            <button onclick="moveDetail(-1)"
+              class="px-2 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg border"
+              title="이전 학생 (←)"><i class="fa-solid fa-chevron-left"></i></button>
+            <span id="modal-pos" class="text-xs text-slate-500 font-semibold w-12 text-center"></span>
+            <button onclick="moveDetail(1)"
+              class="px-2 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg border"
+              title="다음 학생 (→)"><i class="fa-solid fa-chevron-right"></i></button>
+          </div>
+          <button id="btn-reopen" onclick="reopenExam()"
+            class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg"
+            title="제출했거나 시간이 끝난 시험을 다시 열어 이어서 응시하게 함 (답안 유지)">
+            <i class="fa-solid fa-lock-open mr-1"></i>응시 재개
+          </button>
+          <button onclick="resetStudentPin()"
+            class="px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-bold rounded-lg border border-amber-300"
+            title="학생이 비밀번호를 잊었을 때: 다음에 들어올 때 새 비밀번호를 정하게 함 (작성한 내용은 그대로)">
+            <i class="fa-solid fa-key mr-1"></i>비밀번호 초기화
+          </button>
+          <button onclick="copySeteukPrompt()"
+            class="px-3 py-1.5 bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold rounded-lg"
+            title="이 학생의 활동지 내용으로 AI에게 세특 초안을 요청하는 글을 복사 (이름·학번 제외)">
+            <i class="fa-solid fa-wand-magic-sparkles mr-1"></i>AI 세특 요청문 복사
+          </button>
+          <button onclick="printStudentReport()"
+            class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg flex items-center space-x-1">
+            <i class="fa-solid fa-file-pdf"></i>
+            <span>A4 PDF 출력</span>
+          </button>
+          <button onclick="closeDetailModal()" class="text-slate-400 hover:text-slate-600"><i
+              class="fa-solid fa-xmark text-xl"></i></button>
+        </div>
+      </div>
+      <div id="modal-body" class="space-y-4 text-xs leading-relaxed"></div>
+    </div>
+  </div>
+
+  <!-- 화면 안 알림창: 시험 중에는 브라우저 알림창(alert·confirm)을 쓰지 않음 -->
+  <div id="ui-dialog" class="hidden fixed inset-0 z-[55] bg-black/50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl">
+      <p id="ui-dialog-msg" class="text-sm text-slate-800 whitespace-pre-line leading-relaxed"></p>
+      <div class="flex justify-end gap-2">
+        <button id="ui-dialog-cancel" type="button" onclick="closeUiDialog(false)"
+          class="hidden px-4 py-2 rounded-lg border bg-white hover:bg-slate-50 text-slate-700 text-sm font-bold">취소</button>
+        <button id="ui-dialog-ok" type="button" onclick="closeUiDialog(true)"
+          class="px-5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold">확인</button>
+      </div>
+    </div>
+  </div>
+  <div id="toast"
+    class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-[70] px-4 py-2.5 rounded-lg bg-slate-900 text-white text-sm font-semibold shadow-lg">
+  </div>
+
+  <!-- PRINT CONTAINER -->
+  <div id="print-area"></div>
+
+  <script>
+    // 학생 화면에서는 교사 로그인 칸(이메일·비밀번호)을 아예 없앰
+    // → 브라우저가 저장된 교사 이메일을 학생 이름 칸에 추천하지 않게 함
+    if (!window.TEACHER_PAGE) document.getElementById('teacher-login-view').innerHTML = '';
+
+    // ================= 설정 =================
+    // 이 페이지는 독서 활동지라 부정행위 감지(전체화면·화면 이탈·붙여넣기 차단)를 쓰지 않음
+    const CFG = window.APP_CONFIG || {};
+    let sb = null;
+    try {
+      if (CFG.SUPABASE_URL && CFG.SUPABASE_ANON_KEY && !CFG.SUPABASE_URL.includes('YOUR-PROJECT')) {
+        // 교사 로그인은 '이 탭'에서만 유지 (탭·브라우저를 닫으면 자동 로그아웃)
+        try { Object.keys(localStorage).forEach(k => { if (/^sb-.+-auth-token/.test(k)) localStorage.removeItem(k); }); } catch (e) { }
+        sb = window.supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON_KEY, {
+          auth: { storage: window.sessionStorage, persistSession: true, autoRefreshToken: true }
+        });
+      }
+    } catch (e) { console.error(e); }
+    const TOKEN_PREFIX = 'calc_token_';     // 이 기기에서 시작했다는 표시
+    const BACKUP_PREFIX = 'calc_backup_';   // 네트워크 오류 대비 임시 백업
+    const TABLE = 'calculus_submissions';
+    const EXAM_ID = Number(window.EXAM && window.EXAM.id) || 3;
+    const EXAM_LABEL = (window.EXAM && window.EXAM.label) || `${EXAM_ID}회차`;
+    const SHEET_TITLE = '대수 후속 탐구 독서 활동지';
+    let TEST_MINUTES = 50;                  // 서버(회차별 제한 시간) 값으로 덮어씀
+    let EXAM_DEADLINE = null;               // 마감 일시(ms). 있으면 그때까지 비밀번호로 다시 들어와 고칠 수 있음, 없으면 제한 시간 방식
+
+    let currentMode = 'student';
+    let activeStudentKey = null;
+    let timerInterval = null;
+    let isLocked = false;
+    let studentToken = null;
+    let serverOffsetMs = 0;                 // 서버 시각 - 기기 시각
+    let teacherRows = {};
+    let teacherPoll = null;
+    let modalChart = null;                  // (그래프 없음 — 공통 코드 호환용)
+    const examPaused = false;               // (부정행위 중지 없음 — 공통 코드 호환용)
+
+    function esc(s) {
+      return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    // ================= 활동지 문항 =================
+    // kind: 'text' = 한 줄, 'area' = 여러 줄 / max = 최대 글자 수 / short = 교사 화면·엑셀에 쓰는 짧은 이름
+    const FIELDS = [
+      { id: 'career', kind: 'text', max: 60, label: '나의 진로 희망', short: '진로 희망', ph: '예: 데이터 분석가, 간호사, 건축가' },
+      { id: 'book-title', kind: 'text', max: 100, label: '선택 도서명', short: '도서명', ph: '책 제목' },
+      { id: 'book-author', kind: 'text', max: 60, label: '저자', short: '저자', ph: '지은이' },
+      { id: 'q1', kind: 'area', max: 1000, rows: 6, short: '문항1 탐구의 출발점',
+        help: '▶ 대수 수업이나 수행평가 과정에서 지수함수, 로그함수, 삼각함수와 관련하여 평소 가지고 있었던 수학적 의문이나, 나의 진로 분야와 연계해 더 깊이 탐구하고 싶었던 궁금증을 기술하시오.' },
+      { id: 'q2', kind: 'area', max: 1000, rows: 8, short: '문항2 수학적 원리와 개념적 확장',
+        help: '▶ 책을 읽으며 나의 궁금증을 해결해 준 수학적 사실이나 새롭게 알게 된 개념을 정리하시오.\n(지수·로그·삼각함수의 성질, 그래프의 특징, 또는 수학적 모델링의 구체적 사례를 중심으로 기술)' },
+      { id: 'q3', kind: 'area', max: 1000, rows: 7, short: '문항3 진로 융합 및 가치 성찰',
+        help: '▶ 책에서 얻은 통찰을 바탕으로, 내가 탐구한 함수 개념(지수, 로그, 삼각함수)이 나의 진로 분야(예: IT, 의생명, 경영·경제, 인문사회 등) 및 삶에서 현상을 예측하거나 문제를 해결할 때 어떻게 연관지을 수 있는지 서술하시오.' },
+      { id: 'q4s1', kind: 'area', max: 600, rows: 4, short: '문항4 Step1 꼬리 질문', title: 'Step 1. 꼬리 질문 던지기 (새로운 의문 발견)',
+        help: "* 책을 읽으면서 완전히 해결되지 않았거나, 새로 알게 된 사실에서 꼬리를 물고 생겨난 '새로운 수학적 의문(질문)'은 무엇인가요?" },
+      { id: 'q4s2', kind: 'area', max: 600, rows: 4, short: '문항4 Step2 수학적 도구 연결', title: 'Step 2. 수학적 도구 연결하기 (과목 간 확장)',
+        help: "* 이 의문을 해결하기 위해 향후 배울 후속 수학 교과(미적분, 기하, 확률과 통계 등)나 다른 과목의 어떤 개념이 필요할지 예상하여 연결해 보세요. (예: 함수의 실시간 변화율을 추적하기 위해 '미적분'의 미분 개념이 필요함 등)" },
+      { id: 'q4s3', kind: 'area', max: 150, rows: 2, short: '문항4 Step3 후속 탐구 제안 주제', title: 'Step 3. 나만의 심화 탐구 주제 제안 (최종 완성)',
+        help: "* 위 두 단계의 고민을 바탕으로, 향후 발표나 보고서 작성 시 도전해보고 싶은 '나만의 심화 탐구 주제'를 문장(제목 형태)으로 멋지게 제안해 보세요.",
+        label: '[후속 탐구 제안 주제]' }
+    ];
+    const FIELD_IDS = FIELDS.map(f => f.id);
+    const AREA_MIN = 20;   // 여러 줄 칸은 이 글자 수 이상이어야 '작성함'으로 셈 (진행률 계산용)
+    const fieldEl = id => document.getElementById('f-' + id);
+    const charLen = v => [...String(v || '')].length;
+
+    // ================= 수파베이스 저장 =================
+    const ERR_TEXT = {
+      NOT_IN_ROSTER: '명렬표에 없는 정보입니다. 학년·반·번호·이름을 다시 확인하세요.',
+      TOKEN_MISMATCH: '저장 열쇠가 바뀌었습니다. 첫 화면에서 다시 들어와 비밀번호를 입력하세요.',
+      TIME_OVER: '시험 시간이 종료되어 더 이상 저장할 수 없습니다.',
+      ALREADY_SUBMITTED: '이미 제출한 답안입니다.',
+      TOO_LARGE: '답안 용량이 너무 큽니다. 선생님께 문의하세요.',
+      PAUSED: '시험이 중지된 상태라 저장할 수 없습니다. 선생님께 해제를 요청하세요.',
+      EXAM_CLOSED: '지금은 이 회차 시험을 볼 수 없습니다.\n시험 시간이 맞는지 선생님께 확인하세요. (결석했던 시험이면 선생님께 응시 허용을 요청하세요)',
+      NO_EXAM: '회차 설정이 없습니다. 선생님께 문의하세요. (회차 관리에서 3회차를 만들어야 합니다)',
+      DEADLINE_PASSED: '활동지 마감 일시가 지났습니다. 선생님께 문의하세요.'
+    };
+    function errCode(e) {
+      const m = (e && (e.message || e.details)) || String(e);
+      return Object.keys(ERR_TEXT).find(k => m.includes(k)) || null;
+    }
+    function errText(e) {
+      const raw = String((e && (e.message || e.details)) || '');
+      if ((e && e.code === 'PGRST202') || /calc_act_/.test(raw)) return '서버에 활동지 비밀번호 기능이 아직 없습니다. 선생님께 알려 주세요.\n(수파베이스에서 add_activity_password.sql 실행 필요)';
+      const c = errCode(e);
+      return c ? ERR_TEXT[c] : '서버에 연결하지 못했습니다. 인터넷 연결을 확인하세요.\n(' + ((e && e.message) || e) + ')';
+    }
+
+    function setSaveStatus(state, text) {
+      const el = document.getElementById('save-status');
+      const cls = {
+        pending: 'bg-amber-100 text-amber-700', saving: 'bg-amber-100 text-amber-700',
+        saved: 'bg-emerald-100 text-emerald-700', error: 'bg-red-100 text-red-700', idle: 'bg-slate-100 text-slate-500'
+      }[state];
+      el.className = 'ml-3 px-2 py-0.5 rounded text-[11px] font-semibold ' + cls;
+      el.innerHTML = text;
+    }
+
+    let saveTimer = null, saving = false, saveAgain = false, pendingPayload = null;
+
+    function backupKey() { return BACKUP_PREFIX + activeStudentKey; }
+
+    function queueServerSave(payload) {
+      pendingPayload = payload;
+      try { localStorage.setItem(backupKey(), JSON.stringify({ ...payload, token: studentToken })); } catch (e) { }   // 어느 응시의 백업인지 토큰도 함께 저장
+      setSaveStatus('pending', '<i class="fa-solid fa-pen mr-0.5"></i>저장 대기');
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(() => flushSave(), 1200);
+    }
+
+    async function flushSave() {
+      clearTimeout(saveTimer);
+      if (!pendingPayload || !sb) return true;
+      if (saving) { saveAgain = true; return false; }
+      saving = true;
+      const payload = pendingPayload;
+      setSaveStatus('saving', '<i class="fa-solid fa-spinner fa-spin mr-0.5"></i>저장 중');
+      try {
+        const { error } = await sb.rpc('calc_act_save', {
+          p_key: activeStudentKey, p_token: studentToken, p_data: payload.data, p_progress: payload.progress, p_submit: false
+        });
+        if (error) throw error;
+        if (pendingPayload === payload) pendingPayload = null;
+        setSaveStatus('saved', '<i class="fa-solid fa-cloud mr-0.5"></i>저장됨 ' + new Date().toLocaleTimeString());
+        return true;
+      } catch (e) {
+        const c = errCode(e);
+        if (c === 'TIME_OVER') { pendingPayload = null; lockTestFields('time'); setSaveStatus('error', '시간 종료'); }
+        else if (c === 'ALREADY_SUBMITTED') { pendingPayload = null; lockTestFields('submitted'); setSaveStatus('saved', '제출됨'); }
+        else if (c === 'TOKEN_MISMATCH') { pendingPayload = null; lockTestFields('device'); setSaveStatus('error', '다른 기기에서 접속됨'); uiAlert(ERR_TEXT.TOKEN_MISMATCH); }
+        else {
+          setSaveStatus('error', '<i class="fa-solid fa-triangle-exclamation mr-0.5"></i>저장 실패 · 재시도 중');
+          saveTimer = setTimeout(() => flushSave(), 5000);   // 네트워크 오류: 5초 뒤 다시 시도
+        }
+        return false;
+      } finally {
+        saving = false;
+        if (saveAgain) { saveAgain = false; flushSave(); }
+      }
+    }
+
+    // 탭을 닫거나 다른 앱으로 전환할 때 남은 내용 저장
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flushSave(); });
+    window.addEventListener('beforeunload', (e) => {
+      if (pendingPayload && !isLocked) { flushSave(); e.preventDefault(); e.returnValue = ''; }
+    });
+
+    // ================= 모드 전환 =================
+
+    function showOnly(id) {
+      ['student-login-view', 'student-view', 'exam-end-view', 'teacher-login-view', 'teacher-view']
+        .forEach(v => document.getElementById(v).classList.toggle('hidden', v !== id));
+    }
+
+    async function switchMode(mode) {
+      if (mode === 'teacher' && !window.TEACHER_PAGE) return;   // 학생용 페이지에서는 교사 화면을 열지 않음
+      if (mode === 'student' && window.TEACHER_PAGE) return;
+      if (mode === 'teacher') {
+        if (!sb) { alert('수파베이스 연결 설정(config.js)이 없습니다.'); return; }
+        if (activeStudentKey && !isLocked && !confirm('응시 중인 화면입니다. 교사 화면으로 이동할까요?\n(학생 답안은 저장되어 있습니다)')) return;
+        if (activeStudentKey) await flushSave();
+        currentMode = 'teacher';
+        document.getElementById('timer-banner').classList.add('hidden');
+        const { data } = await sb.auth.getSession();
+        if (data.session) await enterTeacherDashboard(data.session);
+        else showOnly('teacher-login-view');
+      } else {
+        currentMode = 'student';
+        stopTeacherPoll();
+        // 학생 기기에 교사 로그인이 남지 않도록 로그아웃
+        if (sb) { try { const { data } = await sb.auth.getSession(); if (data.session) await sb.auth.signOut(); } catch (e) { } }
+        teacherRows = {};
+        resetAnswerCache();
+        const loggedIn = !!activeStudentKey;
+        showOnly(loggedIn ? 'student-view' : 'student-login-view');
+        document.getElementById('timer-banner').classList.toggle('hidden', !loggedIn || isLocked);
+      }
+    }
+
+    // ================= 교사 로그인 =================
+    async function teacherLogin() {
+      const email = document.getElementById('t-email').value.trim();
+      const password = document.getElementById('t-password').value;
+      const errEl = document.getElementById('t-error');
+      errEl.classList.add('hidden');
+      if (!email || !password) { errEl.innerText = '이메일과 비밀번호를 입력하세요.'; errEl.classList.remove('hidden'); return; }
+      const btn = document.getElementById('btn-teacher-login');
+      btn.disabled = true; btn.innerText = '로그인 중...';
+      const { data, error } = await sb.auth.signInWithPassword({ email, password });
+      btn.disabled = false; btn.innerText = '로그인';
+      if (error) {
+        errEl.innerText = '로그인 실패: 이메일 또는 비밀번호를 확인하세요.';
+        errEl.classList.remove('hidden');
+        return;
+      }
+      document.getElementById('t-password').value = '';
+      try { localStorage.setItem(LAST_TEACHER_KEY, email.toLowerCase()); } catch (e) { }
+      await enterTeacherDashboard(data.session);
+    }
+
+    async function enterTeacherDashboard(session) {
+      const { data: isTeacher, error } = await sb.rpc('calc_is_teacher');
+      if (error || !isTeacher) {
+        await sb.auth.signOut();
+        showOnly('teacher-login-view');
+        const errEl = document.getElementById('t-error');
+        errEl.innerText = '교사로 등록되지 않은 계정입니다. (calc_teachers 표에 이메일을 추가하세요)';
+        errEl.classList.remove('hidden');
+        return;
+      }
+      // 담당 반 (add_teacher_classes.sql 미실행이면 예전처럼 모든 반)
+      const { data: me } = await sb.rpc('calc_me');
+      TEACHER_ME = me && me.role ? me : null;
+      IS_ADMIN = !TEACHER_ME || TEACHER_ME.role === 'admin';
+      CLASS_LIST = IS_ADMIN ? ALL_CLASSES.slice()
+        : ALL_CLASSES.filter(c => (TEACHER_ME.classes || []).map(Number).includes(c));
+      roster = null; openClasses = []; teacherRows = {}; resetAnswerCache();   // 앞서 로그인했던 교사의 정보가 남지 않게
+      firstExamInfo = true;   // 이 화면에 처음 들어왔을 때: 시험 중인 반이 있으면 그 반 탭부터 보여 줌
+      document.getElementById('teacher-email').innerText = session.user.email +
+        (TEACHER_ME ? (IS_ADMIN ? ' · 관리자(모든 반)' : CLASS_LIST.length ? ` · ${CLASS_LIST.join('·')}반 담당` : ' · 담당 반 미선택') : '');
+      document.getElementById('teacher-badge').innerHTML = '<i class="fa-solid fa-chalkboard-user mr-1"></i> ' +
+        (TEACHER_ME && !IS_ADMIN && CLASS_LIST.length ? `${CLASS_LIST.join('·')}반 확인` : '교사 확인' + (TEACHER_ME ? ' (관리자)' : ''));
+      loadClassFilter(session.user.email);   // 이 교사가 마지막으로 보던 반 탭
+      showOnly('teacher-view');
+      if (window.ExamAdmin) ExamAdmin.mount(document.getElementById('exam-admin'), sb, {
+        examId: EXAM_ID, pageBase: '../', me: TEACHER_ME,
+        onChange: list => {
+          if (!list[0]) return;
+          TEST_MINUTES = list[0].limit_minutes || TEST_MINUTES;
+          EXAM_DEADLINE = list[0].deadline ? Date.parse(list[0].deadline) : null;
+          renderDeadlinePanel();
+          const next = [...(list[0].open_classes || [])].map(Number).filter(c => CLASS_LIST.includes(c)).sort((a, b) => a - b);
+          const changed = next.join(',') !== openClasses.join(',');
+          const mine = ownAdminClick && Date.now() - ownAdminClick < 10000;
+          ownAdminClick = 0;
+          openClasses = next;
+          // 처음 들어왔을 때 내 담당 반 중 시험 중인 반이 있으면, 마지막에 보던 탭 대신 '시험 중' 탭으로 시작
+          if (firstExamInfo) {
+            firstExamInfo = false;
+            if (openClasses.length) { setClassFilter('open'); return; }
+          }
+          if (!changed) return;
+          // '내가' 반을 열었을 때만 아래 현황을 '시험 중인 반'으로 바꿈.
+          // 다른 선생님이 다른 교실에서 반을 열고 닫은 것(15초마다 반영)은 내가 보던 탭을 바꾸지 않음.
+          if (mine && openClasses.length) setClassFilter('open');
+          else if (classFilter === 'open' && !openClasses.length) setClassFilter('all');
+          else renderTeacherDashboard();
+        }
+      });
+      await loadTeacherRows();
+      stopTeacherPoll();
+      teacherPoll = setInterval(() => { if (currentMode === 'teacher' && document.visibilityState === 'visible') loadTeacherRows(); }, 15000);
+    }
+
+    let pausedWatch = null, lastPausedSig = '';
+    // 이 선생님이 직접 반 열기·닫기 버튼을 눌렀는지 (다른 선생님의 변경과 구별)
+    let ownAdminClick = 0;
+    let firstExamInfo = true;
+    document.getElementById('exam-admin').addEventListener('click', e => {
+      const b = e.target.closest('button[data-act]');
+      if (b && ['toggle', 'all-open', 'all-close'].includes(b.dataset.act)) ownAdminClick = Date.now();
+    }, true);
+    function startPausedWatch() {
+      if (pausedWatch) clearInterval(pausedWatch);
+      pausedWatch = setInterval(async () => {
+        if (currentMode !== 'teacher') return;
+        const { data, error } = await sb.from(TABLE).select('student_key').eq('exam_id', EXAM_ID).eq('paused', true).eq('submitted', false);
+        if (error) return;   // add_pause.sql 미적용
+        const sig = data.map(r => r.student_key).sort().join('|');
+        if (sig !== lastPausedSig) loadTeacherRows();
+      }, 5000);
+    }
+    function stopTeacherPoll() {
+      if (teacherPoll) { clearInterval(teacherPoll); teacherPoll = null; }
+      if (pausedWatch) { clearInterval(pausedWatch); pausedWatch = null; }
+    }
+
+    async function teacherLogout() {
+      stopTeacherPoll();
+      await sb.auth.signOut();
+      teacherRows = {};
+      resetAnswerCache();
+      roster = null;
+      inspectStudentKey = null;
+      closeDetailModal();
+      document.getElementById('t-email').value = '';
+      syncTeacherPick(false);   // 로그아웃 후에도 드롭다운에서 고른 선생님 유지
+      document.getElementById('t-password').value = '';
+      showOnly('teacher-login-view');
+    }
+
+    const fmtTime = t => t ? new Date(t).toLocaleString() : '';
+
+    // 학생이 저장한 데이터는 그대로 믿지 않음: 정해진 칸의 글자만 남김 (교사 화면에 스크립트를 심는 공격을 막음)
+    function sanitizeItem(d) {
+      const a = (d && d.answers && typeof d.answers === 'object') ? d.answers : {};
+      const answers = {};
+      FIELDS.forEach(f => answers[f.id] = typeof a[f.id] === 'string' ? a[f.id].slice(0, f.max * 2) : '');
+      return { answers };
+    }
+    const totalChars = item => FIELDS.filter(f => f.kind === 'area').reduce((n, f) => n + charLen((item.answers || {})[f.id]), 0);
+
+    // ===== 명렬표 (미접속 학생 확인용) =====
+    let roster = null;          // [{grade, class, num, name}] — 처음 한 번만 불러옴
+    let rosterError = '';
+    async function loadRoster() {
+      const { data, error } = await sb.rpc('calc_roster');
+      if (error) {
+        roster = [];
+        rosterError = String(error.message || '').includes('calc_roster') || error.code === 'PGRST202'
+          ? '미접속 학생을 보려면 수파베이스에서 add_roster.sql을 실행하세요.' : '명렬표를 불러오지 못했습니다.';
+        return;
+      }
+      rosterError = '';
+      roster = (Array.isArray(data) ? data : []).filter(r => CLASS_LIST.includes(Number(r.class)));
+    }
+    const normName = s => String(s ?? '').replace(/\s/g, '');
+    const rosterId = (g, c, n, name) => `${Number(g)}_${Number(c)}_${Number(n)}_${normName(name)}`;
+
+    // 명렬표에 있지만 이 회차에 접속 기록이 없는 학생 (classes: 반 목록, null이면 모든 반)
+    function absentStudents(classes, useSearch) {
+      if (!roster) return [];
+      const seen = new Set(Object.values(teacherRows).map(it => {
+        const i = it.studentInfo || {};
+        return rosterId(i.grade, i.class, i.num, i.name);
+      }));
+      const q = useSearch && teacherSearch ? teacherSearch.replace(/\s/g, '') : '';
+      return roster.filter(r => (!classes || classes.includes(Number(r.class))) &&
+        !seen.has(rosterId(r.grade, r.class, r.num, r.name)) &&
+        (!q || `${r.grade}학년${r.class}반${r.num}번${normName(r.name)}`.includes(q)));
+    }
+    function rosterCount(classes) {
+      return roster ? roster.filter(r => !classes || classes.includes(Number(r.class))).length : 0;
+    }
+
+    function renderAbsentPanel() {
+      const el = document.getElementById('absent-panel');
+      if (rosterError) {
+        el.className = 'p-3 rounded-xl border border-slate-300 bg-slate-50 text-xs text-slate-600';
+        el.innerHTML = `<i class="fa-solid fa-circle-info mr-1"></i>${esc(rosterError)}`;
+        return;
+      }
+      if (!roster) { el.className = 'hidden'; return; }
+      const cls = filterClasses();
+      const list = absentStudents(cls, true);
+      if (!list.length) {
+        el.className = 'p-3 rounded-xl border-2 border-emerald-300 bg-emerald-50 text-sm font-bold text-emerald-700';
+        el.innerHTML = `<i class="fa-solid fa-circle-check mr-1"></i>${esc(filterLabel())} 학생이 모두 접속했습니다.`;
+        return;
+      }
+      const byClass = {};
+      list.forEach(r => (byClass[r.class] = byClass[r.class] || []).push(r));
+      el.className = 'p-4 rounded-xl border-2 border-rose-300 bg-rose-50 space-y-2';
+      el.innerHTML = `<p class="text-sm font-bold text-rose-700"><i class="fa-solid fa-user-clock mr-1"></i>아직 접속하지 않은 학생 ${list.length}명
+          <span class="font-normal text-xs text-rose-600">(${esc(filterLabel())} · 명렬표 기준 · 15초마다 갱신)</span></p>` +
+        Object.keys(byClass).sort((a, b) => a - b).map(c => `
+          <div class="flex flex-wrap items-center gap-1.5">
+            <span class="w-12 text-xs font-bold text-slate-700">${Number(c)}반</span>
+            ${byClass[c].map(r => `<span class="px-2 py-1 rounded-lg bg-white border border-rose-200 text-xs text-slate-800"><b>${Number(r.num)}</b> ${esc(r.name)}</span>`).join('')}
+          </div>`).join('') +
+        `<p class="text-[11px] text-slate-500">결석으로 오늘 응시하지 않는 학생은 나중에 위의 [결석생 개별 응시 허용]으로 응시하게 할 수 있습니다.</p>`;
+    }
+
+    // ===== 교사 화면 갱신 (수파베이스 무료 전송량 절약) =====
+    // 예전: 15초마다 모든 학생의 답안 전체(서술형 포함, 1명당 약 5KB)를 다시 받음 → 관리자 화면 1시간에 200MB 넘게 사용
+    // 지금: 15초마다 이름·진행률·상태 같은 가벼운 칸만 받고(1명당 약 0.3KB),
+    //       답안 전체는 '마지막 저장 시각·진행률·제출 여부'가 바뀐 학생만 다시 받음
+    //       ([새로고침] 버튼을 누르면 모든 학생의 답안을 새로 받음)
+    const LIGHT_COLS = 'student_key, grade, class_no, num, name, progress, submitted, submitted_at, updated_at, start_time, token, reopen_count, reopened_at, paused, pause_count, pause_log';
+    let answerCache = {};       // student_key → { sig, item }  (sanitizeItem까지 마친 답안)
+    let lightColsOk = true;     // 예전 표 구성이라 위 칸 중 없는 것이 있으면 예전 방식(전체 받기)으로
+    const rowSig = r => [r.updated_at, r.progress, r.submitted, r.reopen_count].join('|');
+
+    function resetAnswerCache() { answerCache = {}; }
+
+    async function loadTeacherRows(forceAll) {
+      const sync = document.getElementById('teacher-sync');
+      sync.innerText = '불러오는 중...';
+      if (roster === null) await loadRoster();
+      // 이 회차의 답안만 불러옴 (다른 회차와 섞이지 않게)
+      // 담당 교사는 자기 반 답안만 불러옴 (관리자는 모든 반)
+      const scoped = q => {
+        q = q.eq('exam_id', EXAM_ID);
+        if (!IS_ADMIN) q = q.in('class_no', CLASS_LIST.length ? CLASS_LIST : [-1]);
+        return q;
+      };
+      let res = await scoped(sb.from(TABLE).select(lightColsOk ? LIGHT_COLS : '*')).order('grade').order('class_no').order('num');
+      if (res.error && lightColsOk && /column|42703|PGRST204/i.test(String(res.error.message || '') + res.error.code)) {
+        // 수파베이스 표에 일부 칸(예: paused·reopen_count)이 아직 없으면 예전처럼 전체를 받음
+        lightColsOk = false;
+        console.warn('가벼운 갱신을 쓸 수 없어 예전 방식으로 불러옵니다.', res.error);
+        res = await scoped(sb.from(TABLE).select('*')).order('grade').order('class_no').order('num');
+      }
+      const { data, error } = res;
+      if (error) {
+        sync.innerText = String(error.message || '').includes('exam_id') ? '불러오기 실패 (add_exams.sql 실행 필요)' : '불러오기 실패';
+        console.error(error); return;
+      }
+
+      // 답안이 바뀐 학생만 답안 전체를 받음 (예전 방식이면 이미 data가 들어 있음)
+      if (forceAll === true) resetAnswerCache();
+      if (lightColsOk) {
+        const need = data.filter(r => !answerCache[r.student_key] || answerCache[r.student_key].sig !== rowSig(r)).map(r => r.student_key);
+        for (let i = 0; i < need.length; i += 40) {
+          const { data: full, error: e2 } = await sb.from(TABLE).select('student_key, data')
+            .eq('exam_id', EXAM_ID).in('student_key', need.slice(i, i + 40));
+          if (e2) { sync.innerText = '답안 불러오기 실패 (잠시 뒤 다시 시도)'; console.error(e2); break; }
+          const byKey = {};
+          (full || []).forEach(f => byKey[f.student_key] = f.data);
+          data.forEach(r => {
+            if (r.student_key in byKey) answerCache[r.student_key] = { sig: rowSig(r), item: sanitizeItem(byKey[r.student_key] || {}) };
+          });
+        }
+      } else {
+        data.forEach(r => answerCache[r.student_key] = { sig: rowSig(r), item: sanitizeItem(r.data || {}) });
+      }
+
+      const next = {}, alive = new Set();
+      data.forEach(r => {
+        alive.add(r.student_key);
+        const cached = answerCache[r.student_key];
+        next[r.student_key] = {
+          ...(cached ? cached.item : sanitizeItem({})),
+          studentInfo: { grade: r.grade, class: r.class_no, num: r.num, name: r.name },
+          progress: r.progress, submitted: r.submitted,
+          submittedAt: fmtTime(r.submitted_at), updatedAt: fmtTime(r.updated_at), startTime: fmtTime(r.start_time),
+          hasDevice: !!r.token,
+          startMs: Date.parse(r.start_time),
+          reopenCount: r.reopen_count || 0,
+          reopenedAt: fmtTime(r.reopened_at),
+          paused: !!r.paused && !r.submitted,
+          pauseCount: Number(r.pause_count) || 0,
+          pauseLog: Array.isArray(r.pause_log) ? r.pause_log : []
+        };
+      });
+      Object.keys(answerCache).forEach(k => { if (!alive.has(k)) delete answerCache[k]; });   // 삭제된 답안은 기억에서도 지움
+      teacherRows = next;
+      sync.innerText = '갱신 ' + new Date().toLocaleTimeString() + ' (15초마다)';
+      renderTeacherDashboard();
+    }
+
+    // ================= 학생 로그인 / 타이머 =================
+    function pinError(msg) {
+      const el = document.getElementById('pin-error');
+      el.innerText = msg || '';
+      el.classList.toggle('hidden', !msg);
+    }
+    function setStartLabel(t) { document.querySelector('#btn-start span').innerText = t; }
+
+    async function startStudentTest() {
+      if (!sb) { uiAlert('서버에 연결할 수 없습니다. 새로고침한 뒤에도 같으면 선생님께 알리세요.'); return; }
+      const g = parseInt(document.getElementById('login-grade').value, 10);
+      const c = parseInt(document.getElementById('login-class').value, 10);
+      const n = parseInt(document.getElementById('login-num').value, 10);
+      const name = document.getElementById('login-name').value.trim();
+      if (!g || !c || !n || !name) { uiAlert('학년, 반, 번호, 이름을 모두 올바르게 입력해주세요.'); return; }
+      const pinEl = document.getElementById('login-pin'), pin2El = document.getElementById('login-pin2');
+      const pin = pinEl.value.trim();
+      pinError('');
+      if (!/^[0-9]{4}$/.test(pin)) { pinError('비밀번호는 숫자 4자리로 입력하세요.'); pinEl.focus(); return; }
+      const setting = !document.getElementById('pin2-box').classList.contains('hidden');
+      if (setting && pin2El.value.trim() !== pin) {
+        pinError('두 비밀번호가 다릅니다. 확인 칸에 같은 숫자 4자리를 입력하세요.');
+        pin2El.value = ''; pin2El.focus(); return;
+      }
+
+      const btn = document.getElementById('btn-start');
+      btn.disabled = true;
+      const { data: res, error } = await sb.rpc('calc_act_start', {
+        p_grade: g, p_class: c, p_num: n, p_name: name, p_exam: EXAM_ID, p_pin: pin, p_set: setting
+      });
+      btn.disabled = false;
+      if (error) { uiAlert(errText(error)); return; }
+      if (res && res.error) {
+        if (res.error === 'PW_NEW') {
+          document.getElementById('pin2-box').classList.remove('hidden');
+          setStartLabel('비밀번호 정하고 시작하기');
+          pin2El.value = ''; pin2El.focus();
+          return;
+        }
+        if (res.error === 'PW_WRONG') pinError(`비밀번호가 틀렸습니다. (${res.left}번 더 틀리면 10분 동안 잠깁니다)`);
+        else if (res.error === 'PW_LOCKED') pinError(`비밀번호를 여러 번 틀려 잠겼습니다. ${Math.max(1, Math.ceil(res.seconds / 60))}분 뒤에 다시 하거나 선생님께 비밀번호 초기화를 요청하세요.`);
+        else if (res.error === 'BAD_PIN') pinError('비밀번호는 숫자 4자리로 입력하세요.');
+        else pinError('들어가지 못했습니다. (' + res.error + ')');
+        pinEl.value = ''; pinEl.focus();
+        return;
+      }
+
+      // 저장 열쇠(토큰)는 기기에 남기지 않음 → 공용 기기에서 다른 학생이 비밀번호 없이 열 수 없음
+      activeStudentKey = res.student_key;
+      studentToken = res.token;
+      pinEl.value = ''; pin2El.value = '';
+      try { sessionStorage.removeItem('calc_login'); } catch (e) { }
+      serverOffsetMs = Date.parse(res.server_now) - Date.now();
+      TEST_MINUTES = res.limit_minutes || TEST_MINUTES;
+      EXAM_DEADLINE = res.deadline ? Date.parse(res.deadline) : null;
+
+      // 서버에 없는 최신 내용이 이 기기에 백업돼 있으면(네트워크 끊김 등) 그것을 사용
+      let saved = res.data || {};
+      try {
+        const bk = JSON.parse(localStorage.getItem(backupKey()) || 'null');
+        if (bk && bk.data && bk.token === res.token && (bk.data.clientSavedAt || 0) > (saved.clientSavedAt || 0)) saved = bk.data;
+        else if (bk && bk.token !== res.token) localStorage.removeItem(backupKey());
+      } catch (e) { }
+
+      document.getElementById('stu-info-tag').innerText = `${g}학년 ${c}반 ${n}번 ${name}`;
+      showOnly('student-view');
+      document.getElementById('timer-banner').classList.remove('hidden');
+      loadStudentState(saved);
+      window.scrollTo(0, 0);
+      if (EXAM_DEADLINE) {
+        if (Date.now() + serverOffsetMs > EXAM_DEADLINE) { lockTestFields('time'); return; }
+        if (res.submitted) {
+          setSaveStatus('saved', '<i class="fa-solid fa-circle-check mr-0.5"></i>제출됨 · 고치기 가능');
+          document.querySelector('#btn-submit span').innerText = '고친 내용으로 다시 제출하기';
+        }
+        initDeadlineTimer();
+      } else if (res.submitted) { lockTestFields('submitted'); setSaveStatus('saved', '<i class="fa-solid fa-circle-check mr-0.5"></i>제출됨'); }
+      else initCountdownTimer(Date.parse(res.start_time));
+    }
+
+    // 마감 일시까지 남은 시간 (며칠 남았으면 '3일 04:12', 하루 안이면 '04:12:30')
+    function initDeadlineTimer() {
+      if (timerInterval) clearInterval(timerInterval);
+      document.querySelector('#timer-banner .text-xs').innerText = '마감까지:';
+      const p2 = v => String(v).padStart(2, '0');
+      function tick() {
+        const left = EXAM_DEADLINE - (Date.now() + serverOffsetMs);
+        if (left <= 0) { clearInterval(timerInterval); document.getElementById('timer-display').innerText = '마감'; lockTestFields('time'); return; }
+        const t = Math.floor(left / 1000), d = Math.floor(t / 86400), h = Math.floor(t % 86400 / 3600), m = Math.floor(t % 3600 / 60), sec = t % 60;
+        document.getElementById('timer-display').innerText = d ? `${d}일 ${p2(h)}:${p2(m)}` : `${p2(h)}:${p2(m)}:${p2(sec)}`;
+      }
+      tick();
+      timerInterval = setInterval(tick, 1000);
+    }
+
+    // 화면 안 알림창 (브라우저 알림창 대신)
+    let uiDialogResolve = null;
+    function uiDialog(msg, withCancel) {
+      return new Promise(resolve => {
+        if (uiDialogResolve) uiDialogResolve(false);
+        uiDialogResolve = resolve;
+        document.getElementById('ui-dialog-msg').innerText = msg;
+        document.getElementById('ui-dialog-cancel').classList.toggle('hidden', !withCancel);
+        document.getElementById('ui-dialog').classList.remove('hidden');
+        document.getElementById('ui-dialog-ok').focus();
+      });
+    }
+    function closeUiDialog(v) {
+      document.getElementById('ui-dialog').classList.add('hidden');
+      const r = uiDialogResolve; uiDialogResolve = null;
+      if (r) r(v);
+    }
+    const uiAlert = msg => uiDialog(msg, false);
+    const uiConfirm = msg => uiDialog(msg, true);
+
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.innerText = msg;
+      t.classList.remove('hidden');
+      clearTimeout(showToast.timer);
+      showToast.timer = setTimeout(() => t.classList.add('hidden'), 2500);
+    }
+
+    function initCountdownTimer(startTime) {
+      if (timerInterval) clearInterval(timerInterval);
+      const totalMs = TEST_MINUTES * 60 * 1000;
+      function tick() {
+        const remaining = totalMs - (Date.now() + serverOffsetMs - startTime);
+        if (remaining <= 0) {
+          clearInterval(timerInterval);
+          document.getElementById('timer-display').innerText = '00:00';
+          lockTestFields('time');
+        } else {
+          const t = Math.floor(remaining / 1000);
+          document.getElementById('timer-display').innerText = `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`;
+        }
+      }
+      tick();
+      timerInterval = setInterval(tick, 1000);
+    }
+
+    const fmtDeadline = () => EXAM_DEADLINE ? new Date(EXAM_DEADLINE).toLocaleString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short', hour: '2-digit', minute: '2-digit' }) : '';
+
+    function lockTestFields(reason) {
+      const wasLocked = isLocked;
+      isLocked = true;
+      if (reason === 'time' && !wasLocked) flushSave();   // 마감 직후 마지막 내용 저장 (서버가 90초 유예)
+      if (timerInterval) clearInterval(timerInterval);
+      document.querySelectorAll('.test-field').forEach(el => el.disabled = true);
+      const btn = document.getElementById('btn-submit');
+      btn.classList.add('opacity-50', 'cursor-not-allowed');
+
+      const banner = document.getElementById('lock-banner');
+      banner.classList.remove('hidden');
+      if (reason === 'submitted') {
+        banner.className = 'p-4 bg-emerald-50 border-2 border-emerald-500 rounded-xl text-emerald-800 flex items-center space-x-3';
+        document.getElementById('lock-icon').className = 'fa-solid fa-circle-check text-2xl';
+        document.getElementById('lock-title').innerText = '활동지 제출이 완료되었습니다';
+        document.getElementById('lock-desc').innerText = EXAM_DEADLINE
+          ? `마감(${fmtDeadline()}) 전까지 첫 화면에서 다시 들어와 비밀번호를 입력하면 고칠 수 있습니다.`
+          : '제출 후에는 답안을 수정할 수 없습니다. (선생님이 다시 열어 주면 새로고침 후 같은 정보로 다시 시작하세요)';
+        document.getElementById('timer-banner').classList.add('hidden');
+      } else {
+        banner.className = 'p-4 bg-red-50 border-2 border-red-500 rounded-xl text-red-700 flex items-center space-x-3';
+        document.getElementById('lock-icon').className = 'fa-solid fa-triangle-exclamation text-2xl';
+        if (reason === 'device') {
+          document.getElementById('lock-title').innerText = '다른 기기에서 접속하여 이 화면에서는 저장할 수 없습니다';
+          document.getElementById('lock-desc').innerText = '선생님께 문의하세요.';
+        } else {
+          document.getElementById('lock-title').innerText = EXAM_DEADLINE ? '마감 일시가 지났습니다' : `작성 시간이 끝났습니다 (${TEST_MINUTES}분 경과)`;
+          document.getElementById('lock-desc').innerText = '더 이상 문항을 수정할 수 없습니다. 마감 직전까지 작성한 내용은 저장되었습니다. (선생님이 다시 열어 주면 새로고침 후 같은 정보로 다시 시작하세요)';
+        }
+      }
+
+      // 제출·시간 종료 후에는 종료 화면만 보여 줌
+      if (reason === 'submitted' || reason === 'time') {
+        const done = reason === 'submitted';
+        document.getElementById('end-icon').className = 'w-16 h-16 rounded-full flex items-center justify-center mx-auto text-3xl ' +
+          (done ? 'fa-solid fa-circle-check bg-emerald-100 text-emerald-600' : 'fa-solid fa-clock bg-red-100 text-red-600');
+        document.getElementById('end-title').innerText = done ? '활동지를 제출했습니다' : (EXAM_DEADLINE ? '마감 일시가 지났습니다' : `작성 시간이 끝났습니다 (${TEST_MINUTES}분)`);
+        document.getElementById('end-who').innerText = `${EXAM_LABEL} · ` + document.getElementById('stu-info-tag').innerText;
+        document.getElementById('end-desc').innerText = (done ? '활동지가 정상적으로 제출되었습니다.' : '마감 직전까지 작성한 내용은 저장되었습니다.') +
+          '\n수고했습니다.' + (EXAM_DEADLINE && done
+            ? `\n\n마감(${fmtDeadline()}) 전까지는 첫 화면에서 다시 들어와\n비밀번호를 입력하면 고칠 수 있습니다.`
+            : '\n\n(선생님이 다시 열어 주면 첫 화면에서 다시 들어오세요)');
+        document.getElementById('timer-banner').classList.add('hidden');
+        if (activeStudentKey && !window.TEACHER_PAGE) showOnly('exam-end-view');
+      }
+    }
+
+    // ================= 학생 활동지 그리기·저장·불러오기 =================
+    // 문항 칸을 FIELDS 설정대로 만듦 (문항 문구를 고치려면 위 FIELDS만 바꾸면 됨)
+    (function buildFields() {
+      FIELDS.forEach(f => {
+        const slot = document.getElementById('slot-' + f.id);
+        if (!slot) return;
+        const head = (f.title ? `<p class="text-sm font-bold text-slate-900">${esc(f.title)}</p>` : '') +
+          (f.help ? `<p class="text-sm text-slate-500 whitespace-pre-line leading-relaxed">${esc(f.help)}</p>` : '') +
+          (f.label ? `<label for="f-${f.id}" class="block text-xs font-semibold text-slate-600">${esc(f.label)}</label>` : '');
+        const input = f.kind === 'area'
+          ? `<textarea id="f-${f.id}" rows="${f.rows || 5}" maxlength="${f.max}" autocomplete="off"
+               class="test-field w-full p-3 border rounded-lg text-sm leading-relaxed focus:ring-2 focus:ring-teal-500 focus:outline-none"></textarea>`
+          : `<input type="text" id="f-${f.id}" maxlength="${f.max}" autocomplete="off" placeholder="${esc(f.ph || '')}"
+               class="test-field w-full p-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none">`;
+        const counter = f.kind === 'area' ? `<p class="text-right text-[11px] text-slate-400"><span id="cnt-${f.id}">0</span> / ${f.max}자</p>` : '';
+        slot.className = 'space-y-1.5';
+        slot.innerHTML = head + input + counter;
+        fieldEl(f.id).addEventListener('input', () => { updateCounter(f); saveStudentData(); });
+      });
+    })();
+
+    function updateCounter(f) {
+      const c = document.getElementById('cnt-' + f.id);
+      if (!c) return;
+      const n = charLen(fieldEl(f.id).value);
+      c.innerText = n;
+      c.parentElement.className = 'text-right text-[11px] ' + (n >= f.max ? 'text-rose-600 font-bold' : 'text-slate-400');
+    }
+
+    function fieldDone(f, v) {
+      const t = String(v || '').trim();
+      return f.kind === 'area' ? charLen(t) >= Math.min(AREA_MIN, f.max / 2) : t.length > 0;
+    }
+
+    function computeProgress(answers) {
+      return Math.round(FIELDS.filter(f => fieldDone(f, answers[f.id])).length / FIELDS.length * 100);
+    }
+
+    function collectPayload() {
+      const answers = {};
+      FIELDS.forEach(f => answers[f.id] = fieldEl(f.id).value);
+      return { progress: computeProgress(answers), data: { answers, clientSavedAt: Date.now() + serverOffsetMs } };
+    }
+
+    function showProgress(p) {
+      document.getElementById('student-progress-bar').style.width = p + '%';
+      document.getElementById('student-progress-text').innerText = p + '%';
+    }
+
+    function saveStudentData() {
+      if (!activeStudentKey || isLocked) return;
+      const payload = collectPayload();
+      showProgress(payload.progress);
+      queueServerSave(payload);
+    }
+
+    function loadStudentState(item) {
+      const a = (item && item.answers) || {};
+      FIELDS.forEach(f => { fieldEl(f.id).value = typeof a[f.id] === 'string' ? a[f.id] : ''; updateCounter(f); });
+      const answers = {};
+      FIELDS.forEach(f => answers[f.id] = fieldEl(f.id).value);
+      showProgress(computeProgress(answers));
+      setSaveStatus('saved', '<i class="fa-solid fa-cloud mr-0.5"></i>불러옴');
+    }
+
+    async function submitWorksheet() {
+      if (!activeStudentKey || isLocked) return;
+      const payload = collectPayload();
+      const empty = FIELDS.filter(f => !fieldDone(f, payload.data.answers[f.id])).map(f => '· ' + (f.title || f.label || f.short));
+      if (empty.length && !(await uiConfirm(`아직 덜 쓴 칸이 ${empty.length}개 있습니다.\n${empty.join('\n')}\n\n그래도 제출할까요?`))) return;
+      if (!(await uiConfirm(EXAM_DEADLINE
+        ? `활동지를 제출할까요?\n마감(${fmtDeadline()}) 전까지는 다시 들어와 고칠 수 있습니다.`
+        : '제출 후에는 고칠 수 없습니다. 활동지를 제출할까요?'))) return;
+      if (isLocked) return;   // 확인 창이 떠 있는 사이 시간이 끝난 경우
+      clearTimeout(saveTimer);
+      const btn = document.getElementById('btn-submit');
+      btn.disabled = true;
+      const { error } = await sb.rpc('calc_act_save', {
+        p_key: activeStudentKey, p_token: studentToken, p_data: payload.data, p_progress: payload.progress, p_submit: true
+      });
+      if (error) {
+        btn.disabled = false;
+        if (errCode(error) === 'TIME_OVER') lockTestFields('time');
+        uiAlert('제출하지 못했습니다.\n' + errText(error));
+        return;
+      }
+      pendingPayload = null;
+      try { localStorage.removeItem(backupKey()); } catch (e) { }
+      lockTestFields('submitted');
+      setSaveStatus('saved', '<i class="fa-solid fa-circle-check mr-0.5"></i>제출됨');
+    }
+
+    // ================= 교사 대시보드 =================
+    function studentLabel(info) {
+      return `${info.grade || '?'}학년 ${info.class || '?'}반 ${info.num || '?'}번 ${info.name || '익명'}`;
+    }
+
+    // ===== 반별 관리 =====
+    // 담당 반 묶음 (선생님별 담당 반이 바뀌면 여기만 고치면 됩니다)
+    const ALL_CLASSES = [1, 2, 3, 4, 5, 6];
+    let CLASS_LIST = ALL_CLASSES.slice();   // 로그인한 교사가 관리하는 반 (담당 교사는 자기 반만)
+    let TEACHER_ME = null, IS_ADMIN = true;
+    // 반 묶음 탭은 관리자 화면에만 보임 (담당 반은 수파베이스 calc_teachers 표에서 정함)
+    const CLASS_GROUPS = {
+      g135: { label: '1·3·5반', classes: [1, 3, 5] },
+      g246: { label: '2·4·6반', classes: [2, 4, 6] }
+    };
+    const CLASS_FILTER_KEY = 'calc_teacher_class';
+    let classFilter = 'all';
+    let classFilterKey = CLASS_FILTER_KEY;   // 교사마다 따로 기억 (로그인하면 이메일을 붙임)
+    function loadClassFilter(email) {
+      classFilterKey = CLASS_FILTER_KEY + (email ? '_' + email : '');
+      try { classFilter = localStorage.getItem(classFilterKey) || 'all'; } catch (e) { classFilter = 'all'; }
+    }
+    let teacherSearch = '';
+    let openClasses = [];   // 이 회차가 지금 열려 있는 반 (위 '응시 관리'에서 연 반)
+
+    const classOf = item => Number(item.studentInfo?.class) || 0;
+    function allClasses() {
+      return [...new Set([...CLASS_LIST, ...Object.values(teacherRows).map(classOf).filter(Boolean)])].sort((a, b) => a - b);
+    }
+    // 현재 선택한 탭의 반 목록 (null = 전체)
+    function filterClasses() {
+      if (classFilter === 'all') return null;
+      if (classFilter === 'open') return openClasses;
+      if (CLASS_GROUPS[classFilter]) return CLASS_GROUPS[classFilter].classes;
+      return [Number(classFilter)];
+    }
+    function filterLabel() {
+      if (classFilter === 'all') return IS_ADMIN ? '전체' : CLASS_LIST.length ? `${CLASS_LIST.join('·')}반 전체` : '담당 반 없음';
+      if (classFilter === 'open') return `시험 중 ${openClasses.join('·')}반`;
+      if (CLASS_GROUPS[classFilter]) return CLASS_GROUPS[classFilter].label;
+      return `${classFilter}반`;
+    }
+    function setClassFilter(f) {
+      classFilter = String(f);
+      try { localStorage.setItem(classFilterKey, classFilter); } catch (e) { }
+      renderTeacherDashboard();
+    }
+    // 현재 탭 + 검색어에 해당하는 학생 (학년·반·번호 순)
+    function filteredKeys() {
+      const cls = filterClasses();
+      return Object.keys(teacherRows).filter(k => {
+        const it = teacherRows[k];
+        if (cls && !cls.includes(classOf(it))) return false;
+        if (teacherSearch && !studentLabel(it.studentInfo || {}).replace(/\s/g, '').includes(teacherSearch.replace(/\s/g, ''))) return false;
+        return true;
+      });
+    }
+
+    function renderClassTabs() {
+      const valid = ['all', ...(IS_ADMIN ? Object.keys(CLASS_GROUPS) : []), ...allClasses().map(String)];
+      if (openClasses.length) valid.push('open');
+      if (!valid.includes(classFilter)) classFilter = 'all';
+      const items = Object.values(teacherRows);
+      const tab = (key, label, list, wide, classes = null) => {
+        const on = classFilter === key;
+        const sub = list.filter(i => i.submitted).length;
+        const writing = list.filter(i => examState(i) === 'writing').length;
+        const pausedN = list.filter(i => i.paused).length;
+        const absentN = roster ? absentStudents(classes, false).length : 0;
+        return `<button type="button" onclick="setClassFilter('${key}')"
+          class="px-3 py-1.5 rounded-lg border-2 text-left transition-all ${wide ? 'min-w-[6.5rem]' : 'min-w-[5.2rem]'} ${on ? 'bg-indigo-600 border-indigo-600 text-white shadow' : 'bg-white border-slate-200 text-slate-700 hover:border-indigo-300 hover:bg-indigo-50'}">
+          <span class="block text-sm font-bold">${label}</span>
+          <span class="block text-[11px] ${on ? 'text-indigo-100' : 'text-slate-500'}">제출 ${sub}/${list.length}${writing ? ` · <span class="${on ? 'text-amber-200' : 'text-amber-600'} font-bold">응시 중 ${writing}</span>` : ''}${pausedN ? ` · <span class="px-1 rounded bg-red-600 text-white font-bold">중지 ${pausedN}</span>` : ''}${absentN ? ` · <span class="${on ? 'text-rose-200' : 'text-rose-600'} font-bold">미접속 ${absentN}</span>` : ''}</span>
+        </button>`;
+      };
+      const groups = !IS_ADMIN ? '' : Object.entries(CLASS_GROUPS)
+        .map(([k, g]) => tab(k, g.label, items.filter(i => g.classes.includes(classOf(i))), true, g.classes)).join('');
+      const classes = allClasses().map(c => tab(String(c), `${c}반`, items.filter(i => classOf(i) === c), false, [c])).join('');
+      document.getElementById('class-tabs').innerHTML =
+        (openClasses.length
+          ? tab('open', `<i class="fa-solid fa-pen-to-square mr-1"></i>시험 중 ${openClasses.join('·')}반`,
+            items.filter(i => openClasses.includes(classOf(i))), true, openClasses)
+            .replace('bg-white border-slate-200', 'bg-emerald-50 border-emerald-400') +
+          '<span class="w-px h-8 bg-slate-200 mx-1"></span>'
+          : '') +
+        tab('all', IS_ADMIN ? '전체' : '내 반 전체', items, true) + '<span class="w-px h-8 bg-slate-200 mx-1"></span>' +
+        (groups ? groups + '<span class="w-px h-8 bg-slate-200 mx-1"></span>' : '') + classes;
+      document.querySelectorAll('.filter-label').forEach(el => el.innerText = `(${filterLabel()})`);
+    }
+
+    function renderTeacherDashboard() {
+      renderClassTabs();
+      const tbody = document.getElementById('teacher-student-tbody');
+      tbody.innerHTML = '';
+      const keys = filteredKeys();
+      document.getElementById('teacher-total-count').innerText = `${keys.length}명`;
+      const subEl = document.getElementById('teacher-roster-sub');
+      if (roster && roster.length && !teacherSearch) {
+        const cls = filterClasses(), absentN = absentStudents(cls, false).length;
+        subEl.innerHTML = `명렬 ${rosterCount(cls)}명 중 · ` + (absentN
+          ? `<span class="font-bold text-rose-600">미접속 ${absentN}명</span>` : '<span class="font-bold text-emerald-600">모두 접속</span>');
+      } else subEl.innerHTML = '';
+      renderAbsentPanel();
+      if (!keys.length) tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-xs text-slate-400">${teacherSearch ? '검색 결과가 없습니다.' : `${filterLabel()}에 접속한 학생이 아직 없습니다.`}</td></tr>`;
+      let submitted = 0;
+      keys.forEach(key => {
+        const item = teacherRows[key];
+        if (item.submitted) submitted++;
+        const a = item.answers || {};
+        const book = a['book-title'] ? `${a['book-title']}${a['book-author'] ? ' · ' + a['book-author'] : ''}` : '';
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-50 transition-colors cursor-pointer';
+        tr.onclick = () => openDetailModal(key);
+        tr.innerHTML = `
+          <td class="p-3 font-semibold text-slate-800 whitespace-nowrap">${esc(studentLabel(item.studentInfo || {}))}</td>
+          <td class="p-3 text-slate-600 truncate max-w-xs">${book ? esc(book) : '<span class="text-slate-400">(미작성)</span>'}</td>
+          <td class="p-3 text-slate-600 truncate max-w-[10rem]">${esc(a.career || '') || '<span class="text-slate-400">-</span>'}</td>
+          <td class="p-3 text-xs font-bold text-slate-700">${totalChars(item).toLocaleString()}자</td>
+          <td class="p-3">
+            <div class="flex items-center space-x-2">
+              <div class="w-16 bg-slate-200 rounded-full h-2"><div class="bg-teal-600 h-2 rounded-full" style="width:${Number(item.progress) || 0}%"></div></div>
+              <span class="text-xs font-bold text-slate-600">${Number(item.progress) || 0}%</span>
+            </div>
+          </td>
+          <td class="p-3 whitespace-nowrap">${statusBadge(item)}${item.reopenCount ? `<span class="ml-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-sky-100 text-sky-700">재개 ${item.reopenCount}회</span>` : ''}</td>
+          <td class="p-3 text-center"><button class="px-3 py-1 bg-teal-50 text-teal-700 hover:bg-teal-100 font-bold text-xs rounded-lg">활동지 보기</button></td>`;
+        tbody.appendChild(tr);
+      });
+      document.getElementById('teacher-submitted-count').innerText = `${submitted}명`;
+      document.getElementById('teacher-progress-count').innerText = `${keys.length - submitted}명`;
+    }
+
+    let inspectStudentKey = null;
+
+    // 응시 상태: 제출 완료 / 시간 종료(미제출) / 작성 중
+    function examState(item) {
+      if (item.submitted) return 'submitted';
+      if (EXAM_DEADLINE) return Date.now() > EXAM_DEADLINE ? 'timeover' : 'writing';
+      if (item.startMs && Date.now() > item.startMs + TEST_MINUTES * 60000) return 'timeover';
+      return 'writing';
+    }
+    function statusBadge(item) {
+      if (item.paused) return '<span class="px-2 py-1 rounded-full text-xs font-bold bg-red-600 text-white animate-pulse">시험 중지</span>';
+      return {
+        submitted: '<span class="px-2 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800">제출 완료</span>',
+        timeover: '<span class="px-2 py-1 rounded-full text-xs font-bold bg-red-100 text-red-700">시간 종료</span>',
+        writing: '<span class="px-2 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800">작성 중</span>'
+      }[examState(item)];
+    }
+
+    // 응시 재개: 끝난 시험을 다시 열어 답안을 유지한 채 정한 시간만큼 이어서 응시
+    async function reopenExam() {
+      const item = teacherRows[inspectStudentKey];
+      if (!item) return;
+      const state = examState(item);
+      const name = studentLabel(item.studentInfo || {});
+      if (state === 'writing' && !confirm(`${name} 학생은 아직 응시 중입니다.\n남은 시간을 새로 정해 주려면 계속하세요.`)) return;
+      const input = prompt(`[응시 재개] ${name}\n\n답안은 그대로 유지되고, 지금부터 아래 시간 동안 다시 응시할 수 있습니다.\n추가로 줄 시간(분)을 입력하세요. (1~120)`, '10');
+      if (input === null) return;
+      const minutes = parseInt(input, 10);
+      if (!(minutes >= 1 && minutes <= 120)) { alert('1~120 사이의 숫자(분)를 입력하세요.'); return; }
+      const { data, error } = await sb.rpc('calc_reopen', { p_key: inspectStudentKey, p_minutes: minutes });
+      if (error) {
+        alert(String(error.message).includes('NOT_MY_CLASS') ? '담당 반 학생이 아니어서 응시 재개를 할 수 없습니다.'
+          : String(error.message).includes('calc_reopen')
+            ? '수파베이스에 응시 재개 기능이 아직 없습니다. add_reopen.sql을 SQL Editor에서 실행하세요.'
+            : '응시 재개 실패: ' + error.message);
+        return;
+      }
+      if (item.paused) await sb.rpc('calc_unpause', { p_key: inspectStudentKey });
+      alert(`응시를 재개했습니다.\n종료 예정: ${new Date(data.ends_at).toLocaleTimeString()} (${minutes}분)\n\n학생에게 첫 화면에서 다시 들어와 비밀번호를 입력하라고 안내하세요.`);
+      await loadTeacherRows();
+      openDetailModal(inspectStudentKey);
+    }
+
+    // 교사 검토 창: 활동지 전체
+    function answerBlocksHTML(a) {
+      const box = f => {
+        const v = String(a[f.id] || '');
+        return `<div class="space-y-1">
+          <div class="flex items-baseline justify-between gap-2">
+            <p class="font-bold text-slate-800">${esc(f.title || f.short)}</p>
+            ${f.kind === 'area' ? `<span class="text-[11px] text-slate-400 shrink-0">${charLen(v)}자</span>` : ''}</div>
+          <p class="text-slate-700 bg-slate-50 p-2.5 rounded border whitespace-pre-line ${v.trim() ? '' : 'text-slate-400'}">${v.trim() ? esc(v) : '(작성하지 않음)'}</p></div>`;
+      };
+      const byId = id => FIELDS.find(f => f.id === id);
+      return `
+        <div class="space-y-3">${['q1', 'q2', 'q3'].map(id => box(byId(id))).join('')}</div>
+        <div class="border-t pt-3 space-y-3">
+          <h4 class="font-bold text-slate-900">[문항 4] 지적 호기심의 확장 및 후속 연계 탐구 설계</h4>
+          ${['q4s1', 'q4s2', 'q4s3'].map(id => box(byId(id))).join('')}
+        </div>`;
+    }
+
+    function openDetailModal(key) {
+      inspectStudentKey = key;
+      const item = teacherRows[key];
+      if (!item) return;
+      const a = item.answers || {};
+      document.getElementById('modal-title').innerText = `[활동지] ${studentLabel(item.studentInfo || {})}`;
+      document.getElementById('modal-body').innerHTML = `
+        <div class="p-3 bg-teal-50/60 rounded-lg border border-teal-100 grid grid-cols-1 md:grid-cols-3 gap-2 text-sm">
+          <p><strong>진로 희망:</strong> ${esc(a.career || '-')}</p>
+          <p><strong>선택 도서명:</strong> ${esc(a['book-title'] || '-')}</p>
+          <p><strong>저자:</strong> ${esc(a['book-author'] || '-')}</p>
+        </div>
+        ${answerBlocksHTML(a)}
+        <p class="text-slate-400 text-right">${statusBadge(item)} · 서술 ${totalChars(item).toLocaleString()}자 ·
+          ${item.reopenCount ? `다시 열기 ${item.reopenCount}회 (최근 ${esc(item.reopenedAt)}) · ` : ''}시작: ${esc(item.startTime || '-')} · 마지막 저장: ${esc(item.updatedAt || '-')}${item.submittedAt ? ' · 제출: ' + esc(item.submittedAt) : ''}</p>`;
+      document.getElementById('detail-modal').classList.remove('hidden');
+      updateModalNav();
+    }
+
+    // 검토 창에서 같은 목록(현재 탭·검색)의 이전/다음 학생으로 이동
+    function moveDetail(step) {
+      const keys = filteredKeys();
+      if (!keys.length) return;
+      let i = keys.indexOf(inspectStudentKey);
+      i = i < 0 ? 0 : Math.min(keys.length - 1, Math.max(0, i + step));
+      if (keys[i] !== inspectStudentKey) openDetailModal(keys[i]);
+    }
+    function updateModalNav() {
+      const keys = filteredKeys(), i = keys.indexOf(inspectStudentKey);
+      document.getElementById('modal-pos').innerText = i >= 0 ? `${i + 1} / ${keys.length}` : '';
+    }
+    document.addEventListener('keydown', e => {
+      if (document.getElementById('detail-modal').classList.contains('hidden')) return;
+      if (e.key === 'ArrowLeft') moveDetail(-1);
+      else if (e.key === 'ArrowRight') moveDetail(1);
+      else if (e.key === 'Escape') closeDetailModal();
+    });
+
+    function closeDetailModal() {
+      document.getElementById('detail-modal').classList.add('hidden');
+      if (modalChart) { modalChart.destroy(); modalChart = null; }
+    }
+
+    // ================= A4 출력 =================
+    function printStudentReport() {
+      if (!inspectStudentKey || !teacherRows[inspectStudentKey]) return;
+      printReports([inspectStudentKey]);
+    }
+
+    async function printReports(keys) {
+      document.getElementById('print-area').innerHTML = keys.map(reportHTML).join('');
+      // 그래프 이미지가 모두 준비된 뒤 인쇄 (학생이 많을 때 그래프가 빠지는 현상 방지)
+      const imgs = [...document.querySelectorAll('#print-area img')];
+      await Promise.all(imgs.map(img => (img.decode ? img.decode() : Promise.resolve()).catch(() => { })));
+      await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+      window.print();
+    }
+
+    // 현재 목록(탭·검색) 학생 전체를 한 번에 출력
+    function printFilteredReports() {
+      const keys = filteredKeys();
+      if (!keys.length) { alert('출력할 학생이 없습니다.'); return; }
+      const notSub = keys.filter(k => !teacherRows[k].submitted).length;
+      if (!confirm(`${filterLabel()} ${keys.length}명의 산출물을 A4로 일괄 출력합니다. (학생당 1~2쪽)` +
+        (notSub ? `\n\n※ 아직 제출하지 않은 학생 ${notSub}명도 포함됩니다. (출력물 상단에 상태가 표시됩니다)` : '') +
+        '\n\n인쇄 창에서 [대상: PDF로 저장]을 고르면 PDF 파일 하나로 저장됩니다.')) return;
+      printReports(keys);
+    }
+
+    function reportHTML(key) {
+      const item = teacherRows[key];
+      if (!item) return '';
+      const info = item.studentInfo || {};
+      const a = item.answers || {};
+      const TH = 'background:#f1f5f9;padding:5px 8px;text-align:left;width:18%;font-weight:bold;';
+      const TD = 'padding:5px 8px;';
+      const tbl = 'width:100%;border-collapse:collapse;font-size:9.5pt;';
+      const box = (f, minMm) => `<div class="print-box" style="margin-top:9px;">
+          <p style="font-size:10.5pt;font-weight:bold;margin:0 0 3px 0;">${esc(f.title || f.short)}</p>
+          ${f.help ? `<p style="font-size:8pt;color:#64748b;margin:0 0 4px 0;white-space:pre-line;">${esc(f.help)}</p>` : ''}
+          <div style="border:1px solid #cbd5e1;padding:7px 9px;min-height:${minMm}mm;font-size:9.6pt;line-height:1.65;white-space:pre-line;">${esc(a[f.id] || '')}</div></div>`;
+      const byId = id => FIELDS.find(f => f.id === id);
+      const qTitle = { q1: '[문항 1] 탐구의 출발점 및 도서 선택 이유', q2: '[문항 2] 책 속에서 찾은 수학적 원리와 개념적 확장', q3: '[문항 3] 함수 개념의 진로 융합 및 가치 성찰' };
+      return `
+        <div class="print-page">
+          <div style="border-bottom:2px solid #0f766e;padding-bottom:6px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:flex-end;">
+            <h1 style="font-size:15pt;font-weight:bold;color:#134e4a;margin:0;">&lt;${esc(SHEET_TITLE)}&gt;</h1>
+            <div style="text-align:right;font-size:10.5pt;font-weight:bold;">
+              ${esc(info.grade)}학년 ${esc(info.class)}반 ${esc(info.num)}번 &nbsp; 이름: ${esc(info.name)}
+              <div style="font-size:8pt;font-weight:normal;color:#64748b;">${STATE_TXT[examState(item)]}${item.submittedAt ? ' · ' + esc(item.submittedAt) : ''}</div>
+            </div>
+          </div>
+          <table style="${tbl}" border="1">
+            <tr><th style="${TH}">나의 진로 희망</th><td style="${TD}" colspan="3">${esc(a.career)}</td></tr>
+            <tr><th style="${TH}">선택 도서명</th><td style="${TD}">${esc(a['book-title'])}</td>
+                <th style="${TH};width:10%">저자</th><td style="${TD};width:25%">${esc(a['book-author'])}</td></tr>
+          </table>
+          ${['q1', 'q2', 'q3'].map(id => box({ ...byId(id), title: qTitle[id] }, 32)).join('')}
+          <div class="print-box" style="margin-top:12px;">
+            <p style="font-size:11pt;font-weight:bold;margin:0;">[문항 4] 지적 호기심의 확장 및 후속 연계 탐구 설계</p>
+          </div>
+          ${box(byId('q4s1'), 20)}
+          ${box(byId('q4s2'), 20)}
+          ${box(byId('q4s3'), 10)}
+          <div class="print-box" style="border:1px solid #94a3b8;padding:6px;font-size:8.5pt;margin-top:12px;">
+            <p style="font-weight:bold;margin:0 0 4px 0;font-size:9pt;">[교사 확인 및 피드백]</p>
+            <div style="height:16mm;border:1px dashed #cbd5e1;"></div>
+          </div>
+        </div>`;
+    }
+
+    const STATE_TXT = { submitted: '제출 완료', timeover: '시간 종료 (미제출)', writing: '작성 중' };
+
+    // 엑셀에서 수식으로 실행되지 않도록 =, +, -, @ 로 시작하는 글자는 앞에 '를 붙임
+    function csvCell(v) {
+      if (typeof v === 'number') return isFinite(v) ? String(v) : '';
+      let s = String(v ?? '');
+      if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
+      return '"' + s.replace(/"/g, '""') + '"';
+    }
+
+    // 엑셀(CSV): 활동지 내용 전체 (세특 작성용) + 미접속 학생
+    function exportCSV() {
+      const keys = filteredKeys();
+      const absent = absentStudents(filterClasses(), true);
+      if (!keys.length && !absent.length) { uiAlert('내보낼 학생이 없습니다.'); return; }
+      const head = ['학년', '반', '번호', '이름', '상태', '진행률(%)', ...FIELDS.map(f => f.short), '서술 글자 수', '다시 열기 횟수', '시작 시각', '제출 시각', '비고'];
+      const lines = [head.map(csvCell).join(',')];
+      keys.forEach(k => {
+        const it = teacherRows[k], info = it.studentInfo || {}, a = it.answers || {};
+        lines.push([Number(info.grade) || '', Number(info.class) || '', Number(info.num) || '', info.name || '',
+          STATE_TXT[examState(it)], Number(it.progress) || 0, ...FIELDS.map(f => a[f.id] || ''),
+          totalChars(it), it.reopenCount || 0, it.startTime || '', it.submittedAt || '', ''].map(csvCell).join(','));
+      });
+      absent.forEach(r => {
+        const cells = head.map(() => '');
+        cells[0] = Number(r.grade); cells[1] = Number(r.class); cells[2] = Number(r.num); cells[3] = r.name; cells[4] = '미접속';
+        lines.push(cells.map(csvCell).join(','));
+      });
+      const d = new Date(), ymd = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
+      downloadFile(`대수_독서활동지_${EXAM_LABEL}_${filterLabel().replace(/·/g, '-')}_${ymd}.csv`, '\ufeff' + lines.join('\r\n'), 'text/csv;charset=utf-8');
+    }
+
+    function filteredKeysIgnoringSearch() {
+      const cls = filterClasses();
+      return Object.keys(teacherRows).filter(k => !cls || cls.includes(classOf(teacherRows[k])));
+    }
+
+    // 비밀번호 다시 묻기 (가려진 입력 칸이 있는 화면 안 창)
+    function askPassword(msg) {
+      return new Promise(resolve => {
+        const wrap = document.createElement('div');
+        wrap.className = 'fixed inset-0 z-[80] bg-black/50 flex items-center justify-center p-4';
+        wrap.innerHTML = `<div class="bg-white rounded-2xl max-w-sm w-full p-6 space-y-3 shadow-2xl">
+            <p class="text-sm font-bold text-slate-900"><i class="fa-solid fa-lock text-red-600 mr-1"></i>비밀번호 확인</p>
+            <p class="text-xs text-slate-600 whitespace-pre-line"></p>
+            <input type="password" autocomplete="current-password" placeholder="교사 비밀번호"
+              class="w-full p-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-red-500">
+            <div class="flex justify-end gap-2">
+              <button type="button" data-a="no" class="px-4 py-2 rounded-lg border bg-white hover:bg-slate-50 text-slate-700 text-sm font-bold">취소</button>
+              <button type="button" data-a="ok" class="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-bold">확인</button>
+            </div></div>`;
+        wrap.querySelector('p.text-xs').innerText = msg;
+        const input = wrap.querySelector('input');
+        const done = v => { wrap.remove(); resolve(v); };
+        wrap.querySelector('[data-a="ok"]').onclick = () => done(input.value);
+        wrap.querySelector('[data-a="no"]').onclick = () => done(null);
+        input.addEventListener('keydown', e => { if (e.key === 'Enter') done(input.value); if (e.key === 'Escape') done(null); });
+        document.body.appendChild(wrap);
+        input.focus();
+      });
+    }
+
+    function downloadFile(name, text, type) {
+      const url = URL.createObjectURL(new Blob([text], { type }));
+      const link = document.createElement('a');
+      link.href = url; link.download = name;
+      document.body.appendChild(link); link.click(); link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+    }
+
+    // 삭제 직전 백업: ① 엑셀로 열어 볼 수 있는 CSV ② 그대로 되살릴 수 있는 원본 JSON
+    function saveDeleteBackup(rows, scopeTxt, email) {
+      const d = new Date(), p2 = n => String(n).padStart(2, '0');
+      const stamp = `${d.getFullYear()}${p2(d.getMonth() + 1)}${p2(d.getDate())}-${p2(d.getHours())}${p2(d.getMinutes())}`;
+      const base = `삭제전백업_대수독서활동지_${EXAM_LABEL}_${scopeTxt.replace(/[·\s/\\:*?"<>|()]/g, '-')}_${stamp}`;
+      const head = ['학년', '반', '번호', '이름', '제출', '진행률(%)', '시작 시각', '제출 시각', ...FIELDS.map(f => f.short)];
+      const lines = [head.map(csvCell).join(',')];
+      rows.forEach(r => {
+        const a = (r.data && r.data.answers) || {};
+        lines.push([Number(r.grade) || '', Number(r.class_no) || '', Number(r.num) || '', r.name || '',
+          r.submitted ? '제출' : '미제출', Number(r.progress) || 0, fmtTime(r.start_time), fmtTime(r.submitted_at),
+          ...FIELDS.map(f => typeof a[f.id] === 'string' ? a[f.id] : '')].map(csvCell).join(','));
+      });
+      downloadFile(base + '.csv', '\ufeff' + lines.join('\r\n'), 'text/csv;charset=utf-8');
+      const json = JSON.stringify({
+        kind: 'calculus_submissions_backup', exam_id: EXAM_ID, exam_label: EXAM_LABEL,
+        scope: scopeTxt, saved_at: d.toISOString(), saved_by: email, count: rows.length, rows
+      }, null, 1);
+      setTimeout(() => downloadFile(base + '_원본(복원용).json', json, 'application/json'), 600);
+      return base;
+    }
+
+    async function clearAllData() {
+      const cls = filterClasses();
+      // 지울 반을 항상 명시: '전체' 탭이라도 담당 교사는 자기 반만 지움 (관리자만 반 조건 없이 전체 삭제)
+      const target = cls || (IS_ADMIN ? null : CLASS_LIST);
+      if (target && !target.length) { alert('삭제할 담당 반이 없습니다.'); return; }
+      const scope = cls ? `${EXAM_LABEL} ${filterLabel()} 학생`
+        : IS_ADMIN ? `${EXAM_LABEL} 모든 반(전체) 학생` : `${EXAM_LABEL} 담당 ${CLASS_LIST.join('·')}반 학생`;
+      const scopeTxt = cls ? filterLabel() : IS_ADMIN ? '전체' : `${CLASS_LIST.join('·')}반`;
+      const count = filteredKeysIgnoringSearch().length;
+      if (!count) { alert('삭제할 답안이 없습니다.'); return; }
+      // 다른 교실에서 시험 중인 반의 답안을 실수로 지우지 않도록, 열려 있는 반이 포함되면 삭제 금지
+      const busy = (target || allClasses()).filter(c => openClasses.includes(c));
+      if (busy.length) {
+        alert(`지금 시험 중(열림)인 ${busy.join('·')}반이 포함되어 있어 삭제할 수 없습니다.\n먼저 위의 [이 회차 응시 관리]에서 해당 반을 닫은 뒤 다시 시도하세요.`);
+        return;
+      }
+      // [1단계] 범위 확인
+      if (!confirm(`[삭제 1/4] ${scope} ${count}명의 답안을 수파베이스에서 영구 삭제합니다. 계속할까요?` +
+        '\n\n※ 다른 회차 답안은 삭제되지 않습니다.' +
+        (target ? '\n※ 다른 반은 삭제되지 않습니다.' : '\n※ 특정 반만 지우려면 위의 반 탭을 먼저 고르세요.') +
+        '\n※ 삭제하기 전에 백업 파일이 자동으로 저장됩니다.')) return;
+      // [2단계] 학생 수 입력: 가운뎃점(·) 없이 숫자만 입력하도록 (한글 키보드로 입력하기 쉽게)
+      const typed = prompt(`[삭제 2/4] 정말 삭제하려면 삭제할 학생 수 ${count}을(를) 숫자로 입력하세요.`);
+      if (typed === null) return;
+      if (typed.replace(/\s|명/g, '') !== String(count)) { alert('입력한 숫자가 달라 삭제하지 않았습니다.'); return; }
+      // [3단계] 교사 비밀번호 다시 확인
+      const { data: ses } = await sb.auth.getSession();
+      const email = ses && ses.session && ses.session.user.email;
+      if (!email) { alert('로그인이 끊겼습니다. 다시 로그인한 뒤 시도하세요.'); return; }
+      const pw = await askPassword(`[삭제 3/4] ${email}\n이 계정의 비밀번호를 다시 입력하세요.`);
+      if (pw === null) return;
+      if (!pw) { alert('비밀번호를 입력하지 않아 삭제하지 않았습니다.'); return; }
+      const { error: authErr } = await sb.auth.signInWithPassword({ email, password: pw });
+      if (authErr) { alert('비밀번호가 맞지 않아 삭제하지 않았습니다.'); return; }
+      // 지울 답안을 서버에서 새로 불러와 백업 (화면에 보이는 것이 아니라 실제로 지워질 행 그대로)
+      let q = sb.from(TABLE).select('*').eq('exam_id', EXAM_ID);
+      if (target) q = q.in('class_no', target);
+      const { data: rows, error: readErr } = await q.order('class_no').order('num');
+      if (readErr) { alert('백업할 답안을 불러오지 못해 삭제하지 않았습니다.\n' + readErr.message); return; }
+      if (!rows.length) { alert('삭제할 답안이 없습니다.'); await loadTeacherRows(); return; }
+      const base = saveDeleteBackup(rows, scopeTxt, email);
+      // [4단계] 백업 파일 저장을 확인한 뒤 최종 삭제
+      await new Promise(r => setTimeout(r, 1200));   // 두 파일이 다 내려받아질 시간
+      if (!confirm(`[삭제 4/4] 백업 파일 2개를 저장했습니다. (다운로드 폴더)\n` +
+        `· ${base}.csv  ← 엑셀로 열어 볼 수 있음\n· ${base}_원본(복원용).json  ← 되살릴 때 필요\n\n` +
+        `파일이 저장된 것을 확인했으면 [확인]을 눌러 ${rows.length}명의 답안을 삭제합니다.\n` +
+        `(브라우저가 '여러 파일 다운로드 허용'을 물으면 [허용]을 누른 뒤 확인하세요)`)) {
+        alert('삭제를 취소했습니다. 답안은 그대로 있습니다.'); return;
+      }
+      // 백업한 학생만 정확히 삭제 (백업 뒤에 새로 들어온 답안은 지우지 않음), 실제로 지워진 수를 확인
+      const keys = rows.map(r => r.student_key);
+      let deleted = 0;
+      for (let i = 0; i < keys.length; i += 40) {
+        let dq = sb.from(TABLE).delete().eq('exam_id', EXAM_ID).in('student_key', keys.slice(i, i + 40));
+        if (target) dq = dq.in('class_no', target);
+        const { data: del, error } = await dq.select('student_key');
+        if (error) { alert(`삭제 중 오류가 났습니다. (${deleted}명 삭제됨)\n` + error.message); await loadTeacherRows(); return; }
+        deleted += (del || []).length;
+      }
+      await loadTeacherRows();
+      alert(deleted === rows.length ? `${deleted}명의 답안을 삭제했습니다.\n백업 파일은 다운로드 폴더에 있습니다.`
+        : `${rows.length}명 중 ${deleted}명만 삭제되었습니다.\n담당 반이 아닌 학생은 삭제 권한이 없습니다.`);
+    }
+
+
+    // ===== 활동지 마감 일시 (교사 화면) =====
+    function renderDeadlinePanel() {
+      const el = document.getElementById('deadline-panel');
+      if (!el) return;
+      const p2 = v => String(v).padStart(2, '0');
+      const toLocal = ms => { const d = new Date(ms); return `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}T${p2(d.getHours())}:${p2(d.getMinutes())}`; };
+      const passed = EXAM_DEADLINE && Date.now() > EXAM_DEADLINE;
+      el.innerHTML = `<div class="flex flex-wrap items-center gap-2 text-sm">
+          <span class="font-bold text-slate-800"><i class="fa-solid fa-calendar-check text-teal-600 mr-1"></i>활동지 마감 일시</span>
+          <input type="datetime-local" id="deadline-input" value="${EXAM_DEADLINE ? toLocal(EXAM_DEADLINE) : ''}" ${IS_ADMIN ? '' : 'disabled'}
+            class="p-1.5 border rounded-lg text-sm focus:ring-2 focus:ring-teal-500">
+          ${IS_ADMIN ? `<button type="button" onclick="saveDeadline(false)" class="px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold">저장</button>
+            ${EXAM_DEADLINE ? '<button type="button" onclick="saveDeadline(true)" class="px-3 py-1.5 rounded-lg border bg-white hover:bg-slate-50 text-slate-600 text-xs font-bold">마감 없애기</button>' : ''}` : ''}
+        </div>
+        <p class="mt-1.5 text-xs ${!EXAM_DEADLINE ? 'text-amber-700' : passed ? 'text-rose-600' : 'text-teal-700'}">${!EXAM_DEADLINE
+          ? '마감 일시가 없어 제한 시간 방식으로 동작합니다. 학생이 다른 날 다시 들어와 고치게 하려면 마감 일시를 정하세요.'
+          : passed ? `마감(${esc(new Date(EXAM_DEADLINE).toLocaleString())})이 지나 학생이 더 이상 고칠 수 없습니다.`
+            : `${esc(new Date(EXAM_DEADLINE).toLocaleString())}까지 학생이 비밀번호로 다시 들어와 이어 쓰거나 고칠 수 있습니다 (제출한 뒤에도). 새로 시작하는 학생은 반이 열려 있어야 합니다.`}</p>
+        ${IS_ADMIN ? '' : '<p class="text-[11px] text-slate-500 mt-1">마감 일시는 관리자 계정만 바꿀 수 있습니다.</p>'}`;
+    }
+
+    async function saveDeadline(clear) {
+      const v = clear ? '' : document.getElementById('deadline-input').value;
+      if (!clear && !v) { alert('마감 일시를 고르세요.'); return; }
+      const iso = v ? new Date(v).toISOString() : null;
+      if (!confirm(clear
+        ? '마감 일시를 없앨까요?\n제한 시간 방식으로 돌아가, 제출했거나 시간이 끝난 학생은 더 이상 고칠 수 없게 됩니다.'
+        : `마감 일시를 ${new Date(iso).toLocaleString()}(으)로 정할까요?\n이때까지 학생이 비밀번호로 다시 들어와 고칠 수 있습니다.`)) return;
+      const { error } = await sb.rpc('calc_act_set_deadline', { p_exam: EXAM_ID, p_deadline: iso });
+      if (error) {
+        const m = String(error.message || '');
+        alert(m.includes('NOT_ADMIN') ? '관리자 계정만 마감 일시를 바꿀 수 있습니다.'
+          : (error.code === 'PGRST202' || m.includes('calc_act_set_deadline')) ? '수파베이스에서 add_activity_password.sql을 먼저 실행하세요.'
+            : '저장 실패: ' + m);
+        return;
+      }
+      EXAM_DEADLINE = iso ? Date.parse(iso) : null;
+      renderDeadlinePanel();
+      renderTeacherDashboard();
+      if (window.ExamAdmin) ExamAdmin.reload();
+    }
+
+    // 학생이 비밀번호를 잊었을 때: 비밀번호만 지움 (작성한 내용은 그대로, 다음에 들어올 때 새로 정함)
+    async function resetStudentPin() {
+      const it = teacherRows[inspectStudentKey];
+      if (!it) return;
+      if (!IS_ADMIN && !CLASS_LIST.includes(classOf(it))) { alert('담당 반 학생이 아니어서 비밀번호를 초기화할 수 없습니다.'); return; }
+      if (!confirm(`${studentLabel(it.studentInfo || {})} 학생의 비밀번호를 초기화할까요?\n\n· 작성한 내용은 그대로 남습니다.\n· 학생이 다음에 들어올 때 새 비밀번호를 정합니다.\n· 초기화한 뒤에는 학생이 바로 들어가 새 비밀번호를 정하게 하세요.`)) return;
+      const { error } = await sb.rpc('calc_act_reset_pw', { p_key: inspectStudentKey });
+      if (error) {
+        const m = String(error.message || '');
+        alert(m.includes('NOT_MY_CLASS') ? '담당 반 학생이 아니어서 비밀번호를 초기화할 수 없습니다.'
+          : (error.code === 'PGRST202' || m.includes('calc_act_reset_pw')) ? '수파베이스에서 add_activity_password.sql을 먼저 실행하세요.'
+            : '초기화 실패: ' + m);
+        return;
+      }
+      alert('비밀번호를 초기화했습니다.\n학생에게 첫 화면에서 다시 들어와 새 비밀번호를 정하라고 안내하세요.');
+    }
+
+
+    // ===== AI 세특 요청문 =====
+    // 학생 활동지 내용을 넣어 AI에게 미적분Ⅰ 세특 초안을 요청하는 글을 만듦 (이름·학번은 넣지 않음)
+    const ST_KEY = 'calc_seteuk_opts';
+    function loadSeteukOpts() {
+      try {
+        const o = JSON.parse(localStorage.getItem(ST_KEY) || 'null');
+        if (!o) return;
+        if (o.chars) document.getElementById('st-chars').value = o.chars;
+        document.getElementById('st-book').checked = o.book !== false;
+        document.getElementById('st-two').checked = o.two !== false;
+      } catch (e) { }
+    }
+    function seteukOpts() {
+      const n = parseInt(document.getElementById('st-chars').value, 10);
+      return {
+        chars: n >= 100 && n <= 1000 ? n : 500,
+        book: document.getElementById('st-book').checked,
+        two: document.getElementById('st-two').checked
+      };
+    }
+    function saveSeteukOpts() { try { localStorage.setItem(ST_KEY, JSON.stringify(seteukOpts())); } catch (e) { } }
+
+    function buildSeteukPrompt(item) {
+      const a = item.answers || {}, o = seteukOpts();
+      const v = id => String(a[id] || '').trim() || '(작성하지 않음)';
+      const book = a['book-title'] ? `${a['book-title']}${a['book-author'] ? ' (' + a['book-author'] + ')' : ''}` : '(작성하지 않음)';
+      return [
+        '당신은 고등학교 수학 교사입니다. 아래 학생의 활동지를 근거로 학교생활기록부 「미적분Ⅰ」 과목 세부능력 및 특기사항(세특) 초안을 작성해 주세요.',
+        '',
+        '[활동 배경]',
+        '- 이 학생은 2학년 1학기 「대수」에서 지수함수·로그함수·삼각함수를 배웠고, 2학기 「미적분Ⅰ」 수업에서 그 후속 탐구로 관련 도서를 읽고 아래 활동지를 작성함.',
+        '- 활동지 구성: 탐구의 출발점과 도서 선택 이유 → 책에서 찾은 수학적 원리와 개념적 확장 → 함수 개념의 진로 융합 → 꼬리 질문·수학적 도구 연결(후속 교과)·심화 탐구 주제 설계.',
+        '',
+        '[작성 규칙]',
+        '1. 학생이 활동지에 실제로 쓴 내용만 근거로 함. 활동지에 없는 활동, 실험, 발표, 성취, 수치는 지어내지 말 것.',
+        '2. 교사가 관찰하여 기록하는 문체로, 주어 없이 "~함", "~임", "~보임"처럼 명사형으로 끝맺음.',
+        '3. 다음이 드러나게 쓸 것: ① 대수에서 가진 수학적 의문 ② 독서로 확장한 개념(지수·로그·삼각함수의 성질, 그래프, 수학적 모델링 사례) ③ 진로 분야와의 연결 ④ 미적분 등 후속 교과와 연결한 탐구 설계와 지적 호기심.',
+        '4. 칭찬하는 형용사를 늘어놓지 말고, 학생이 무엇을 이해하고 어떻게 생각을 넓혔는지 구체적으로 쓸 것. 학생 글의 오개념이 있으면 세특에는 쓰지 말고 아래 "확인할 점"에 적을 것.',
+        `5. 분량: 초안 하나당 공백 포함 ${o.chars}자 이내.`,
+        o.book ? '6. 도서는 "도서명(저자)" 형태로 한 번만 언급.' : '6. 도서명과 저자는 쓰지 말고 "관련 도서를 읽고"처럼 표현.',
+        '7. 학생 이름, 학교명, 특정 대학·기업·기관명, 사교육 관련 내용, 수상·자격·어학 성적 등 기재할 수 없는 내용은 쓰지 말 것.',
+        '',
+        '[출력 형식]',
+        o.two ? '- 초안 A(수학 개념 이해·확장 중심)와 초안 B(진로 연계·후속 탐구 중심) 두 가지를 각각 한 문단으로 쓰고, 각 초안 끝에 (공백 포함 ○자)를 표시.'
+          : '- 초안 하나를 한 문단으로 쓰고, 끝에 (공백 포함 ○자)를 표시.',
+        '- 마지막에 "확인할 점"으로, 교사가 학생에게 확인하거나 보완하면 좋을 부분(내용이 부족한 문항, 수학적으로 부정확한 표현 등)을 2~3줄로 적을 것.',
+        '',
+        '[학생 활동지]',
+        `- 진로 희망: ${v('career')}`,
+        `- 선택 도서: ${book}`,
+        `- [문항 1] 탐구의 출발점 및 도서 선택 이유: ${v('q1')}`,
+        `- [문항 2] 책 속에서 찾은 수학적 원리와 개념적 확장: ${v('q2')}`,
+        `- [문항 3] 함수 개념의 진로 융합 및 가치 성찰: ${v('q3')}`,
+        `- [문항 4] Step 1 꼬리 질문: ${v('q4s1')}`,
+        `- [문항 4] Step 2 수학적 도구 연결(후속 교과): ${v('q4s2')}`,
+        `- [문항 4] Step 3 심화 탐구 제안 주제: ${v('q4s3')}`
+      ].join('\n');
+    }
+
+    async function copyText(text) {
+      try { await navigator.clipboard.writeText(text); return true; } catch (e) { }
+      const ta = document.createElement('textarea');   // 클립보드 권한이 없을 때
+      ta.value = text; ta.style.cssText = 'position:fixed;left:-9999px;top:0';
+      document.body.appendChild(ta); ta.select();
+      let ok = false; try { ok = document.execCommand('copy'); } catch (e) { }
+      ta.remove();
+      return ok;
+    }
+
+    async function copySeteukPrompt() {
+      const it = teacherRows[inspectStudentKey];
+      if (!it) return;
+      const filled = FIELDS.filter(f => f.kind === 'area' && charLen((it.answers || {})[f.id]) >= 20).length;
+      if (filled < 2 && !confirm('이 학생은 활동지를 거의 쓰지 않았습니다. 그래도 요청문을 복사할까요?')) return;
+      const ok = await copyText(buildSeteukPrompt(it));
+      if (ok) alert('AI 세특 요청문을 복사했습니다.\nAI 대화창(챗GPT·Claude 등)에 붙여 넣으세요. (이름·학번은 들어 있지 않습니다)');
+      else { downloadFile(`세특요청문_${studentLabel(it.studentInfo || {}).replace(/\s/g, '')}.txt`, '﻿' + buildSeteukPrompt(it), 'text/plain;charset=utf-8'); alert('복사가 막혀 있어 파일로 저장했습니다.'); }
+    }
+
+    // 현재 목록 학생 전체: 학생마다 [학번 이름] 구분선 + 요청문 (구분선은 교사 확인용, AI에는 요청문만 붙여 넣기)
+    function exportSeteukPrompts() {
+      const keys = filteredKeys();
+      if (!keys.length) { alert('저장할 학생이 없습니다.'); return; }
+      const parts = keys.map((k, i) => {
+        const it = teacherRows[k];
+        return `========== ${i + 1}. ${studentLabel(it.studentInfo || {})} (${STATE_TXT[examState(it)]}) ==========\n` +
+          `※ 아래 줄부터 다음 구분선 전까지를 복사해 AI에 붙여 넣으세요.\n\n${buildSeteukPrompt(it)}\n`;
+      });
+      const d = new Date(), ymd = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
+      downloadFile(`세특요청문_${EXAM_LABEL}_${filterLabel().replace(/·/g, '-')}_${ymd}.txt`, '﻿' + parts.join('\n\n'), 'text/plain;charset=utf-8');
+    }
+    loadSeteukOpts();
+
+    async function resetStudentDevice() {
+      if (!inspectStudentKey) return;
+      const it = teacherRows[inspectStudentKey];
+      if (!it) return;
+      if (!IS_ADMIN && !CLASS_LIST.includes(classOf(it))) { alert('담당 반 학생이 아니어서 기기 초기화를 할 수 없습니다.'); return; }
+      if (!confirm('이 학생이 다른 기기에서 이어서 응시할 수 있도록 기기 등록을 초기화할까요?\n(답안과 남은 시간은 그대로 유지됩니다)')) return;
+      const { error } = await sb.from(TABLE).update({ token: null }).eq('exam_id', EXAM_ID).eq('student_key', inspectStudentKey);   // 이 회차만
+      if (error) { alert('초기화 실패: ' + error.message); return; }
+      alert('초기화했습니다. 학생이 새 기기에서 같은 정보로 다시 시작하면 이어서 응시합니다.');
+      await loadTeacherRows();
+    }
+
+    // ===== 교사 로그인: 등록된 선생님을 드롭다운으로 고르기 =====
+    // (수파베이스에 add_login_list.sql을 실행해야 목록이 나옴. 실행 전이거나 오류가 나면 예전처럼 이메일 직접 입력)
+    const LAST_TEACHER_KEY = 'calc_last_teacher';   // 이 컴퓨터에서 마지막으로 로그인한 선생님을 미리 골라 둠
+    async function loadTeacherPicker() {
+      const pick = document.getElementById('t-email-pick');
+      if (!sb || !pick) return;
+      const { data, error } = await sb.rpc('calc_login_list');
+      if (error || !Array.isArray(data) || !data.length) return;
+      let last = '';
+      try { last = localStorage.getItem(LAST_TEACHER_KEY) || ''; } catch (e) { }
+      const label = t => t.role === 'admin' ? '관리자' : (t.classes || []).length ? `${t.classes.join('·')}반 담당` : '담당 반 미선택';
+      pick.innerHTML = '<option value="">선생님을 고르세요</option>' +
+        data.map(t => `<option value="${esc(t.email)}">${esc(label(t))} · ${esc(t.email)}</option>`).join('') +
+        '<option value="__other">목록에 없음 (직접 입력)</option>';
+      pick.value = data.some(t => t.email === last) ? last : '';
+      pick.classList.remove('hidden');
+      syncTeacherPick(false);
+    }
+    // 드롭다운에서 고른 이메일을 로그인 칸에 넣음 ('직접 입력'을 고르면 이메일 칸을 보여 줌)
+    function syncTeacherPick(fromUser) {
+      const pick = document.getElementById('t-email-pick'), input = document.getElementById('t-email');
+      if (!pick || pick.classList.contains('hidden')) return;
+      const other = pick.value === '__other';
+      input.classList.toggle('hidden', !other);
+      if (!other) input.value = pick.value;
+      else if (fromUser) input.value = '';
+      if (fromUser) (other ? input : document.getElementById('t-password')).focus();
+    }
+
+    if (!sb) {
+      const w = document.getElementById('config-warning');
+      if (!window.supabase) w.innerHTML = '<i class="fa-solid fa-plug-circle-xmark mr-1"></i> 서버 연결 프로그램(supabase.js)을 받지 못했습니다. 인터넷 연결을 확인하고 새로고침하세요.';
+      w.classList.remove('hidden');
+    }
+    document.querySelectorAll('.exam-label').forEach(el => el.innerText = EXAM_LABEL);
+    // 첫 화면(회차 선택)에서 넘어온 경우 인적사항을 미리 채움
+    if (!window.TEACHER_PAGE) {
+      try {
+        const p = JSON.parse(sessionStorage.getItem('calc_login') || 'null');
+        if (p && Number(p.exam) === EXAM_ID) {
+          document.getElementById('login-grade').value = p.g;
+          document.getElementById('login-class').value = p.c;
+          document.getElementById('login-num').value = p.n;
+          document.getElementById('login-name').value = p.name;
+          document.getElementById('prefill-note').classList.remove('hidden');
+          document.getElementById('btn-start').focus();
+        }
+      } catch (e) { }
+    }
+    if (window.TEACHER_PAGE) {
+      document.title = `[교사] ${EXAM_LABEL} 대수 후속 탐구 독서 활동지`;
+      document.getElementById('teacher-badge').classList.remove('hidden');
+      switchMode('teacher');
+      loadTeacherPicker();
+    }
+  </script>
+</body>
+
+</html>
