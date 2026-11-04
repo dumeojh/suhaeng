@@ -43,7 +43,7 @@
         <i class="fa-solid fa-square-root-variable text-2xl text-indigo-200"></i>
         <div>
           <h1 class="font-bold text-lg md:text-xl">미적분Ⅰ 수행평가</h1>
-          <p class="text-xs text-indigo-200">인적사항을 입력하면 지금 응시할 회차로 안내합니다</p>
+          <p class="text-xs text-indigo-200">인적사항을 입력하고 참여할 시험·활동을 고르세요</p>
         </div>
       </div>
       <span id="teacher-badge" class="hidden px-3 py-1.5 rounded-lg text-sm font-semibold bg-white text-indigo-700 shadow">
@@ -60,7 +60,7 @@
           <i class="fa-solid fa-id-card"></i>
         </div>
         <h2 class="text-xl font-bold text-slate-900 mt-3">수행평가 인적사항 입력</h2>
-        <p class="text-xs text-slate-500 mt-1">입력 후 [응시할 시험 확인]을 누르세요.<br>아직 시험 시간은 시작되지 않습니다.</p>
+        <p class="text-xs text-slate-500 mt-1">입력 후 [시험·활동 선택하기]를 누르세요.<br>아직 시간은 시작되지 않습니다.</p>
       </div>
       <div class="space-y-3">
         <div class="grid grid-cols-3 gap-2">
@@ -80,7 +80,7 @@
       </div>
       <button id="btn-find" onclick="findExams()"
         class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md flex items-center justify-center space-x-2">
-        <i class="fa-solid fa-magnifying-glass"></i><span>응시할 시험 확인</span>
+        <i class="fa-solid fa-magnifying-glass"></i><span>시험·활동 선택하기</span>
       </button>
       <div id="result" class="space-y-2"></div>
     </div>
@@ -135,8 +135,8 @@
     const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     const PAGE_RE = /^[A-Za-z0-9_-]+$/;
     const STATUS = {
-      new: { txt: '응시 가능', cls: 'bg-indigo-100 text-indigo-700' },
-      writing: { txt: '이어서 응시', cls: 'bg-amber-100 text-amber-700' },
+      new: { txt: '시작 가능', cls: 'bg-indigo-100 text-indigo-700' },
+      writing: { txt: '이어서 하기', cls: 'bg-amber-100 text-amber-700' },
       submitted: { txt: '제출 완료', cls: 'bg-emerald-100 text-emerald-700' },
       timeover: { txt: '시간 종료', cls: 'bg-slate-200 text-slate-600' }
     };
@@ -163,22 +163,22 @@
       }
       const list = (data || []).filter(x => PAGE_RE.test(x.page || ''));
       const go = list.filter(x => x.status === 'new' || x.status === 'writing');
-      if (!list.length) { box.innerHTML = msg('지금 응시할 수 있는 시험이 없습니다.<br>시험 시간이 맞는지 선생님께 확인하세요.', 'amber'); return; }
+      if (!list.length) { box.innerHTML = msg('지금 열려 있는 시험·활동이 없습니다.<br>시간이 맞는지 선생님께 확인하세요.', 'amber'); return; }
       const login = { g, c, n, name };
-      if (go.length === 1 && list.length === 1) { enter(go[0], login); return; }   // 하나뿐이면 바로 이동
-      box.innerHTML = `<p class="text-xs font-bold text-slate-600">응시할 회차를 고르세요.</p>` + list.map(x => {
+      // 열려 있는 시험·활동을 항상 목록으로 보여 주고 학생이 골라서 들어감 (하나뿐이어도 고름)
+      box.innerHTML = `<p class="text-sm font-bold text-slate-700">참여할 시험·활동을 고르세요.</p>` + list.map(x => {
         const st = STATUS[x.status] || STATUS.new, ok = x.status === 'new' || x.status === 'writing';
         return `<button type="button" ${ok ? '' : 'disabled'} data-id="${x.id}"
-          class="exam-pick w-full text-left p-3 rounded-xl border-2 ${ok ? 'border-indigo-200 hover:border-indigo-500 hover:bg-indigo-50' : 'border-slate-200 bg-slate-50 opacity-60 cursor-not-allowed'}">
-          <span class="flex items-center justify-between">
-            <span class="font-bold text-slate-900">${x.id}회차 · ${esc(x.title)}</span>
-            <span class="px-2 py-0.5 rounded text-[11px] font-bold ${st.cls}">${st.txt}</span></span>
-          <span class="block text-xs text-slate-500 mt-0.5">제한 시간 ${Number(x.limit_minutes) || ''}분</span></button>`;
+          class="exam-pick w-full text-left p-4 rounded-xl border-2 ${ok ? 'border-indigo-200 hover:border-indigo-500 hover:bg-indigo-50' : 'border-slate-200 bg-slate-50 opacity-60 cursor-not-allowed'}">
+          <span class="flex items-center justify-between gap-2">
+            <span class="font-bold text-slate-900 text-base">${esc(x.title)}</span>
+            <span class="shrink-0 px-2 py-0.5 rounded text-[11px] font-bold ${st.cls}">${st.txt}</span></span>
+          <span class="block text-xs text-slate-500 mt-1">${x.id}회차 · 제한 시간 ${Number(x.limit_minutes) || ''}분${ok ? ' · 눌러서 들어가기' : ''}</span></button>`;
       }).join('');
       box.querySelectorAll('.exam-pick:not([disabled])').forEach(b => b.onclick = () => enter(list.find(x => x.id === Number(b.dataset.id)), login));
     }
 
-    // 회차 페이지로 이동 (인적사항은 다음 화면에 미리 채워 둠 → 학생은 [시험 시작하기]만 누르면 됨)
+    // 고른 시험·활동 페이지로 이동 (인적사항은 다음 화면에 미리 채워 둠 → 학생은 [시작하기]만 누르면 됨)
     function enter(exam, login) {
       try { sessionStorage.setItem('calc_login', JSON.stringify({ ...login, exam: exam.id })); } catch (e) { }
       location.href = exam.page + '/';
