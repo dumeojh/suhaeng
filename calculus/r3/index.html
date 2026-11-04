@@ -185,7 +185,7 @@
         <span>활동지 작성 시작하기</span>
       </button>
       <a href="../" class="block text-xs text-slate-400 hover:text-indigo-600 hover:underline">← 회차 선택 화면으로</a>
-      <p class="text-[10px] text-slate-300">버전 2026-11-04r3b · <span class="exam-label"></span></p>
+      <p class="text-[10px] text-slate-300">버전 2026-11-04r3c · <span class="exam-label"></span></p>
     </div>
 
     <!-- ================= 종료 화면 ================= -->
@@ -307,6 +307,24 @@
       <div id="exam-admin"></div>
       <!-- 활동지 마감 일시 (관리자가 정함) -->
       <div id="deadline-panel" class="bg-white p-4 rounded-xl shadow-sm border border-slate-200"></div>
+      <!-- AI 세특 요청문 설정 -->
+      <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-2">
+        <div class="flex flex-wrap items-center gap-3 text-sm">
+          <span class="font-bold text-slate-800"><i class="fa-solid fa-wand-magic-sparkles text-violet-600 mr-1"></i>AI 세특 요청문</span>
+          <label class="flex items-center gap-1 text-xs text-slate-600">분량
+            <input id="st-chars" type="number" min="100" max="1000" step="50" value="500" onchange="saveSeteukOpts()"
+              class="w-20 p-1 border rounded text-center text-sm">자 이내 (공백 포함)</label>
+          <label class="flex items-center gap-1 text-xs text-slate-600"><input id="st-book" type="checkbox" checked onchange="saveSeteukOpts()">도서명·저자 넣기</label>
+          <label class="flex items-center gap-1 text-xs text-slate-600"><input id="st-two" type="checkbox" checked onchange="saveSeteukOpts()">초안 2가지 받기</label>
+          <button type="button" onclick="exportSeteukPrompts()"
+            class="ml-auto px-3 py-1.5 bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold rounded-lg"
+            title="현재 목록 학생들의 요청문을 한 파일(.txt)로 저장">
+            <i class="fa-solid fa-file-lines mr-1"></i>현재 목록 요청문 일괄 저장</button>
+        </div>
+        <p class="text-[11px] text-slate-500 leading-relaxed">학생의 활동지 내용을 넣어 AI(챗GPT·Claude 등)에게 미적분Ⅰ 세특 초안을 요청하는 글을 만듭니다.
+          학생 [활동지 보기] 창의 <b>[AI 세특 요청문 복사]</b>를 누르고 AI 대화창에 붙여 넣으세요.
+          요청문에는 <b>학생 이름·학번을 넣지 않습니다.</b> AI가 쓴 초안은 반드시 학생 활동지와 대조하고, 학교 기재요령(도서명 기재 여부, 분량 등)에 맞게 고쳐 쓰세요.</p>
+      </div>
       <!-- 반 선택 탭 -->
       <div class="bg-white p-3 rounded-xl shadow-sm border border-slate-200">
         <div id="class-tabs" class="flex flex-wrap items-center gap-2"></div>
@@ -411,6 +429,11 @@
             class="px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-bold rounded-lg border border-amber-300"
             title="학생이 비밀번호를 잊었을 때: 다음에 들어올 때 새 비밀번호를 정하게 함 (작성한 내용은 그대로)">
             <i class="fa-solid fa-key mr-1"></i>비밀번호 초기화
+          </button>
+          <button onclick="copySeteukPrompt()"
+            class="px-3 py-1.5 bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold rounded-lg"
+            title="이 학생의 활동지 내용으로 AI에게 세특 초안을 요청하는 글을 복사 (이름·학번 제외)">
+            <i class="fa-solid fa-wand-magic-sparkles mr-1"></i>AI 세특 요청문 복사
           </button>
           <button onclick="printStudentReport()"
             class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg flex items-center space-x-1">
@@ -1689,6 +1712,100 @@
       }
       alert('비밀번호를 초기화했습니다.\n학생에게 첫 화면에서 다시 들어와 새 비밀번호를 정하라고 안내하세요.');
     }
+
+
+    // ===== AI 세특 요청문 =====
+    // 학생 활동지 내용을 넣어 AI에게 미적분Ⅰ 세특 초안을 요청하는 글을 만듦 (이름·학번은 넣지 않음)
+    const ST_KEY = 'calc_seteuk_opts';
+    function loadSeteukOpts() {
+      try {
+        const o = JSON.parse(localStorage.getItem(ST_KEY) || 'null');
+        if (!o) return;
+        if (o.chars) document.getElementById('st-chars').value = o.chars;
+        document.getElementById('st-book').checked = o.book !== false;
+        document.getElementById('st-two').checked = o.two !== false;
+      } catch (e) { }
+    }
+    function seteukOpts() {
+      const n = parseInt(document.getElementById('st-chars').value, 10);
+      return {
+        chars: n >= 100 && n <= 1000 ? n : 500,
+        book: document.getElementById('st-book').checked,
+        two: document.getElementById('st-two').checked
+      };
+    }
+    function saveSeteukOpts() { try { localStorage.setItem(ST_KEY, JSON.stringify(seteukOpts())); } catch (e) { } }
+
+    function buildSeteukPrompt(item) {
+      const a = item.answers || {}, o = seteukOpts();
+      const v = id => String(a[id] || '').trim() || '(작성하지 않음)';
+      const book = a['book-title'] ? `${a['book-title']}${a['book-author'] ? ' (' + a['book-author'] + ')' : ''}` : '(작성하지 않음)';
+      return [
+        '당신은 고등학교 수학 교사입니다. 아래 학생의 활동지를 근거로 학교생활기록부 「미적분Ⅰ」 과목 세부능력 및 특기사항(세특) 초안을 작성해 주세요.',
+        '',
+        '[활동 배경]',
+        '- 이 학생은 2학년 1학기 「대수」에서 지수함수·로그함수·삼각함수를 배웠고, 2학기 「미적분Ⅰ」 수업에서 그 후속 탐구로 관련 도서를 읽고 아래 활동지를 작성함.',
+        '- 활동지 구성: 탐구의 출발점과 도서 선택 이유 → 책에서 찾은 수학적 원리와 개념적 확장 → 함수 개념의 진로 융합 → 꼬리 질문·수학적 도구 연결(후속 교과)·심화 탐구 주제 설계.',
+        '',
+        '[작성 규칙]',
+        '1. 학생이 활동지에 실제로 쓴 내용만 근거로 함. 활동지에 없는 활동, 실험, 발표, 성취, 수치는 지어내지 말 것.',
+        '2. 교사가 관찰하여 기록하는 문체로, 주어 없이 "~함", "~임", "~보임"처럼 명사형으로 끝맺음.',
+        '3. 다음이 드러나게 쓸 것: ① 대수에서 가진 수학적 의문 ② 독서로 확장한 개념(지수·로그·삼각함수의 성질, 그래프, 수학적 모델링 사례) ③ 진로 분야와의 연결 ④ 미적분 등 후속 교과와 연결한 탐구 설계와 지적 호기심.',
+        '4. 칭찬하는 형용사를 늘어놓지 말고, 학생이 무엇을 이해하고 어떻게 생각을 넓혔는지 구체적으로 쓸 것. 학생 글의 오개념이 있으면 세특에는 쓰지 말고 아래 "확인할 점"에 적을 것.',
+        `5. 분량: 초안 하나당 공백 포함 ${o.chars}자 이내.`,
+        o.book ? '6. 도서는 "도서명(저자)" 형태로 한 번만 언급.' : '6. 도서명과 저자는 쓰지 말고 "관련 도서를 읽고"처럼 표현.',
+        '7. 학생 이름, 학교명, 특정 대학·기업·기관명, 사교육 관련 내용, 수상·자격·어학 성적 등 기재할 수 없는 내용은 쓰지 말 것.',
+        '',
+        '[출력 형식]',
+        o.two ? '- 초안 A(수학 개념 이해·확장 중심)와 초안 B(진로 연계·후속 탐구 중심) 두 가지를 각각 한 문단으로 쓰고, 각 초안 끝에 (공백 포함 ○자)를 표시.'
+          : '- 초안 하나를 한 문단으로 쓰고, 끝에 (공백 포함 ○자)를 표시.',
+        '- 마지막에 "확인할 점"으로, 교사가 학생에게 확인하거나 보완하면 좋을 부분(내용이 부족한 문항, 수학적으로 부정확한 표현 등)을 2~3줄로 적을 것.',
+        '',
+        '[학생 활동지]',
+        `- 진로 희망: ${v('career')}`,
+        `- 선택 도서: ${book}`,
+        `- [문항 1] 탐구의 출발점 및 도서 선택 이유: ${v('q1')}`,
+        `- [문항 2] 책 속에서 찾은 수학적 원리와 개념적 확장: ${v('q2')}`,
+        `- [문항 3] 함수 개념의 진로 융합 및 가치 성찰: ${v('q3')}`,
+        `- [문항 4] Step 1 꼬리 질문: ${v('q4s1')}`,
+        `- [문항 4] Step 2 수학적 도구 연결(후속 교과): ${v('q4s2')}`,
+        `- [문항 4] Step 3 심화 탐구 제안 주제: ${v('q4s3')}`
+      ].join('\n');
+    }
+
+    async function copyText(text) {
+      try { await navigator.clipboard.writeText(text); return true; } catch (e) { }
+      const ta = document.createElement('textarea');   // 클립보드 권한이 없을 때
+      ta.value = text; ta.style.cssText = 'position:fixed;left:-9999px;top:0';
+      document.body.appendChild(ta); ta.select();
+      let ok = false; try { ok = document.execCommand('copy'); } catch (e) { }
+      ta.remove();
+      return ok;
+    }
+
+    async function copySeteukPrompt() {
+      const it = teacherRows[inspectStudentKey];
+      if (!it) return;
+      const filled = FIELDS.filter(f => f.kind === 'area' && charLen((it.answers || {})[f.id]) >= 20).length;
+      if (filled < 2 && !confirm('이 학생은 활동지를 거의 쓰지 않았습니다. 그래도 요청문을 복사할까요?')) return;
+      const ok = await copyText(buildSeteukPrompt(it));
+      if (ok) alert('AI 세특 요청문을 복사했습니다.\nAI 대화창(챗GPT·Claude 등)에 붙여 넣으세요. (이름·학번은 들어 있지 않습니다)');
+      else { downloadFile(`세특요청문_${studentLabel(it.studentInfo || {}).replace(/\s/g, '')}.txt`, '﻿' + buildSeteukPrompt(it), 'text/plain;charset=utf-8'); alert('복사가 막혀 있어 파일로 저장했습니다.'); }
+    }
+
+    // 현재 목록 학생 전체: 학생마다 [학번 이름] 구분선 + 요청문 (구분선은 교사 확인용, AI에는 요청문만 붙여 넣기)
+    function exportSeteukPrompts() {
+      const keys = filteredKeys();
+      if (!keys.length) { alert('저장할 학생이 없습니다.'); return; }
+      const parts = keys.map((k, i) => {
+        const it = teacherRows[k];
+        return `========== ${i + 1}. ${studentLabel(it.studentInfo || {})} (${STATE_TXT[examState(it)]}) ==========\n` +
+          `※ 아래 줄부터 다음 구분선 전까지를 복사해 AI에 붙여 넣으세요.\n\n${buildSeteukPrompt(it)}\n`;
+      });
+      const d = new Date(), ymd = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
+      downloadFile(`세특요청문_${EXAM_LABEL}_${filterLabel().replace(/·/g, '-')}_${ymd}.txt`, '﻿' + parts.join('\n\n'), 'text/plain;charset=utf-8');
+    }
+    loadSeteukOpts();
 
     async function resetStudentDevice() {
       if (!inspectStudentKey) return;
