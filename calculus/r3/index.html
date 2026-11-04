@@ -121,7 +121,7 @@
       </div>
       <div>
         <h2 class="text-xl font-bold text-slate-900"><span class="exam-label text-teal-600"></span> 독서 활동지 인적사항 입력</h2>
-        <p class="text-xs text-slate-500 mt-1">인적사항을 정확히 입력한 후 [시험 시작하기]를 누르세요.<br>시작하면 <strong>제한 시간</strong>이 시작됩니다.</p>
+        <p class="text-xs text-slate-500 mt-1">인적사항과 <strong>비밀번호</strong>를 입력한 후<br>[활동지 작성 시작하기]를 누르세요.</p>
       </div>
       <div class="space-y-3 text-left">
         <div class="grid grid-cols-3 gap-2">
@@ -151,11 +151,25 @@
             class="w-full p-2.5 border rounded-lg text-center font-bold text-sm focus:ring-2 focus:ring-teal-500">
         </div>
       </div>
+      <div class="space-y-2 text-left">
+        <label for="login-pin" class="block text-xs font-semibold text-slate-600">비밀번호 (숫자 4자리)</label>
+        <input type="password" id="login-pin" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off"
+          placeholder="숫자 4자리" onkeydown="if(event.key==='Enter') startStudentTest()"
+          class="w-full p-2.5 border rounded-lg text-center font-bold text-lg tracking-widest focus:ring-2 focus:ring-teal-500">
+        <div id="pin2-box" class="hidden space-y-1.5 p-3 rounded-lg bg-amber-50 border border-amber-300">
+          <p class="text-xs font-bold text-amber-900"><i class="fa-solid fa-key mr-1"></i>처음 들어왔습니다. 위에 쓴 비밀번호를 한 번 더 입력하면 이 비밀번호로 정해집니다.</p>
+          <input type="password" id="login-pin2" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off"
+            placeholder="비밀번호 확인" onkeydown="if(event.key==='Enter') startStudentTest()"
+            class="w-full p-2.5 border rounded-lg text-center font-bold text-lg tracking-widest focus:ring-2 focus:ring-amber-500">
+        </div>
+        <p id="pin-error" class="hidden text-xs font-bold text-rose-600"></p>
+      </div>
       <div class="p-3 bg-teal-50 border border-teal-200 rounded-lg text-xs text-teal-900 text-left leading-relaxed">
         <p class="font-bold mb-1"><i class="fa-solid fa-circle-info mr-1"></i>작성 안내</p>
+        · <strong>처음 들어올 때 비밀번호(숫자 4자리)를 정합니다.</strong> 다음에 다시 들어올 때 필요하니 꼭 기억하세요. 잊어버리면 선생님께 초기화를 요청하세요.<br>
         · 쓰는 내용은 <strong>자동으로 저장</strong>됩니다. 화면 위쪽에 '저장됨'이 보이는지 확인하세요.<br>
-        · 다 쓰면 맨 아래 <strong>[활동지 제출하기]</strong>를 누르세요. 제출 후에는 고칠 수 없습니다.<br>
-        · <strong>제한 시간</strong>이 끝나면 그때까지 저장된 내용으로 마감됩니다.
+        · 다 쓰면 맨 아래 <strong>[활동지 제출하기]</strong>를 누르세요.<br>
+        · 선생님이 정한 <strong>마감 일시 전까지는</strong> 다른 기기에서도 비밀번호로 다시 들어와 이어 쓰거나 고칠 수 있습니다. (제출한 뒤에도)
       </div>
       <div id="config-warning"
         class="hidden p-3 bg-red-50 border border-red-300 rounded-lg text-xs text-red-700 text-left">
@@ -171,7 +185,7 @@
         <span>활동지 작성 시작하기</span>
       </button>
       <a href="../" class="block text-xs text-slate-400 hover:text-indigo-600 hover:underline">← 회차 선택 화면으로</a>
-      <p class="text-[10px] text-slate-300">버전 2026-11-04r3a · <span class="exam-label"></span></p>
+      <p class="text-[10px] text-slate-300">버전 2026-11-04r3b · <span class="exam-label"></span></p>
     </div>
 
     <!-- ================= 종료 화면 ================= -->
@@ -291,6 +305,8 @@
           class="text-xs text-indigo-600 font-semibold hover:underline">
           <i class="fa-solid fa-layer-group mr-1"></i>전체 회차 관리로</a></div>
       <div id="exam-admin"></div>
+      <!-- 활동지 마감 일시 (관리자가 정함) -->
+      <div id="deadline-panel" class="bg-white p-4 rounded-xl shadow-sm border border-slate-200"></div>
       <!-- 반 선택 탭 -->
       <div class="bg-white p-3 rounded-xl shadow-sm border border-slate-200">
         <div id="class-tabs" class="flex flex-wrap items-center gap-2"></div>
@@ -391,10 +407,10 @@
             title="제출했거나 시간이 끝난 시험을 다시 열어 이어서 응시하게 함 (답안 유지)">
             <i class="fa-solid fa-lock-open mr-1"></i>응시 재개
           </button>
-          <button onclick="resetStudentDevice()"
-            class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg border"
-            title="학생이 다른 기기에서 이어서 응시할 수 있게 함">
-            <i class="fa-solid fa-laptop mr-1"></i>기기 초기화
+          <button onclick="resetStudentPin()"
+            class="px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-bold rounded-lg border border-amber-300"
+            title="학생이 비밀번호를 잊었을 때: 다음에 들어올 때 새 비밀번호를 정하게 함 (작성한 내용은 그대로)">
+            <i class="fa-solid fa-key mr-1"></i>비밀번호 초기화
           </button>
           <button onclick="printStudentReport()"
             class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg flex items-center space-x-1">
@@ -453,6 +469,7 @@
     const EXAM_LABEL = (window.EXAM && window.EXAM.label) || `${EXAM_ID}회차`;
     const SHEET_TITLE = '대수 후속 탐구 독서 활동지';
     let TEST_MINUTES = 50;                  // 서버(회차별 제한 시간) 값으로 덮어씀
+    let EXAM_DEADLINE = null;               // 마감 일시(ms). 있으면 그때까지 비밀번호로 다시 들어와 고칠 수 있음, 없으면 제한 시간 방식
 
     let currentMode = 'student';
     let activeStudentKey = null;
@@ -497,19 +514,22 @@
     // ================= 수파베이스 저장 =================
     const ERR_TEXT = {
       NOT_IN_ROSTER: '명렬표에 없는 정보입니다. 학년·반·번호·이름을 다시 확인하세요.',
-      TOKEN_MISMATCH: '이미 다른 기기(또는 브라우저)에서 시작한 기록이 있습니다.\n처음 시작한 기기로 접속하거나, 선생님께 [기기 초기화]를 요청하세요.',
+      TOKEN_MISMATCH: '저장 열쇠가 바뀌었습니다. 첫 화면에서 다시 들어와 비밀번호를 입력하세요.',
       TIME_OVER: '시험 시간이 종료되어 더 이상 저장할 수 없습니다.',
       ALREADY_SUBMITTED: '이미 제출한 답안입니다.',
       TOO_LARGE: '답안 용량이 너무 큽니다. 선생님께 문의하세요.',
       PAUSED: '시험이 중지된 상태라 저장할 수 없습니다. 선생님께 해제를 요청하세요.',
       EXAM_CLOSED: '지금은 이 회차 시험을 볼 수 없습니다.\n시험 시간이 맞는지 선생님께 확인하세요. (결석했던 시험이면 선생님께 응시 허용을 요청하세요)',
-      NO_EXAM: '회차 설정이 없습니다. 선생님께 문의하세요. (회차 관리에서 3회차를 만들어야 합니다)'
+      NO_EXAM: '회차 설정이 없습니다. 선생님께 문의하세요. (회차 관리에서 3회차를 만들어야 합니다)',
+      DEADLINE_PASSED: '활동지 마감 일시가 지났습니다. 선생님께 문의하세요.'
     };
     function errCode(e) {
       const m = (e && (e.message || e.details)) || String(e);
       return Object.keys(ERR_TEXT).find(k => m.includes(k)) || null;
     }
     function errText(e) {
+      const raw = String((e && (e.message || e.details)) || '');
+      if ((e && e.code === 'PGRST202') || /calc_act_/.test(raw)) return '서버에 활동지 비밀번호 기능이 아직 없습니다. 선생님께 알려 주세요.\n(수파베이스에서 add_activity_password.sql 실행 필요)';
       const c = errCode(e);
       return c ? ERR_TEXT[c] : '서버에 연결하지 못했습니다. 인터넷 연결을 확인하세요.\n(' + ((e && e.message) || e) + ')';
     }
@@ -544,7 +564,7 @@
       const payload = pendingPayload;
       setSaveStatus('saving', '<i class="fa-solid fa-spinner fa-spin mr-0.5"></i>저장 중');
       try {
-        const { error } = await sb.rpc('calc_save', {
+        const { error } = await sb.rpc('calc_act_save', {
           p_key: activeStudentKey, p_token: studentToken, p_data: payload.data, p_progress: payload.progress, p_submit: false
         });
         if (error) throw error;
@@ -655,6 +675,8 @@
         onChange: list => {
           if (!list[0]) return;
           TEST_MINUTES = list[0].limit_minutes || TEST_MINUTES;
+          EXAM_DEADLINE = list[0].deadline ? Date.parse(list[0].deadline) : null;
+          renderDeadlinePanel();
           const next = [...(list[0].open_classes || [])].map(Number).filter(c => CLASS_LIST.includes(c)).sort((a, b) => a - b);
           const changed = next.join(',') !== openClasses.join(',');
           const mine = ownAdminClick && Date.now() - ownAdminClick < 10000;
@@ -866,6 +888,13 @@
     }
 
     // ================= 학생 로그인 / 타이머 =================
+    function pinError(msg) {
+      const el = document.getElementById('pin-error');
+      el.innerText = msg || '';
+      el.classList.toggle('hidden', !msg);
+    }
+    function setStartLabel(t) { document.querySelector('#btn-start span').innerText = t; }
+
     async function startStudentTest() {
       if (!sb) { uiAlert('서버에 연결할 수 없습니다. 새로고침한 뒤에도 같으면 선생님께 알리세요.'); return; }
       const g = parseInt(document.getElementById('login-grade').value, 10);
@@ -873,30 +902,53 @@
       const n = parseInt(document.getElementById('login-num').value, 10);
       const name = document.getElementById('login-name').value.trim();
       if (!g || !c || !n || !name) { uiAlert('학년, 반, 번호, 이름을 모두 올바르게 입력해주세요.'); return; }
-
-      const key = `${g}학년_${c}반_${String(n).padStart(2, '0')}번_${name}`;
-      const tokenKey = `${TOKEN_PREFIX}${EXAM_ID}회차_${key}`;   // 기기 표시는 회차마다 따로 보관
-      let token = null;
-      try { token = localStorage.getItem(tokenKey); } catch (e) { }
+      const pinEl = document.getElementById('login-pin'), pin2El = document.getElementById('login-pin2');
+      const pin = pinEl.value.trim();
+      pinError('');
+      if (!/^[0-9]{4}$/.test(pin)) { pinError('비밀번호는 숫자 4자리로 입력하세요.'); pinEl.focus(); return; }
+      const setting = !document.getElementById('pin2-box').classList.contains('hidden');
+      if (setting && pin2El.value.trim() !== pin) {
+        pinError('두 비밀번호가 다릅니다. 확인 칸에 같은 숫자 4자리를 입력하세요.');
+        pin2El.value = ''; pin2El.focus(); return;
+      }
 
       const btn = document.getElementById('btn-start');
       btn.disabled = true;
-      const { data: res, error } = await sb.rpc('calc_start', { p_grade: g, p_class: c, p_num: n, p_name: name, p_token: token, p_exam: EXAM_ID });
+      const { data: res, error } = await sb.rpc('calc_act_start', {
+        p_grade: g, p_class: c, p_num: n, p_name: name, p_exam: EXAM_ID, p_pin: pin, p_set: setting
+      });
       btn.disabled = false;
       if (error) { uiAlert(errText(error)); return; }
+      if (res && res.error) {
+        if (res.error === 'PW_NEW') {
+          document.getElementById('pin2-box').classList.remove('hidden');
+          setStartLabel('비밀번호 정하고 시작하기');
+          pin2El.value = ''; pin2El.focus();
+          return;
+        }
+        if (res.error === 'PW_WRONG') pinError(`비밀번호가 틀렸습니다. (${res.left}번 더 틀리면 10분 동안 잠깁니다)`);
+        else if (res.error === 'PW_LOCKED') pinError(`비밀번호를 여러 번 틀려 잠겼습니다. ${Math.max(1, Math.ceil(res.seconds / 60))}분 뒤에 다시 하거나 선생님께 비밀번호 초기화를 요청하세요.`);
+        else if (res.error === 'BAD_PIN') pinError('비밀번호는 숫자 4자리로 입력하세요.');
+        else pinError('들어가지 못했습니다. (' + res.error + ')');
+        pinEl.value = ''; pinEl.focus();
+        return;
+      }
 
+      // 저장 열쇠(토큰)는 기기에 남기지 않음 → 공용 기기에서 다른 학생이 비밀번호 없이 열 수 없음
       activeStudentKey = res.student_key;
       studentToken = res.token;
-      try { localStorage.setItem(tokenKey, res.token); sessionStorage.removeItem('calc_login'); } catch (e) { }
+      pinEl.value = ''; pin2El.value = '';
+      try { sessionStorage.removeItem('calc_login'); } catch (e) { }
       serverOffsetMs = Date.parse(res.server_now) - Date.now();
       TEST_MINUTES = res.limit_minutes || TEST_MINUTES;
+      EXAM_DEADLINE = res.deadline ? Date.parse(res.deadline) : null;
 
       // 서버에 없는 최신 내용이 이 기기에 백업돼 있으면(네트워크 끊김 등) 그것을 사용
       let saved = res.data || {};
       try {
         const bk = JSON.parse(localStorage.getItem(backupKey()) || 'null');
-        if (!res.submitted && bk && bk.data && bk.token === res.token && (bk.data.clientSavedAt || 0) > (saved.clientSavedAt || 0)) saved = bk.data;
-        else if (bk && bk.token !== res.token) localStorage.removeItem(backupKey());   // 지워진 예전 응시의 백업은 버림
+        if (bk && bk.data && bk.token === res.token && (bk.data.clientSavedAt || 0) > (saved.clientSavedAt || 0)) saved = bk.data;
+        else if (bk && bk.token !== res.token) localStorage.removeItem(backupKey());
       } catch (e) { }
 
       document.getElementById('stu-info-tag').innerText = `${g}학년 ${c}반 ${n}번 ${name}`;
@@ -904,8 +956,30 @@
       document.getElementById('timer-banner').classList.remove('hidden');
       loadStudentState(saved);
       window.scrollTo(0, 0);
-      if (res.submitted) { lockTestFields('submitted'); setSaveStatus('saved', '<i class="fa-solid fa-circle-check mr-0.5"></i>제출됨'); }
+      if (EXAM_DEADLINE) {
+        if (Date.now() + serverOffsetMs > EXAM_DEADLINE) { lockTestFields('time'); return; }
+        if (res.submitted) {
+          setSaveStatus('saved', '<i class="fa-solid fa-circle-check mr-0.5"></i>제출됨 · 고치기 가능');
+          document.querySelector('#btn-submit span').innerText = '고친 내용으로 다시 제출하기';
+        }
+        initDeadlineTimer();
+      } else if (res.submitted) { lockTestFields('submitted'); setSaveStatus('saved', '<i class="fa-solid fa-circle-check mr-0.5"></i>제출됨'); }
       else initCountdownTimer(Date.parse(res.start_time));
+    }
+
+    // 마감 일시까지 남은 시간 (며칠 남았으면 '3일 04:12', 하루 안이면 '04:12:30')
+    function initDeadlineTimer() {
+      if (timerInterval) clearInterval(timerInterval);
+      document.querySelector('#timer-banner .text-xs').innerText = '마감까지:';
+      const p2 = v => String(v).padStart(2, '0');
+      function tick() {
+        const left = EXAM_DEADLINE - (Date.now() + serverOffsetMs);
+        if (left <= 0) { clearInterval(timerInterval); document.getElementById('timer-display').innerText = '마감'; lockTestFields('time'); return; }
+        const t = Math.floor(left / 1000), d = Math.floor(t / 86400), h = Math.floor(t % 86400 / 3600), m = Math.floor(t % 3600 / 60), sec = t % 60;
+        document.getElementById('timer-display').innerText = d ? `${d}일 ${p2(h)}:${p2(m)}` : `${p2(h)}:${p2(m)}:${p2(sec)}`;
+      }
+      tick();
+      timerInterval = setInterval(tick, 1000);
     }
 
     // 화면 안 알림창 (브라우저 알림창 대신)
@@ -954,6 +1028,8 @@
       timerInterval = setInterval(tick, 1000);
     }
 
+    const fmtDeadline = () => EXAM_DEADLINE ? new Date(EXAM_DEADLINE).toLocaleString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short', hour: '2-digit', minute: '2-digit' }) : '';
+
     function lockTestFields(reason) {
       const wasLocked = isLocked;
       isLocked = true;
@@ -969,7 +1045,9 @@
         banner.className = 'p-4 bg-emerald-50 border-2 border-emerald-500 rounded-xl text-emerald-800 flex items-center space-x-3';
         document.getElementById('lock-icon').className = 'fa-solid fa-circle-check text-2xl';
         document.getElementById('lock-title').innerText = '활동지 제출이 완료되었습니다';
-        document.getElementById('lock-desc').innerText = '제출 후에는 답안을 수정할 수 없습니다. (선생님이 다시 열어 주면 새로고침 후 같은 정보로 다시 시작하세요)';
+        document.getElementById('lock-desc').innerText = EXAM_DEADLINE
+          ? `마감(${fmtDeadline()}) 전까지 첫 화면에서 다시 들어와 비밀번호를 입력하면 고칠 수 있습니다.`
+          : '제출 후에는 답안을 수정할 수 없습니다. (선생님이 다시 열어 주면 새로고침 후 같은 정보로 다시 시작하세요)';
         document.getElementById('timer-banner').classList.add('hidden');
       } else {
         banner.className = 'p-4 bg-red-50 border-2 border-red-500 rounded-xl text-red-700 flex items-center space-x-3';
@@ -978,7 +1056,7 @@
           document.getElementById('lock-title').innerText = '다른 기기에서 접속하여 이 화면에서는 저장할 수 없습니다';
           document.getElementById('lock-desc').innerText = '선생님께 문의하세요.';
         } else {
-          document.getElementById('lock-title').innerText = `작성 시간이 끝났습니다 (${TEST_MINUTES}분 경과)`;
+          document.getElementById('lock-title').innerText = EXAM_DEADLINE ? '마감 일시가 지났습니다' : `작성 시간이 끝났습니다 (${TEST_MINUTES}분 경과)`;
           document.getElementById('lock-desc').innerText = '더 이상 문항을 수정할 수 없습니다. 마감 직전까지 작성한 내용은 저장되었습니다. (선생님이 다시 열어 주면 새로고침 후 같은 정보로 다시 시작하세요)';
         }
       }
@@ -988,10 +1066,12 @@
         const done = reason === 'submitted';
         document.getElementById('end-icon').className = 'w-16 h-16 rounded-full flex items-center justify-center mx-auto text-3xl ' +
           (done ? 'fa-solid fa-circle-check bg-emerald-100 text-emerald-600' : 'fa-solid fa-clock bg-red-100 text-red-600');
-        document.getElementById('end-title').innerText = done ? '활동지를 제출했습니다' : `작성 시간이 끝났습니다 (${TEST_MINUTES}분)`;
+        document.getElementById('end-title').innerText = done ? '활동지를 제출했습니다' : (EXAM_DEADLINE ? '마감 일시가 지났습니다' : `작성 시간이 끝났습니다 (${TEST_MINUTES}분)`);
         document.getElementById('end-who').innerText = `${EXAM_LABEL} · ` + document.getElementById('stu-info-tag').innerText;
-        document.getElementById('end-desc').innerText = (done ? '답안이 정상적으로 제출되었습니다.' : '마감 직전까지 작성한 내용은 저장되었습니다.') +
-          '\n수고했습니다. 선생님의 안내를 기다리세요.\n\n(선생님이 다시 열어 주면 새로고침 후 같은 정보로 다시 시작하세요)';
+        document.getElementById('end-desc').innerText = (done ? '활동지가 정상적으로 제출되었습니다.' : '마감 직전까지 작성한 내용은 저장되었습니다.') +
+          '\n수고했습니다.' + (EXAM_DEADLINE && done
+            ? `\n\n마감(${fmtDeadline()}) 전까지는 첫 화면에서 다시 들어와\n비밀번호를 입력하면 고칠 수 있습니다.`
+            : '\n\n(선생님이 다시 열어 주면 첫 화면에서 다시 들어오세요)');
         document.getElementById('timer-banner').classList.add('hidden');
         if (activeStudentKey && !window.TEACHER_PAGE) showOnly('exam-end-view');
       }
@@ -1067,12 +1147,14 @@
       const payload = collectPayload();
       const empty = FIELDS.filter(f => !fieldDone(f, payload.data.answers[f.id])).map(f => '· ' + (f.title || f.label || f.short));
       if (empty.length && !(await uiConfirm(`아직 덜 쓴 칸이 ${empty.length}개 있습니다.\n${empty.join('\n')}\n\n그래도 제출할까요?`))) return;
-      if (!(await uiConfirm('제출 후에는 고칠 수 없습니다. 활동지를 제출할까요?'))) return;
+      if (!(await uiConfirm(EXAM_DEADLINE
+        ? `활동지를 제출할까요?\n마감(${fmtDeadline()}) 전까지는 다시 들어와 고칠 수 있습니다.`
+        : '제출 후에는 고칠 수 없습니다. 활동지를 제출할까요?'))) return;
       if (isLocked) return;   // 확인 창이 떠 있는 사이 시간이 끝난 경우
       clearTimeout(saveTimer);
       const btn = document.getElementById('btn-submit');
       btn.disabled = true;
-      const { error } = await sb.rpc('calc_save', {
+      const { error } = await sb.rpc('calc_act_save', {
         p_key: activeStudentKey, p_token: studentToken, p_data: payload.data, p_progress: payload.progress, p_submit: true
       });
       if (error) {
@@ -1224,6 +1306,7 @@
     // 응시 상태: 제출 완료 / 시간 종료(미제출) / 작성 중
     function examState(item) {
       if (item.submitted) return 'submitted';
+      if (EXAM_DEADLINE) return Date.now() > EXAM_DEADLINE ? 'timeover' : 'writing';
       if (item.startMs && Date.now() > item.startMs + TEST_MINUTES * 60000) return 'timeover';
       return 'writing';
     }
@@ -1256,7 +1339,7 @@
         return;
       }
       if (item.paused) await sb.rpc('calc_unpause', { p_key: inspectStudentKey });
-      alert(`응시를 재개했습니다.\n종료 예정: ${new Date(data.ends_at).toLocaleTimeString()} (${minutes}분)\n\n학생에게 [새로고침] 후 같은 정보로 [시험 시작하기]를 누르라고 안내하세요.`);
+      alert(`응시를 재개했습니다.\n종료 예정: ${new Date(data.ends_at).toLocaleTimeString()} (${minutes}분)\n\n학생에게 첫 화면에서 다시 들어와 비밀번호를 입력하라고 안내하세요.`);
       await loadTeacherRows();
       openDetailModal(inspectStudentKey);
     }
@@ -1545,6 +1628,66 @@
       await loadTeacherRows();
       alert(deleted === rows.length ? `${deleted}명의 답안을 삭제했습니다.\n백업 파일은 다운로드 폴더에 있습니다.`
         : `${rows.length}명 중 ${deleted}명만 삭제되었습니다.\n담당 반이 아닌 학생은 삭제 권한이 없습니다.`);
+    }
+
+
+    // ===== 활동지 마감 일시 (교사 화면) =====
+    function renderDeadlinePanel() {
+      const el = document.getElementById('deadline-panel');
+      if (!el) return;
+      const p2 = v => String(v).padStart(2, '0');
+      const toLocal = ms => { const d = new Date(ms); return `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}T${p2(d.getHours())}:${p2(d.getMinutes())}`; };
+      const passed = EXAM_DEADLINE && Date.now() > EXAM_DEADLINE;
+      el.innerHTML = `<div class="flex flex-wrap items-center gap-2 text-sm">
+          <span class="font-bold text-slate-800"><i class="fa-solid fa-calendar-check text-teal-600 mr-1"></i>활동지 마감 일시</span>
+          <input type="datetime-local" id="deadline-input" value="${EXAM_DEADLINE ? toLocal(EXAM_DEADLINE) : ''}" ${IS_ADMIN ? '' : 'disabled'}
+            class="p-1.5 border rounded-lg text-sm focus:ring-2 focus:ring-teal-500">
+          ${IS_ADMIN ? `<button type="button" onclick="saveDeadline(false)" class="px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold">저장</button>
+            ${EXAM_DEADLINE ? '<button type="button" onclick="saveDeadline(true)" class="px-3 py-1.5 rounded-lg border bg-white hover:bg-slate-50 text-slate-600 text-xs font-bold">마감 없애기</button>' : ''}` : ''}
+        </div>
+        <p class="mt-1.5 text-xs ${!EXAM_DEADLINE ? 'text-amber-700' : passed ? 'text-rose-600' : 'text-teal-700'}">${!EXAM_DEADLINE
+          ? '마감 일시가 없어 제한 시간 방식으로 동작합니다. 학생이 다른 날 다시 들어와 고치게 하려면 마감 일시를 정하세요.'
+          : passed ? `마감(${esc(new Date(EXAM_DEADLINE).toLocaleString())})이 지나 학생이 더 이상 고칠 수 없습니다.`
+            : `${esc(new Date(EXAM_DEADLINE).toLocaleString())}까지 학생이 비밀번호로 다시 들어와 이어 쓰거나 고칠 수 있습니다 (제출한 뒤에도). 새로 시작하는 학생은 반이 열려 있어야 합니다.`}</p>
+        ${IS_ADMIN ? '' : '<p class="text-[11px] text-slate-500 mt-1">마감 일시는 관리자 계정만 바꿀 수 있습니다.</p>'}`;
+    }
+
+    async function saveDeadline(clear) {
+      const v = clear ? '' : document.getElementById('deadline-input').value;
+      if (!clear && !v) { alert('마감 일시를 고르세요.'); return; }
+      const iso = v ? new Date(v).toISOString() : null;
+      if (!confirm(clear
+        ? '마감 일시를 없앨까요?\n제한 시간 방식으로 돌아가, 제출했거나 시간이 끝난 학생은 더 이상 고칠 수 없게 됩니다.'
+        : `마감 일시를 ${new Date(iso).toLocaleString()}(으)로 정할까요?\n이때까지 학생이 비밀번호로 다시 들어와 고칠 수 있습니다.`)) return;
+      const { error } = await sb.rpc('calc_act_set_deadline', { p_exam: EXAM_ID, p_deadline: iso });
+      if (error) {
+        const m = String(error.message || '');
+        alert(m.includes('NOT_ADMIN') ? '관리자 계정만 마감 일시를 바꿀 수 있습니다.'
+          : (error.code === 'PGRST202' || m.includes('calc_act_set_deadline')) ? '수파베이스에서 add_activity_password.sql을 먼저 실행하세요.'
+            : '저장 실패: ' + m);
+        return;
+      }
+      EXAM_DEADLINE = iso ? Date.parse(iso) : null;
+      renderDeadlinePanel();
+      renderTeacherDashboard();
+      if (window.ExamAdmin) ExamAdmin.reload();
+    }
+
+    // 학생이 비밀번호를 잊었을 때: 비밀번호만 지움 (작성한 내용은 그대로, 다음에 들어올 때 새로 정함)
+    async function resetStudentPin() {
+      const it = teacherRows[inspectStudentKey];
+      if (!it) return;
+      if (!IS_ADMIN && !CLASS_LIST.includes(classOf(it))) { alert('담당 반 학생이 아니어서 비밀번호를 초기화할 수 없습니다.'); return; }
+      if (!confirm(`${studentLabel(it.studentInfo || {})} 학생의 비밀번호를 초기화할까요?\n\n· 작성한 내용은 그대로 남습니다.\n· 학생이 다음에 들어올 때 새 비밀번호를 정합니다.\n· 초기화한 뒤에는 학생이 바로 들어가 새 비밀번호를 정하게 하세요.`)) return;
+      const { error } = await sb.rpc('calc_act_reset_pw', { p_key: inspectStudentKey });
+      if (error) {
+        const m = String(error.message || '');
+        alert(m.includes('NOT_MY_CLASS') ? '담당 반 학생이 아니어서 비밀번호를 초기화할 수 없습니다.'
+          : (error.code === 'PGRST202' || m.includes('calc_act_reset_pw')) ? '수파베이스에서 add_activity_password.sql을 먼저 실행하세요.'
+            : '초기화 실패: ' + m);
+        return;
+      }
+      alert('비밀번호를 초기화했습니다.\n학생에게 첫 화면에서 다시 들어와 새 비밀번호를 정하라고 안내하세요.');
     }
 
     async function resetStudentDevice() {

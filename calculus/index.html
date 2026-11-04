@@ -138,7 +138,9 @@
       new: { txt: '시작 가능', cls: 'bg-indigo-100 text-indigo-700' },
       writing: { txt: '이어서 하기', cls: 'bg-amber-100 text-amber-700' },
       submitted: { txt: '제출 완료', cls: 'bg-emerald-100 text-emerald-700' },
-      timeover: { txt: '시간 종료', cls: 'bg-slate-200 text-slate-600' }
+      timeover: { txt: '시간 종료', cls: 'bg-slate-200 text-slate-600' },
+      edit: { txt: '이어서 쓰기·고치기', cls: 'bg-teal-100 text-teal-700' },
+      closed: { txt: '마감됨', cls: 'bg-slate-200 text-slate-600' }
     };
 
     // ===== 학생 =====
@@ -162,18 +164,28 @@
         return;
       }
       const list = (data || []).filter(x => PAGE_RE.test(x.page || ''));
-      const go = list.filter(x => x.status === 'new' || x.status === 'writing');
+      // 마감 일시가 있는 활동지: 이미 시작한 학생은 반이 닫혀 있어도 마감 전까지 다시 들어와 고칠 수 있음
+      // (수파베이스에 add_activity_password.sql을 실행하기 전이면 이 부분은 건너뜀)
+      try {
+        const { data: acts, error: actErr } = await sb.rpc('calc_act_list', { p_grade: g, p_class: c, p_num: n, p_name: name });
+        if (!actErr && Array.isArray(acts)) acts.filter(a => PAGE_RE.test(a.page || '')).forEach(a => {
+          const i = list.findIndex(x => x.id === a.id);
+          const item = { ...(i >= 0 ? list[i] : {}), ...a };
+          if (i >= 0) list[i] = item; else list.push(item);
+        });
+        list.sort((a, b) => a.id - b.id);
+      } catch (e) { }
       if (!list.length) { box.innerHTML = msg('지금 열려 있는 시험·활동이 없습니다.<br>시간이 맞는지 선생님께 확인하세요.', 'amber'); return; }
       const login = { g, c, n, name };
       // 열려 있는 시험·활동을 항상 목록으로 보여 주고 학생이 골라서 들어감 (하나뿐이어도 고름)
       box.innerHTML = `<p class="text-sm font-bold text-slate-700">참여할 시험·활동을 고르세요.</p>` + list.map(x => {
-        const st = STATUS[x.status] || STATUS.new, ok = x.status === 'new' || x.status === 'writing';
+        const st = STATUS[x.status] || STATUS.new, ok = ['new', 'writing', 'edit'].includes(x.status);
         return `<button type="button" ${ok ? '' : 'disabled'} data-id="${x.id}"
           class="exam-pick w-full text-left p-4 rounded-xl border-2 ${ok ? 'border-indigo-200 hover:border-indigo-500 hover:bg-indigo-50' : 'border-slate-200 bg-slate-50 opacity-60 cursor-not-allowed'}">
           <span class="flex items-center justify-between gap-2">
             <span class="font-bold text-slate-900 text-base">${esc(x.title)}</span>
             <span class="shrink-0 px-2 py-0.5 rounded text-[11px] font-bold ${st.cls}">${st.txt}</span></span>
-          <span class="block text-xs text-slate-500 mt-1">${x.id}회차 · 제한 시간 ${Number(x.limit_minutes) || ''}분${ok ? ' · 눌러서 들어가기' : ''}</span></button>`;
+          <span class="block text-xs text-slate-500 mt-1">${x.id}회차 · ${x.deadline ? '마감 ' + esc(new Date(x.deadline).toLocaleString('ko-KR', { month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })) : '제한 시간 ' + (Number(x.limit_minutes) || '') + '분'}${ok ? ' · 눌러서 들어가기' : ''}</span></button>`;
       }).join('');
       box.querySelectorAll('.exam-pick:not([disabled])').forEach(b => b.onclick = () => enter(list.find(x => x.id === Number(b.dataset.id)), login));
     }
