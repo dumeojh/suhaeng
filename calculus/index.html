@@ -6,9 +6,16 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>[미적분Ⅰ] 수행평가</title>
-  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js"></script>
+  <!-- 학교망 필터·외부 서버 장애로 시험이 멈추지 않도록 라이브러리는 이 사이트의 lib 폴더에서 불러옴.
+       lib 파일이 없을 때만 예전처럼 외부(CDN)에서 받음 -->
+  <link rel="stylesheet" href="lib/tailwind.css">
+  <link rel="stylesheet" href="lib/fontawesome/css/all.min.css">
+  <!-- 글꼴은 받아지지 않아도 시험에는 지장이 없으므로 페이지를 막지 않게 따로 불러옴 (막히면 기본 한글 글꼴로 보임) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" media="print" onload="this.media='all'">
+  <!-- 새 회차 페이지에서 lib/tailwind.css에 없는 디자인 클래스를 쓰더라도 보이도록 보충용으로 함께 받음 (막혀도 페이지는 그대로 열림) -->
+  <script src="https://cdn.tailwindcss.com/3.4.17" async></script>
+  <script src="lib/supabase.js"></script>
+  <script>window.supabase || document.write('<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js"><\/script>')</script>
   <script src="config.js"></script>
   <script src="exam-admin.js"></script>
   <script src="roster-admin.js"></script>
@@ -18,8 +25,6 @@
     if (window.TEACHER_PAGE) document.documentElement.classList.add('teacher-page');
   </script>
   <style>
-    @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css');
-
     body {
       font-family: 'Pretendard', sans-serif;
     }
@@ -139,7 +144,7 @@
     // ===== 학생 =====
     async function findExams() {
       const box = document.getElementById('result');
-      if (!sb) { box.innerHTML = msg('수파베이스 연결 설정이 없습니다. 선생님께 문의하세요.', 'red'); return; }
+      if (!sb) { box.innerHTML = msg(window.supabase ? '수파베이스 연결 설정이 없습니다. 선생님께 문의하세요.' : '서버 연결 프로그램을 받지 못했습니다. 새로고침한 뒤에도 같으면 선생님께 알리세요.', 'red'); return; }
       const g = parseInt(document.getElementById('g').value, 10);
       const c = parseInt(document.getElementById('c').value, 10);
       const n = parseInt(document.getElementById('n').value, 10);
@@ -261,7 +266,11 @@
       if (fromUser) (other ? input : document.getElementById('t-password')).focus();
     }
 
-    if (!sb) document.getElementById('config-warning').classList.remove('hidden');
+    if (!sb) {
+      const w = document.getElementById('config-warning');
+      if (w && !window.supabase) w.innerHTML = '<i class="fa-solid fa-plug-circle-xmark mr-1"></i> 서버 연결 프로그램(supabase.js)을 받지 못했습니다. 인터넷 연결을 확인하고 새로고침하세요.';
+      if (w) w.classList.remove('hidden');
+    }
     if (window.TEACHER_PAGE) {
       document.title = '[교사] 미적분Ⅰ 수행평가 회차 관리';
       document.getElementById('teacher-badge').classList.remove('hidden');

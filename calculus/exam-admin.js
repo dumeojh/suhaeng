@@ -55,11 +55,14 @@
     makeups = mk.data || [];
     stats = {};
     if (!opts.examId) {
-      const { data } = await sb.from('calculus_submissions').select('exam_id, submitted');
-      (data || []).forEach(r => {
-        const s = stats[r.exam_id] || (stats[r.exam_id] = { started: 0, submitted: 0 });
-        s.started++; if (r.submitted) s.submitted++;
-      });
+      // 회차별 응시·제출 인원은 '개수'만 받음 (행 전체를 받지 않음)
+      // → 수파베이스 무료 전송량 절약, 답안이 1000건을 넘어도 숫자가 잘리지 않음
+      const cnt = q => q.then(r => r.error ? null : (r.count || 0));
+      const base = id => sb.from('calculus_submissions').select('student_key', { count: 'exact', head: true }).eq('exam_id', id);
+      await Promise.all(exams.map(async e => {
+        const [started, submitted] = await Promise.all([cnt(base(e.id)), cnt(base(e.id).eq('submitted', true))]);
+        if (started !== null) stats[e.id] = { started, submitted: submitted || 0 };
+      }));
     }
     const sig = JSON.stringify([exams, makeups, stats, owners]);
     if (silent && sig === lastSig) return;   // 바뀐 것이 없으면 화면을 다시 그리지 않음

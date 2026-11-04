@@ -12,10 +12,18 @@
     // id는 교사 회차 관리 화면의 '회차 번호'와 같아야 합니다.
     window.EXAM = { id: 1, label: '1회차' };
   </script>
-  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.6.1/dist/chart.umd.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js"></script>
+  <!-- 학교망 필터·외부 서버 장애로 시험이 멈추지 않도록 라이브러리는 이 사이트의 lib 폴더에서 불러옴.
+       lib 파일이 없을 때만 예전처럼 외부(CDN)에서 받음 -->
+  <link rel="stylesheet" href="../lib/tailwind.css">
+  <link rel="stylesheet" href="../lib/fontawesome/css/all.min.css">
+  <!-- 글꼴은 받아지지 않아도 시험에는 지장이 없으므로 페이지를 막지 않게 따로 불러옴 (막히면 기본 한글 글꼴로 보임) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" media="print" onload="this.media='all'">
+  <!-- 새 회차 페이지에서 lib/tailwind.css에 없는 디자인 클래스를 쓰더라도 보이도록 보충용으로 함께 받음 (막혀도 페이지는 그대로 열림) -->
+  <script src="https://cdn.tailwindcss.com/3.4.17" async></script>
+  <script src="../lib/chart.umd.js"></script>
+  <script>window.Chart || document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js@4.6.1/dist/chart.umd.js"><\/script>')</script>
+  <script src="../lib/supabase.js"></script>
+  <script>window.supabase || document.write('<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js"><\/script>')</script>
   <script src="../config.js"></script>
   <script src="../exam-admin.js"></script>
   <script>
@@ -24,8 +32,6 @@
     if (window.TEACHER_PAGE) document.documentElement.classList.add('teacher-page');
   </script>
   <style>
-    @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css');
-
     body {
       font-family: 'Pretendard', sans-serif;
     }
@@ -246,7 +252,7 @@
         <span>시험 시작하기 (카운트다운 시작)</span>
       </button>
       <a href="../" class="block text-xs text-slate-400 hover:text-indigo-600 hover:underline">← 회차 선택 화면으로</a>
-      <p class="text-[10px] text-slate-300">버전 2026-11-03c · <span class="exam-label"></span></p>
+      <p class="text-[10px] text-slate-300">버전 2026-11-04c · <span class="exam-label"></span></p>
     </div>
 
     <!-- ================= 시험 종료 화면 (문항은 보이지 않음) ================= -->
@@ -705,7 +711,7 @@
             <p id="teacher-email" class="text-[11px] text-slate-400 mt-0.5"></p>
           </div>
           <div class="flex flex-col items-end space-y-1">
-            <button onclick="loadTeacherRows()" class="text-xs text-indigo-600 font-semibold hover:underline"><i
+            <button onclick="loadTeacherRows(true)" class="text-xs text-indigo-600 font-semibold hover:underline"><i
                 class="fa-solid fa-rotate mr-0.5"></i>새로고침</button>
             <button onclick="teacherLogout()" class="text-xs text-slate-500 hover:underline">로그아웃</button>
             <button onclick="clearAllData()" class="text-xs text-red-500 hover:underline">데이터 초기화 <span
@@ -1285,6 +1291,7 @@
         // 학생 기기에 교사 로그인이 남지 않도록 로그아웃
         if (sb) { try { const { data } = await sb.auth.getSession(); if (data.session) await sb.auth.signOut(); } catch (e) { } }
         teacherRows = {};
+        resetAnswerCache();
         const loggedIn = !!activeStudentKey;
         showOnly(loggedIn ? 'student-view' : 'student-login-view');
         document.getElementById('timer-banner').classList.toggle('hidden', !loggedIn || isLocked);
@@ -1329,7 +1336,7 @@
       IS_ADMIN = !TEACHER_ME || TEACHER_ME.role === 'admin';
       CLASS_LIST = IS_ADMIN ? ALL_CLASSES.slice()
         : ALL_CLASSES.filter(c => (TEACHER_ME.classes || []).map(Number).includes(c));
-      roster = null; openClasses = []; teacherRows = {};   // 앞서 로그인했던 교사의 정보가 남지 않게
+      roster = null; openClasses = []; teacherRows = {}; resetAnswerCache();   // 앞서 로그인했던 교사의 정보가 남지 않게
       firstExamInfo = true;   // 이 화면에 처음 들어왔을 때: 시험 중인 반이 있으면 그 반 탭부터 보여 줌
       document.getElementById('teacher-email').innerText = session.user.email +
         (TEACHER_ME ? (IS_ADMIN ? ' · 관리자(모든 반)' : CLASS_LIST.length ? ` · ${CLASS_LIST.join('·')}반 담당` : ' · 담당 반 미선택') : '');
@@ -1393,6 +1400,7 @@
       stopTeacherPoll();
       await sb.auth.signOut();
       teacherRows = {};
+      resetAnswerCache();
       roster = null;
       inspectStudentKey = null;
       closeDetailModal();
@@ -1499,23 +1507,66 @@
         `<p class="text-[11px] text-slate-500">결석으로 오늘 응시하지 않는 학생은 나중에 위의 [결석생 개별 응시 허용]으로 응시하게 할 수 있습니다.</p>`;
     }
 
-    async function loadTeacherRows() {
+    // ===== 교사 화면 갱신 (수파베이스 무료 전송량 절약) =====
+    // 예전: 15초마다 모든 학생의 답안 전체(서술형 포함, 1명당 약 5KB)를 다시 받음 → 관리자 화면 1시간에 200MB 넘게 사용
+    // 지금: 15초마다 이름·진행률·상태 같은 가벼운 칸만 받고(1명당 약 0.3KB),
+    //       답안 전체는 '마지막 저장 시각·진행률·제출 여부'가 바뀐 학생만 다시 받음
+    //       ([새로고침] 버튼을 누르면 모든 학생의 답안을 새로 받음)
+    const LIGHT_COLS = 'student_key, grade, class_no, num, name, progress, submitted, submitted_at, updated_at, start_time, token, reopen_count, reopened_at, paused, pause_count, pause_log';
+    let answerCache = {};       // student_key → { sig, item }  (sanitizeItem까지 마친 답안)
+    let lightColsOk = true;     // 예전 표 구성이라 위 칸 중 없는 것이 있으면 예전 방식(전체 받기)으로
+    const rowSig = r => [r.updated_at, r.progress, r.submitted, r.reopen_count].join('|');
+
+    function resetAnswerCache() { answerCache = {}; }
+
+    async function loadTeacherRows(forceAll) {
       const sync = document.getElementById('teacher-sync');
       sync.innerText = '불러오는 중...';
       if (roster === null) await loadRoster();
       // 이 회차의 답안만 불러옴 (다른 회차와 섞이지 않게)
       // 담당 교사는 자기 반 답안만 불러옴 (관리자는 모든 반)
-      let rq = sb.from(TABLE).select('*').eq('exam_id', EXAM_ID);
-      if (!IS_ADMIN) rq = rq.in('class_no', CLASS_LIST.length ? CLASS_LIST : [-1]);
-      const { data, error } = await rq.order('grade').order('class_no').order('num');
+      const scoped = q => {
+        q = q.eq('exam_id', EXAM_ID);
+        if (!IS_ADMIN) q = q.in('class_no', CLASS_LIST.length ? CLASS_LIST : [-1]);
+        return q;
+      };
+      let res = await scoped(sb.from(TABLE).select(lightColsOk ? LIGHT_COLS : '*')).order('grade').order('class_no').order('num');
+      if (res.error && lightColsOk && /column|42703|PGRST204/i.test(String(res.error.message || '') + res.error.code)) {
+        // 수파베이스 표에 일부 칸(예: paused·reopen_count)이 아직 없으면 예전처럼 전체를 받음
+        lightColsOk = false;
+        console.warn('가벼운 갱신을 쓸 수 없어 예전 방식으로 불러옵니다.', res.error);
+        res = await scoped(sb.from(TABLE).select('*')).order('grade').order('class_no').order('num');
+      }
+      const { data, error } = res;
       if (error) {
         sync.innerText = String(error.message || '').includes('exam_id') ? '불러오기 실패 (add_exams.sql 실행 필요)' : '불러오기 실패';
         console.error(error); return;
       }
-      teacherRows = {};
+
+      // 답안이 바뀐 학생만 답안 전체를 받음 (예전 방식이면 이미 data가 들어 있음)
+      if (forceAll === true) resetAnswerCache();
+      if (lightColsOk) {
+        const need = data.filter(r => !answerCache[r.student_key] || answerCache[r.student_key].sig !== rowSig(r)).map(r => r.student_key);
+        for (let i = 0; i < need.length; i += 40) {
+          const { data: full, error: e2 } = await sb.from(TABLE).select('student_key, data')
+            .eq('exam_id', EXAM_ID).in('student_key', need.slice(i, i + 40));
+          if (e2) { sync.innerText = '답안 불러오기 실패 (잠시 뒤 다시 시도)'; console.error(e2); break; }
+          const byKey = {};
+          (full || []).forEach(f => byKey[f.student_key] = f.data);
+          data.forEach(r => {
+            if (r.student_key in byKey) answerCache[r.student_key] = { sig: rowSig(r), item: sanitizeItem(byKey[r.student_key] || {}) };
+          });
+        }
+      } else {
+        data.forEach(r => answerCache[r.student_key] = { sig: rowSig(r), item: sanitizeItem(r.data || {}) });
+      }
+
+      const next = {}, alive = new Set();
       data.forEach(r => {
-        teacherRows[r.student_key] = {
-          ...sanitizeItem(r.data || {}),
+        alive.add(r.student_key);
+        const cached = answerCache[r.student_key];
+        next[r.student_key] = {
+          ...(cached ? cached.item : sanitizeItem({})),
           studentInfo: { grade: r.grade, class: r.class_no, num: r.num, name: r.name },
           progress: r.progress, submitted: r.submitted,
           submittedAt: fmtTime(r.submitted_at), updatedAt: fmtTime(r.updated_at), startTime: fmtTime(r.start_time),
@@ -1528,6 +1579,8 @@
           pauseLog: Array.isArray(r.pause_log) ? r.pause_log : []
         };
       });
+      Object.keys(answerCache).forEach(k => { if (!alive.has(k)) delete answerCache[k]; });   // 삭제된 답안은 기억에서도 지움
+      teacherRows = next;
       sync.innerText = '갱신 ' + new Date().toLocaleTimeString() + ' (15초마다)';
       renderTeacherDashboard();
     }
@@ -1684,6 +1737,7 @@
           '다른 앱을 닫고 시험 화면이 화면 전체를 채우게 하세요.\n(아이패드: 화면 위쪽 가운데 ··· 를 눌러 [전체 화면] 선택)\n\n화면이 꽉 차면 자동으로 시험이 계속됩니다.';
         btn.classList.add('hidden');
         setFieldsPaused(true);
+        startNarrowWatch();
       } else if (mode === 'paused') {
         title.innerText = '시험이 중지되었습니다';
         desc.innerText = (reason ? `사유: ${reason}\n\n` : '이전에 중지된 상태입니다.\n\n') +
@@ -1715,6 +1769,7 @@
       const wasFullscreenGuide = ov.dataset.mode === 'fullscreen' || ov.dataset.mode === 'narrow';
       ov.className = 'hidden';
       ov.dataset.mode = '';
+      stopNarrowWatch();
       setOverlayBlock(false);
       if (wasFullscreenGuide && !examPaused) setFieldsPaused(false);   // 전체화면 안내 때 잠근 답안 칸을 다시 풂
     }
@@ -1778,7 +1833,7 @@
       const reloaded = hadActiveFlag();
       setActiveFlag(true);
       if (reloaded) { triggerPause('시험 중 새로고침 또는 창 닫기'); return; }   // 2초 경고 뒤 화면을 누르면 전체화면
-      if (IS_TOUCH && !windowFull()) { showOverlay('narrow'); return; }   // 태블릿: 처음부터 화면을 꽉 채워야 시작
+      if (narrowNow()) { showOverlay('narrow'); return; }   // 태블릿: 처음부터 화면을 꽉 채워야 시작
       if (fsSupported() && !isFullscreen()) showOverlay('fullscreen');
     }
     function enterPausedFromServer() {
@@ -1850,7 +1905,7 @@
       if (document.getElementById('proctor-overlay').dataset.mode === 'cheat') hideOverlay();
       if (isLocked) return;
       // 5초가 지나도 아직 화면이 줄어 있으면, 꽉 차게 할 때까지 안내 화면 유지 (횟수는 더 늘리지 않음)
-      if (IS_TOUCH && !windowFull()) { showOverlay('narrow'); return; }
+      if (narrowNow()) { showOverlay('narrow'); return; }
       setFieldsPaused(false);
       // 전체화면이 풀렸으면: 화면을 한 번 누르면 다시 전체화면 (누르는 동작이 있어야 전체화면 요청 가능)
       if (fsSupported() && !isFullscreen()) { fsRestore = true; showToast('화면을 한 번 누르면 다시 전체화면이 됩니다.'); }
@@ -1865,13 +1920,57 @@
       if (!sw || !sh) return true;
       const land = typeof window.orientation === 'number' ? Math.abs(window.orientation) === 90 : window.innerWidth > window.innerHeight;
       const expected = land ? Math.max(sw, sh) : Math.min(sw, sh);
+      // (화면 배율로 나눠 보정하는 방식은 화면 나누기를 놓치므로 쓰지 않음.
+      //  기기가 크기를 잘못 알려 줘 안내에 갇히면 15초 뒤 나오는 [계속 응시] 버튼으로 빠져나감)
       return document.documentElement.clientWidth >= expected * 0.9;
+    }
+
+    // ===== '화면을 꽉 차게' 안내에 갇히지 않게 =====
+    // 기기가 화면 크기를 잘못 알려 주면 꽉 찬 화면인데도 안내가 사라지지 않을 수 있음.
+    // 안내가 15초 넘게 계속되면 [이 상태로 계속 응시] 버튼을 보여 주고,
+    // 누르면 이 기기에서는 화면 크기 검사를 끄고 부정행위 1회로 기록(사유에 표시)한 뒤 시험을 계속함.
+    const NARROW_ESCAPE_MS = 15000;
+    let sizeCheckOff = false, narrowWatch = null, narrowEscape = null;
+    const narrowNow = () => IS_TOUCH && !sizeCheckOff && !windowFull();
+    function startNarrowWatch() {
+      stopNarrowWatch();
+      // 1초마다 다시 확인: 화면이 꽉 차면 resize 신호가 오지 않아도 자동으로 안내를 닫음
+      narrowWatch = setInterval(() => {
+        if (document.getElementById('proctor-overlay').dataset.mode !== 'narrow') { stopNarrowWatch(); return; }
+        if (!narrowNow()) { hideOverlay(); setFieldsPaused(false); }
+      }, 1000);
+      narrowEscape = setTimeout(() => {
+        if (document.getElementById('proctor-overlay').dataset.mode !== 'narrow') return;
+        const btn = document.getElementById('po-btn');
+        btn.innerHTML = '<i class="fa-solid fa-forward mr-1"></i> 화면이 이미 꽉 찼는데도 이 화면이 계속 보이면 누르세요';
+        btn.className = btn.className.replace(/\bbg-\S+|\bhover:bg-\S+/g, '').trim() + ' bg-amber-600 hover:bg-amber-700';
+        btn.onclick = skipSizeCheck;
+        btn.classList.remove('hidden');
+        btn.focus();
+      }, NARROW_ESCAPE_MS);
+    }
+    function stopNarrowWatch() {
+      clearInterval(narrowWatch); narrowWatch = null;
+      clearTimeout(narrowEscape); narrowEscape = null;
+    }
+    function skipSizeCheck() {
+      sizeCheckOff = true;
+      hideOverlay();
+      setFieldsPaused(false);
+      // 학생이 일부러 화면을 나눈 채 누를 수도 있으므로 기록은 남김 (사유로 구별되게)
+      if (proctorReady && !isLocked) {
+        pauseCount++;
+        cheatQueue.push(`화면 크기 확인 건너뜀 (가로폭 ${document.documentElement.clientWidth} / 기기 ${screen.width}×${screen.height}, 배율 ${window.devicePixelRatio || 1})`);
+        sendCheats();
+      }
+      showToast('이 기기에서는 화면 크기 검사를 끄고 시험을 계속합니다. (선생님 화면에 기록됨)');
+      if (fsSupported() && !isFullscreen()) fsRestore = true;
     }
     let resizeCheck = null;
     const fullW = {};   // 방향(가로·세로)별로 시험 화면이 꽉 찼을 때의 폭
     const landNow = () => typeof window.orientation === 'number' ? Math.abs(window.orientation) === 90 : window.innerWidth > window.innerHeight;
     function checkWindowSize() {
-      if (window.TEACHER_PAGE || !IS_TOUCH || !proctorOn || examPaused || isLocked || cheatShowing) return;
+      if (window.TEACHER_PAGE || !IS_TOUCH || sizeCheckOff || !proctorOn || examPaused || isLocked || cheatShowing) return;
       const mode = document.getElementById('proctor-overlay').dataset.mode;
       const k = landNow() ? 'L' : 'P', cw = document.documentElement.clientWidth;
       if (windowFull()) {
@@ -2707,6 +2806,16 @@
 
     // ================= 차트 =================
     function createChart(canvas, points, t, opts = {}) {
+      // 그래프 라이브러리를 받지 못했으면 그래프만 빼고 시험은 계속 진행 (예전에는 여기서 오류가 나 시험 화면이 멈췄음)
+      if (typeof Chart === 'undefined') {
+        if (canvas && canvas.parentElement && !canvas.parentElement.querySelector('.chart-missing')) {
+          const n = document.createElement('p');
+          n.className = 'chart-missing text-xs text-slate-400 text-center';
+          n.innerText = '그래프를 불러오지 못했습니다. (시험은 그대로 진행됩니다)';
+          canvas.parentElement.appendChild(n);
+        }
+        return null;
+      }
       const datasets = [{
         type: 'line', label: '실측 데이터 (점 연결)', data: points,
         borderColor: '#4f46e5', backgroundColor: '#4f46e5', borderWidth: 2, pointRadius: 4, tension: 0
@@ -3070,8 +3179,10 @@
               <span class="text-xs font-bold text-slate-600">${Number(item.progress) || 0}%</span>
             </div>
           </td>
-          <td class="p-3">${statusBadge(item)}${item.pauseCount ? `<span class="ml-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-orange-100 text-orange-700" title="화면 이탈 등으로 감지된 부정행위 횟수">부정행위 ${item.pauseCount}회</span>` : ''}${item.paused ? `<button onclick="releasePause('${key}', event)" class="ml-1 px-2 py-0.5 rounded bg-red-600 hover:bg-red-700 text-white text-[11px] font-bold">해제</button>` : ''}${item.reopenCount ? `<span class="ml-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-sky-100 text-sky-700">재개 ${item.reopenCount}회</span>` : ''}</td>
+          <td class="p-3">${statusBadge(item)}${item.pauseCount ? `<span class="ml-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-orange-100 text-orange-700" title="화면 이탈 등으로 감지된 부정행위 횟수">부정행위 ${item.pauseCount}회</span>` : ''}${item.paused ? `<button type="button" data-release="${esc(key)}" class="ml-1 px-2 py-0.5 rounded bg-red-600 hover:bg-red-700 text-white text-[11px] font-bold">해제</button>` : ''}${item.reopenCount ? `<span class="ml-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-sky-100 text-sky-700">재개 ${item.reopenCount}회</span>` : ''}</td>
           <td class="p-3 text-center"><button class="px-3 py-1 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 font-bold text-xs rounded-lg">산출물 검토</button></td>`;
+        // 학생 키(이름 포함)를 onclick 글자 안에 넣지 않음 → 이름에 ' 가 있어도 버튼이 고장 나지 않게
+        tr.querySelectorAll('button[data-release]').forEach(btn => btn.addEventListener('click', e => releasePause(btn.dataset.release, e)));
         tbody.appendChild(tr);
       });
       document.getElementById('teacher-submitted-count').innerText = `${submitted}명`;
@@ -3108,9 +3219,10 @@
         return `<div class="flex items-center gap-2 px-3 py-2 rounded-lg border ${mine ? 'bg-white border-red-300' : 'bg-red-50/60 border-red-200 opacity-70'}">
             <div class="text-xs"><p class="font-bold text-slate-800">${esc(studentLabel(it.studentInfo || {}))}</p>
               <p class="text-slate-500">${last ? esc(fmtClock(last.at)) + ' · ' + esc(last.reason || '') : ''} · 누적 ${it.pauseCount}회</p></div>
-            <button onclick="releasePause('${k}', event)" class="px-2.5 py-1 rounded bg-red-600 hover:bg-red-700 text-white text-xs font-bold">해제</button>
+            <button type="button" data-release="${esc(k)}" class="px-2.5 py-1 rounded bg-red-600 hover:bg-red-700 text-white text-xs font-bold">해제</button>
           </div>`;
       }).join('')}</div>`;
+      el.querySelectorAll('button[data-release]').forEach(btn => btn.addEventListener('click', e => releasePause(btn.dataset.release, e)));
     }
 
     const fmtClock = t => t ? new Date(t).toLocaleTimeString() : '';
@@ -3287,7 +3399,7 @@
       if (modalChart) modalChart.destroy();
       const yv = a['s1-var-y'], xv = a['s1-var-x'];
       modalChart = createChart(document.getElementById('modal-chart'), item.points || [], t, { animation: false, xLabel: xv || 'x', yLabel: yv || 'y' });
-      modalChartImage = modalChart.toBase64Image('image/png', 1);
+      modalChartImage = modalChart ? modalChart.toBase64Image('image/png', 1) : '';
     }
 
     // 검토 창에서 같은 목록(현재 탭·검색)의 이전/다음 학생으로 이동
@@ -3352,8 +3464,9 @@
       off.style.cssText = 'position:fixed;left:-9999px;top:0;width:1000px;height:460px;';
       document.body.appendChild(off);
       const pc = createChart(off, item.points || [], t, { animation: false, responsive: false, xLabel: a['s1-var-x'] || 'x', yLabel: a['s1-var-y'] || 'y' });
-      const chartImg = pc.toBase64Image('image/png', 1);
-      pc.destroy(); off.remove();
+      const chartImg = pc ? pc.toBase64Image('image/png', 1) : '';
+      if (pc) pc.destroy();
+      off.remove();
 
       const H3 = 'font-size:11pt;font-weight:bold;background:#e0e7ff;padding:4px 8px;margin:10px 0 6px 0;';
       const TH = 'background:#f8fafc;padding:4px 6px;text-align:left;width:22%;';
@@ -3634,7 +3747,11 @@
     ensureColumns(INITIAL_COLUMNS);
     setXRows('maxx');
     setXRows('minx');
-    if (!sb) document.getElementById('config-warning').classList.remove('hidden');
+    if (!sb) {
+      const w = document.getElementById('config-warning');
+      if (!window.supabase) w.innerHTML = '<i class="fa-solid fa-plug-circle-xmark mr-1"></i> 서버 연결 프로그램(supabase.js)을 받지 못했습니다. 인터넷 연결을 확인하고 새로고침하세요. (계속되면 선생님께 알리세요)';
+      w.classList.remove('hidden');
+    }
     document.querySelectorAll('.exam-label').forEach(el => el.innerText = EXAM_LABEL);
     // 첫 화면(회차 선택)에서 넘어온 경우 인적사항을 미리 채움 → 학생은 [시험 시작하기]만 누르면 됨
     if (!window.TEACHER_PAGE) {
