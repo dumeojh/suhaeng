@@ -425,8 +425,21 @@
       const tr = await sb.rpc('calc_trash_list', { p_exam: id });
       const trN = tr.error ? 0 : (Array.isArray(tr.data) ? tr.data : []).reduce((t, b) => t + (Number((b && b.count) ?? (b && b.calc_trash_list && b.calc_trash_list.count)) || 0), 0);
       if (trN > 0) { alert(`${id}회차에는 감춘 답안이 ${trN}건 남아 있어 삭제할 수 없습니다.\n(교사 화면의 [감춘 답안 되살리기]에서 되살리거나 완전 삭제한 뒤 다시 시도하세요)`); return; }
-      if (!confirm(`${id}회차 "${e.title}"를 삭제할까요?\n· 이 회차의 결석생 개별 허용 목록도 함께 지워집니다.\n· 깃허브의 문항 폴더(calculus/${e.page}/) 파일은 그대로 남습니다.`)) return;
+      // [1/3] 확인
+      if (!confirm(`[회차 삭제 1/3] ${id}회차 "${e.title}"를 삭제할까요?\n\n· 삭제하면 되돌릴 수 없습니다.\n· 이 회차의 결석생 개별 허용 목록도 함께 지워집니다.\n· 깃허브의 문항 폴더(calculus/${e.page}/) 파일은 그대로 남습니다.`)) return;
+      // [2/3] 회차 번호 입력
+      const typed = prompt(`[회차 삭제 2/3] 정말 삭제하려면 회차 번호 ${id}을(를) 숫자로 입력하세요.`);
+      if (typed === null) return;
+      if (typed.replace(/\s|회차/g, '') !== String(id)) { alert('입력한 번호가 달라 삭제하지 않았습니다.'); return; }
+      // [3/3] 관리자 비밀번호
+      const ok = await passwordDialog(`[회차 삭제 3/3] 관리자 비밀번호 확인`,
+        `${id}회차 "${e.title}"를 최종 삭제합니다.\n지금 로그인한 관리자 계정의 비밀번호를 입력하세요.`);
+      if (!ok) { alert('삭제를 취소했습니다.'); return; }
+      // 비밀번호를 입력하는 사이 반이 열렸거나 응시한 학생이 생겼는지 마지막으로 다시 확인
+      const now2 = await freshOpen(id), n2 = await responseCount(id);
+      if (now2.length || n2 !== 0) { alert('그 사이 반이 열렸거나 응시 기록이 생겨 삭제하지 않았습니다.'); return load(); }
       const { error } = await sb.from('calc_exams').delete().eq('id', id);
+      if (!error) alert(`${id}회차 "${e.title}"를 삭제했습니다.`);
       if (error) alert('삭제 실패: ' + (/foreign key|violates/i.test(String(error.message)) ? '이 회차에 응시 기록이 있어 삭제할 수 없습니다.' : error.message));
       return load();
     }
@@ -472,7 +485,59 @@
     }
   }
 
+
+  // ===== 관리자 비밀번호 확인 (되돌릴 수 없는 삭제의 마지막 단계) =====
+  //  · 지금 로그인한 계정의 비밀번호를 수파베이스에 다시 확인하고, 서버에서 관리자(admin)인지도 다시 확인
+  //  · 반환: true(확인됨) / false(취소·틀림)
+  function passwordDialog(title, msg) {
+    return new Promise(resolve => {
+      const wrap = document.createElement('div');
+      wrap.style.cssText = 'position:fixed;inset:0;z-index:100;background:rgba(15,23,42,.55);display:flex;align-items:center;justify-content:center;padding:16px';
+      wrap.innerHTML = `<div style="background:#fff;border-radius:16px;max-width:24rem;width:100%;padding:24px;box-shadow:0 25px 50px -12px rgba(0,0,0,.35)" class="space-y-3">
+          <p class="text-sm font-bold text-red-700"><i class="fa-solid fa-lock mr-1"></i><span data-t></span></p>
+          <p class="text-xs text-slate-600 whitespace-pre-line" data-m></p>
+          <input type="password" autocomplete="current-password" placeholder="관리자 비밀번호"
+            style="width:100%;box-sizing:border-box" class="p-2.5 border rounded-lg text-sm">
+          <p class="text-xs font-bold text-red-600" data-e></p>
+          <div class="flex justify-end gap-2">
+            <button type="button" data-a="no" class="px-4 py-2 rounded-lg border bg-white text-slate-700 text-sm font-bold">취소</button>
+            <button type="button" data-a="ok" class="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-bold">최종 삭제</button>
+          </div></div>`;
+      wrap.querySelector('[data-t]').innerText = title;
+      wrap.querySelector('[data-m]').innerText = msg;
+      const input = wrap.querySelector('input'), errEl = wrap.querySelector('[data-e]'), okBtn = wrap.querySelector('[data-a="ok"]');
+      const close = v => { wrap.remove(); resolve(v); };
+      const tryOk = async () => {
+        if (!input.value) { errEl.innerText = '비밀번호를 입력하세요.'; return; }
+        okBtn.disabled = true; errEl.innerText = '확인 중...';
+        const r = await verifyAdminPassword(input.value);
+        okBtn.disabled = false;
+        if (r === true) close(true);
+        else { errEl.innerText = r; input.value = ''; input.focus(); }
+      };
+      okBtn.onclick = tryOk;
+      wrap.querySelector('[data-a="no"]').onclick = () => close(false);
+      input.addEventListener('keydown', e => { if (e.key === 'Enter') tryOk(); if (e.key === 'Escape') close(false); });
+      document.body.appendChild(wrap);
+      input.focus();
+    });
+  }
+  async function verifyAdminPassword(pw) {
+    const client = sb || window.__calcSb;
+    if (!client) return '수파베이스 연결을 찾지 못했습니다.';
+    const { data: ses } = await client.auth.getSession();
+    const email = ses && ses.session && ses.session.user && ses.session.user.email;
+    if (!email) return '로그인 정보가 없습니다. 다시 로그인하세요.';
+    const { error } = await client.auth.signInWithPassword({ email, password: pw });
+    if (error) return '비밀번호가 맞지 않습니다.';
+    const me = await client.rpc('calc_me');
+    const m = me.error ? null : (Array.isArray(me.data) ? me.data[0] : me.data);
+    if (!m || m.role !== 'admin') return '관리자 계정이 아닙니다.';
+    return true;
+  }
+
   window.ExamAdmin = {
+    confirmAdminPassword: (title, msg, client) => { if (client) window.__calcSb = client; return passwordDialog(title, msg); },
     mount(el, client, options = {}) {
       root = el; sb = client; opts = options;
       if (!root.dataset.bound) {

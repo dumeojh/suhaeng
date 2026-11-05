@@ -101,6 +101,10 @@
     const typed = prompt(`정말 지우려면 학생 수 ${n}을(를) 숫자로 입력하세요.`);
     if (typed === null) return;
     if (typed.replace(/\s|명/g, '') !== String(n)) { msg('입력한 숫자가 달라 지우지 않았습니다.', true); return; }
+    if (!window.ExamAdmin || !ExamAdmin.confirmAdminPassword) { msg('비밀번호 확인 기능(exam-admin.js)을 찾지 못해 지우지 않았습니다.', true); return; }
+    const ok = await ExamAdmin.confirmAdminPassword('[완전 삭제] 관리자 비밀번호 확인',
+      `감춘 답안 ${n}명을 휴지통에서 영구히 지웁니다.\n지금 로그인한 관리자 계정의 비밀번호를 입력하세요.`, ctx.sb);
+    if (!ok) { msg('완전 삭제를 취소했습니다.', false); return; }
     const { data, error } = await ctx.sb.rpc('calc_trash_purge', { p_batch: id });
     if (error) { msg(String(error.message).includes('NOT_ADMIN') ? '관리자 계정만 완전 삭제할 수 있습니다.' : error.message, true); return; }
     msg(`${Number(data && data.purged) || 0}명의 답안을 휴지통에서 완전히 지웠습니다.`, false);
