@@ -8,10 +8,10 @@
 (function () {
   // lib/tailwind.css에 없는 디자인 보충 (외부 tailwind가 막혀도 모양이 깨지지 않게)
   (function () {
-    if (document.getElementById('calc-extra-css')) return;
+    if (document.getElementById('calc-extra-css-leave-status')) return;
     const st = document.createElement('style');
-    st.id = 'calc-extra-css';
-    st.textContent = `.flex-1{flex:1 1 0%}.bg-slate-600{background-color:#475569}.border-slate-100{border-color:#f1f5f9}.decoration-slate-400{text-decoration-color:#94a3b8}.hover\\:bg-rose-50:hover{background-color:#fff1f2}.hover\\:bg-slate-100:hover{background-color:#f1f5f9}.hover\\:bg-slate-900:hover{background-color:#0f172a}.list-none{list-style-type:none}summary.list-none::-webkit-details-marker{display:none}.max-h-\\[92vh\\]{max-height:92vh}.max-w-2xl{max-width:42rem}.ml-0\\.5{margin-left:.125rem}.no-underline{text-decoration-line:none}.p-5{padding:1.25rem}.pt-1{padding-top:.25rem}@media (min-width:640px){.sm\\:grid-cols-\\[7rem_1fr\\]{grid-template-columns:7rem 1fr}}.text-indigo-400{color:#818cf8}.transition-transform{transition-property:transform;transition-duration:150ms}.rotate-90{transform:rotate(90deg)}.w-8{width:2rem}.z-\\[90\\]{z-index:90}.bg-slate-900\\/50{background-color:rgb(15 23 42/.5)}`;
+    st.id = 'calc-extra-css-leave-status';
+    st.textContent = `.flex-1{flex:1 1 0%}.bg-slate-600{background-color:#475569}.border-slate-100{border-color:#f1f5f9}.decoration-slate-400{text-decoration-color:#94a3b8}.hover\\:bg-rose-50:hover{background-color:#fff1f2}.hover\\:bg-slate-100:hover{background-color:#f1f5f9}.hover\\:bg-slate-900:hover{background-color:#0f172a}.list-none{list-style-type:none}summary.list-none::-webkit-details-marker{display:none}.max-h-\\[92vh\\]{max-height:92vh}.max-w-2xl{max-width:42rem}.ml-0\\.5{margin-left:.125rem}.no-underline{text-decoration-line:none}.p-5{padding:1.25rem}.pt-1{padding-top:.25rem}@media (min-width:640px){.sm\\:grid-cols-\\[7rem_1fr\\]{grid-template-columns:7rem 1fr}}.text-indigo-400{color:#818cf8}.transition-transform{transition-property:transform;transition-duration:150ms}.rotate-90{transform:rotate(90deg)}.w-8{width:2rem}.z-\\[90\\]{z-index:90}.bg-slate-900\\/50{background-color:rgb(15 23 42/.5)}.gap-x-2{column-gap:.5rem}.gap-y-1{row-gap:.25rem}`;
     (document.head || document.documentElement).appendChild(st);
   })();
   const normName = s => String(s ?? '').replace(/\s/g, '');
@@ -144,13 +144,13 @@
     const el = ensureModal(), rows = list(ctx.classes);
     el.querySelector('#lv-count').innerText = `${rows.length}명`;
     el.querySelector('#lv-list').innerHTML = rows.length ? rows.map(r => `
-      <div class="flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-200 bg-white text-sm">
-        <span class="px-1.5 py-0.5 rounded text-[11px] font-bold bg-slate-600 text-white">${esc(r.status)}</span>
-        <span class="font-semibold text-slate-800">${Number(r.class)}반 ${Number(r.num)}번 ${esc(r.name)}</span>
+      <div class="flex flex-wrap items-center gap-x-2 gap-y-1 px-3 py-2 rounded-lg border border-slate-200 bg-white text-sm">
+        <span class="px-1.5 py-0.5 rounded text-[11px] font-bold bg-slate-600 text-white whitespace-nowrap">${esc(r.status)}</span>
+        <span class="font-semibold text-slate-800 whitespace-nowrap">${Number(r.class)}반 ${Number(r.num)}번 ${esc(r.name)}</span>
         <span class="text-xs text-slate-500 truncate">${r.date ? esc(String(r.date).slice(0, 10)) : ''}${r.memo ? ' · ' + esc(r.memo) : ''}</span>
         <span class="flex-1"></span>
-        <button type="button" data-edit="${esc(idOf(r.grade, r.class, r.num, r.name))}" data-cls="${Number(r.class)}" class="px-2 py-1 rounded text-xs font-bold text-slate-600 hover:bg-slate-100">고치기</button>
-        <button type="button" data-clear="${esc(idOf(r.grade, r.class, r.num, r.name))}" class="px-2 py-1 rounded text-xs font-bold text-indigo-600 hover:bg-indigo-50">표시 해제</button>
+        <button type="button" data-edit="${esc(idOf(r.grade, r.class, r.num, r.name))}" data-cls="${Number(r.class)}" class="px-2 py-1 rounded text-xs font-bold text-slate-600 hover:bg-slate-100 whitespace-nowrap">고치기</button>
+        <button type="button" data-clear="${esc(idOf(r.grade, r.class, r.num, r.name))}" class="px-2 py-1 rounded text-xs font-bold text-indigo-600 hover:bg-indigo-50 whitespace-nowrap">표시 해제</button>
       </div>`).join('')
       : '<p class="text-xs text-slate-400">아직 표시한 학생이 없습니다.</p>';
     el.querySelectorAll('[data-edit]').forEach(b => b.addEventListener('click', () => {
