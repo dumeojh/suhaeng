@@ -27,6 +27,7 @@
   <script src="../config.js"></script>
   <script src="../exam-admin.js"></script>
   <script src="../leave-status.js"></script>
+  <script src="../trash-admin.js"></script>
   <script>
     // 주소 뒤에 ?teacher 를 붙이면 교사용 페이지 (예: …/calculus/r1/?teacher)
     window.TEACHER_PAGE = new URLSearchParams(location.search).has('teacher');
@@ -715,7 +716,9 @@
             <button onclick="loadTeacherRows(true)" class="text-xs text-indigo-600 font-semibold hover:underline"><i
                 class="fa-solid fa-rotate mr-0.5"></i>새로고침</button>
             <button onclick="teacherLogout()" class="text-xs text-slate-500 hover:underline">로그아웃</button>
-            <button onclick="clearAllData()" class="text-xs text-red-500 hover:underline">데이터 초기화 <span
+            <button onclick="openTrash()" class="text-xs text-slate-600 font-semibold hover:underline"><i
+                class="fa-solid fa-box-archive mr-0.5"></i>감춘 답안 되살리기</button>
+            <button onclick="clearAllData()" class="text-xs text-red-500 hover:underline" title="답안을 지우지 않고 감춥니다. [감춘 답안 되살리기]에서 되돌릴 수 있습니다.">답안 감추기(초기화) <span
                 class="filter-label"></span></button>
           </div>
         </div>
@@ -3693,7 +3696,7 @@
     function saveDeleteBackup(rows, scopeTxt, email) {
       const d = new Date(), p2 = n => String(n).padStart(2, '0');
       const stamp = `${d.getFullYear()}${p2(d.getMonth() + 1)}${p2(d.getDate())}-${p2(d.getHours())}${p2(d.getMinutes())}`;
-      const base = `삭제전백업_미적분Ⅰ_${EXAM_LABEL}_${scopeTxt.replace(/[·\s/\\:*?"<>|()]/g, '-')}_${stamp}`;
+      const base = `감추기백업_미적분Ⅰ_${EXAM_LABEL}_${scopeTxt.replace(/[·\s/\\:*?"<>|()]/g, '-')}_${stamp}`;
       const ans = r => (r.data && r.data.answers) || {};
       const head = ['학년', '반', '번호', '이름', '제출', '진행률(%)', '시작 시각', '제출 시각', '부정행위 횟수', '추세선 차수',
         '탐구 주제', '데이터 출처', '독립변수 x', '종속변수 y', '데이터(x,y)', '2-2 극대·극소 존재', '2-2 극대 x', '2-2 극소 x',
@@ -3719,68 +3722,58 @@
       return base;
     }
 
+    // 답안 감추기(초기화): 바로 지우지 않고 휴지통(calc_trash)으로 옮김 → [감춘 답안 되살리기]로 되돌릴 수 있음
+    //   감춘 뒤에는 교사 목록에서 사라지고, 학생은 처음부터 다시 응시(작성)할 수 있음
     async function clearAllData() {
+      if (!window.TrashAdmin) { alert('trash-admin.js 파일을 찾지 못했습니다. (답안은 그대로 있습니다)'); return; }
       const cls = filterClasses();
-      // 지울 반을 항상 명시: '전체' 탭이라도 담당 교사는 자기 반만 지움 (관리자만 반 조건 없이 전체 삭제)
+      // 감출 반을 항상 명시: '전체' 탭이라도 담당 교사는 자기 반만 (관리자만 반 조건 없이 전체)
       const target = cls || (IS_ADMIN ? null : CLASS_LIST);
-      if (target && !target.length) { alert('삭제할 담당 반이 없습니다.'); return; }
+      if (target && !target.length) { alert('감출 담당 반이 없습니다.'); return; }
       const scope = cls ? `${EXAM_LABEL} ${filterLabel()} 학생`
         : IS_ADMIN ? `${EXAM_LABEL} 모든 반(전체) 학생` : `${EXAM_LABEL} 담당 ${CLASS_LIST.join('·')}반 학생`;
       const scopeTxt = cls ? filterLabel() : IS_ADMIN ? '전체' : `${CLASS_LIST.join('·')}반`;
       const count = filteredKeysIgnoringSearch().length;
-      if (!count) { alert('삭제할 답안이 없습니다.'); return; }
-      // 다른 교실에서 시험 중인 반의 답안을 실수로 지우지 않도록, 열려 있는 반이 포함되면 삭제 금지
+      if (!count) { alert('감출 답안이 없습니다.'); return; }
+      // 다른 교실에서 시험 중인 반의 답안을 실수로 감추지 않도록, 열려 있는 반이 포함되면 금지
       const busy = (target || allClasses()).filter(c => openClasses.includes(c));
       if (busy.length) {
-        alert(`지금 시험 중(열림)인 ${busy.join('·')}반이 포함되어 있어 삭제할 수 없습니다.\n먼저 위의 [이 회차 응시 관리]에서 해당 반을 닫은 뒤 다시 시도하세요.`);
+        alert(`지금 시험 중(열림)인 ${busy.join('·')}반이 포함되어 있어 감출 수 없습니다.\n먼저 위의 [이 회차 응시 관리]에서 해당 반을 닫은 뒤 다시 시도하세요.`);
         return;
       }
       // [1단계] 범위 확인
-      if (!confirm(`[삭제 1/4] ${scope} ${count}명의 답안을 수파베이스에서 영구 삭제합니다. 계속할까요?` +
-        '\n\n※ 다른 회차 답안은 삭제되지 않습니다.' +
-        (target ? '\n※ 다른 반은 삭제되지 않습니다.' : '\n※ 특정 반만 지우려면 위의 반 탭을 먼저 고르세요.') +
-        '\n※ 삭제하기 전에 백업 파일이 자동으로 저장됩니다.')) return;
-      // [2단계] 학생 수 입력: 가운뎃점(·) 없이 숫자만 입력하도록 (한글 키보드로 입력하기 쉽게)
-      const typed = prompt(`[삭제 2/4] 정말 삭제하려면 삭제할 학생 수 ${count}을(를) 숫자로 입력하세요.`);
+      if (!confirm(`[감추기 1/2] ${scope} ${count}명의 답안을 감춥니다.` +
+        '\n\n· 답안은 지워지지 않고 보관되며, [감춘 답안 되살리기]에서 언제든 되돌릴 수 있습니다.' +
+        '\n· 감춘 뒤에는 학생이 처음부터 다시 응시(작성)할 수 있습니다.' +
+        '\n· 다른 회차 답안은 그대로입니다.' +
+        (target ? '\n· 다른 반은 그대로입니다.' : '\n· 특정 반만 감추려면 위의 반 탭을 먼저 고르세요.'))) return;
+      // [2단계] 학생 수 입력 (가운뎃점 없이 숫자만)
+      const typed = prompt(`[감추기 2/2] 감추려면 학생 수 ${count}을(를) 숫자로 입력하세요.`);
       if (typed === null) return;
-      if (typed.replace(/\s|명/g, '') !== String(count)) { alert('입력한 숫자가 달라 삭제하지 않았습니다.'); return; }
-      // [3단계] 교사 비밀번호 다시 확인
+      if (typed.replace(/\s|명/g, '') !== String(count)) { alert('입력한 숫자가 달라 감추지 않았습니다.'); return; }
+      // 감출 답안을 서버에서 새로 불러와 백업 파일도 저장 (이중 안전)
       const { data: ses } = await sb.auth.getSession();
-      const email = ses && ses.session && ses.session.user.email;
-      if (!email) { alert('로그인이 끊겼습니다. 다시 로그인한 뒤 시도하세요.'); return; }
-      const pw = await askPassword(`[삭제 3/4] ${email}\n이 계정의 비밀번호를 다시 입력하세요.`);
-      if (pw === null) return;
-      if (!pw) { alert('비밀번호를 입력하지 않아 삭제하지 않았습니다.'); return; }
-      const { error: authErr } = await sb.auth.signInWithPassword({ email, password: pw });
-      if (authErr) { alert('비밀번호가 맞지 않아 삭제하지 않았습니다.'); return; }
-      // 지울 답안을 서버에서 새로 불러와 백업 (화면에 보이는 것이 아니라 실제로 지워질 행 그대로)
+      const email = (ses && ses.session && ses.session.user.email) || '';
       let q = sb.from(TABLE).select('*').eq('exam_id', EXAM_ID);
       if (target) q = q.in('class_no', target);
       const { data: rows, error: readErr } = await q.order('class_no').order('num');
-      if (readErr) { alert('백업할 답안을 불러오지 못해 삭제하지 않았습니다.\n' + readErr.message); return; }
-      if (!rows.length) { alert('삭제할 답안이 없습니다.'); await loadTeacherRows(); return; }
-      const base = saveDeleteBackup(rows, scopeTxt, email);
-      // [4단계] 백업 파일 저장을 확인한 뒤 최종 삭제
-      await new Promise(r => setTimeout(r, 1200));   // 두 파일이 다 내려받아질 시간
-      if (!confirm(`[삭제 4/4] 백업 파일 2개를 저장했습니다. (다운로드 폴더)\n` +
-        `· ${base}.csv  ← 엑셀로 열어 볼 수 있음\n· ${base}_원본(복원용).json  ← 되살릴 때 필요\n\n` +
-        `파일이 저장된 것을 확인했으면 [확인]을 눌러 ${rows.length}명의 답안을 삭제합니다.\n` +
-        `(브라우저가 '여러 파일 다운로드 허용'을 물으면 [허용]을 누른 뒤 확인하세요)`)) {
-        alert('삭제를 취소했습니다. 답안은 그대로 있습니다.'); return;
+      if (readErr) { alert('감출 답안을 불러오지 못해 감추지 않았습니다.\n' + readErr.message); return; }
+      if (!rows.length) { alert('감출 답안이 없습니다.'); await loadTeacherRows(); return; }
+      const res = await TrashAdmin.move(sb, EXAM_ID, rows.map(r => r.student_key));
+      if (res.error) {
+        await loadTeacherRows(true);
+        alert((res.missing ? '' : `감추는 중 오류가 났습니다. (${res.moved}명 감춤)\n`) + res.error + (res.moved ? '' : '\n(답안은 그대로 있습니다)'));
+        return;
       }
-      // 백업한 학생만 정확히 삭제 (백업 뒤에 새로 들어온 답안은 지우지 않음), 실제로 지워진 수를 확인
-      const keys = rows.map(r => r.student_key);
-      let deleted = 0;
-      for (let i = 0; i < keys.length; i += 40) {
-        let dq = sb.from(TABLE).delete().eq('exam_id', EXAM_ID).in('student_key', keys.slice(i, i + 40));
-        if (target) dq = dq.in('class_no', target);
-        const { data: del, error } = await dq.select('student_key');
-        if (error) { alert(`삭제 중 오류가 났습니다. (${deleted}명 삭제됨)\n` + error.message); await loadTeacherRows(); return; }
-        deleted += (del || []).length;
-      }
-      await loadTeacherRows();
-      alert(deleted === rows.length ? `${deleted}명의 답안을 삭제했습니다.\n백업 파일은 다운로드 폴더에 있습니다.`
-        : `${rows.length}명 중 ${deleted}명만 삭제되었습니다.\n담당 반이 아닌 학생은 삭제 권한이 없습니다.`);
+      saveDeleteBackup(rows, scopeTxt, email);   // 다운로드 폴더에 CSV·JSON 백업 (되살리기가 안 될 때를 대비)
+      await loadTeacherRows(true);
+      alert((res.moved === rows.length ? `${res.moved}명의 답안을 감췄습니다.` : `${rows.length}명 중 ${res.moved}명만 감췄습니다. (담당 반이 아닌 학생은 감출 수 없음)`) +
+        '\n\n되돌리려면 오른쪽 위 [감춘 답안 되살리기]를 누르세요.\n(백업 파일도 다운로드 폴더에 저장됩니다)');
+    }
+
+    function openTrash() {
+      if (!window.TrashAdmin) { alert('trash-admin.js 파일을 찾지 못했습니다.'); return; }
+      TrashAdmin.open({ sb, examId: EXAM_ID, examLabel: EXAM_LABEL, isAdmin: IS_ADMIN && !!TEACHER_ME, onChange: () => loadTeacherRows(true) });
     }
 
     async function resetStudentDevice() {
