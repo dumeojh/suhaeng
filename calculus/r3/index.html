@@ -889,10 +889,22 @@
     let answerCache = {};       // student_key → { sig, item }  (sanitizeItem까지 마친 답안)
     let lightColsOk = true;     // 예전 표 구성이라 위 칸 중 없는 것이 있으면 예전 방식(전체 받기)으로
     const rowSig = r => [r.updated_at, r.progress, r.submitted, r.reopen_count].join('|');
+    // 수파베이스 무료 전송량 절약: 입력 중인 학생의 답안 전체는 1분에 한 번만 다시 받음
+    //   (제출·다시 열기처럼 중요한 변화, 답안 보기 창 열기, 엑셀 내보내기, [새로고침]은 바로 받음)
+    const ANSWER_REFRESH_MS = 60000;
+    const hardSig = r => [r.submitted, r.reopen_count].join('|');
+    let lightRows = {};         // student_key → 마지막으로 받은 가벼운 행
 
     function resetAnswerCache() { answerCache = {}; }
 
-    async function loadTeacherRows(forceAll) {
+    // 불러오기는 한 번에 하나씩 (동시에 두 번 시작되면 같은 답안을 두 번 받게 되므로 차례로 실행)
+    let teacherLoadChain = Promise.resolve();
+    function loadTeacherRows(forceAll) {
+      const run = teacherLoadChain.then(() => loadTeacherRowsNow(forceAll));
+      teacherLoadChain = run.catch(() => { });
+      return run;
+    }
+    async function loadTeacherRowsNow(forceAll) {
       const sync = document.getElementById('teacher-sync');
       sync.innerText = '불러오는 중...';
       if (roster === null) await loadRoster();
@@ -920,7 +932,16 @@
       // 답안이 바뀐 학생만 답안 전체를 받음 (예전 방식이면 이미 data가 들어 있음)
       if (forceAll === true) resetAnswerCache();
       if (lightColsOk) {
-        const need = data.filter(r => !answerCache[r.student_key] || answerCache[r.student_key].sig !== rowSig(r)).map(r => r.student_key);
+        const now = Date.now();
+        lightRows = {};
+        data.forEach(r => lightRows[r.student_key] = r);
+        const need = data.filter(r => {
+          const c = answerCache[r.student_key];
+          if (!c) return true;
+          if (c.sig === rowSig(r)) return false;                 // 바뀐 것 없음
+          if (forceAll === 'fresh' || c.hard !== hardSig(r)) return true;   // 내보내기 직전·제출/다시 열기
+          return now - c.at >= ANSWER_REFRESH_MS;                // 입력 중: 1분에 한 번
+        }).map(r => r.student_key);
         for (let i = 0; i < need.length; i += 40) {
           const { data: full, error: e2 } = await sb.from(TABLE).select('student_key, data')
             .eq('exam_id', EXAM_ID).in('student_key', need.slice(i, i + 40));
@@ -928,7 +949,7 @@
           const byKey = {};
           (full || []).forEach(f => byKey[f.student_key] = f.data);
           data.forEach(r => {
-            if (r.student_key in byKey) answerCache[r.student_key] = { sig: rowSig(r), item: sanitizeItem(byKey[r.student_key] || {}) };
+            if (r.student_key in byKey) answerCache[r.student_key] = { sig: rowSig(r), hard: hardSig(r), at: Date.now(), item: sanitizeItem(byKey[r.student_key] || {}) };
           });
         }
       } else {
@@ -1437,8 +1458,20 @@
         </div>`;
     }
 
-    function openDetailModal(key) {
+    // 답안 보기 창을 열면 그 학생 답안이 1분 이내 것이 아니어도 바로 최신으로 받아 다시 그림
+    async function refreshOneAnswer(key) {
+      const r = lightRows[key], c = answerCache[key];
+      if (!lightColsOk || !r || !c || c.sig === rowSig(r)) return;
+      const { data: full, error } = await sb.from(TABLE).select('student_key, data').eq('exam_id', EXAM_ID).eq('student_key', key);
+      if (error || !full || !full.length) return;
+      answerCache[key] = { sig: rowSig(r), hard: hardSig(r), at: Date.now(), item: sanitizeItem(full[0].data || {}) };
+      if (teacherRows[key]) Object.assign(teacherRows[key], answerCache[key].item);
+      if (inspectStudentKey === key) openDetailModal(key, true);
+    }
+
+    function openDetailModal(key, fromRefresh) {
       inspectStudentKey = key;
+      if (!fromRefresh) refreshOneAnswer(key);
       const item = teacherRows[key];
       if (!item) return;
       const a = item.answers || {};
@@ -1559,7 +1592,8 @@
     }
 
     // 엑셀(CSV): 활동지 내용 전체 (세특 작성용) + 미접속 학생
-    function exportCSV() {
+    async function exportCSV() {
+      await loadTeacherRows('fresh');   // 내보내기 직전에 모든 학생의 최신 답안을 받음
       const keys = filteredKeys();
       const absent = absentStudents(filterClasses(), true);
       if (!keys.length && !absent.length) { uiAlert('내보낼 학생이 없습니다.'); return; }
