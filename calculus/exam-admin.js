@@ -5,6 +5,14 @@
 // 사용: ExamAdmin.mount(요소, 수파베이스클라이언트, { examId: 1, pageBase: '../' })
 // =====================================================================
 (function () {
+  // lib/tailwind.css에 없는 디자인 보충 (외부 tailwind가 막혀도 모양이 깨지지 않게)
+  (function () {
+    if (document.getElementById('calc-extra-css')) return;
+    const st = document.createElement('style');
+    st.id = 'calc-extra-css';
+    st.textContent = `.flex-1{flex:1 1 0%}.bg-slate-600{background-color:#475569}.border-slate-100{border-color:#f1f5f9}.decoration-slate-400{text-decoration-color:#94a3b8}.hover\\:bg-rose-50:hover{background-color:#fff1f2}.hover\\:bg-slate-100:hover{background-color:#f1f5f9}.hover\\:bg-slate-900:hover{background-color:#0f172a}.list-none{list-style-type:none}summary.list-none::-webkit-details-marker{display:none}.max-h-\\[92vh\\]{max-height:92vh}.max-w-2xl{max-width:42rem}.ml-0\\.5{margin-left:.125rem}.no-underline{text-decoration-line:none}.p-5{padding:1.25rem}.pt-1{padding-top:.25rem}@media (min-width:640px){.sm\\:grid-cols-\\[7rem_1fr\\]{grid-template-columns:7rem 1fr}}.text-indigo-400{color:#818cf8}.transition-transform{transition-property:transform;transition-duration:150ms}.rotate-90{transform:rotate(90deg)}.w-8{width:2rem}.z-\\[90\\]{z-index:90}.bg-slate-900\\/50{background-color:rgb(15 23 42/.5)}`;
+    (document.head || document.documentElement).appendChild(st);
+  })();
   const CLASSES = [1, 2, 3, 4, 5, 6];   // 반 목록 (반이 늘면 여기만 고치면 됩니다)
 
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -12,6 +20,11 @@
 
   let sb = null, root = null, opts = {}, exams = [], makeups = [], stats = {};
   let lastSig = '', poll = null;
+  // 펼쳐 둔 회차 (15초마다 다시 그려도 그대로, 이 브라우저에 기억)
+  const OPEN_KEY = 'calc_exam_open_ids';
+  let openIds = new Set();
+  try { openIds = new Set(JSON.parse(localStorage.getItem(OPEN_KEY) || '[]').map(Number)); } catch (e) { }
+  function saveOpenIds() { try { localStorage.setItem(OPEN_KEY, JSON.stringify([...openIds])); } catch (e) { } }
   let ownerOpen = null;   // 담당 반 패널을 선생님이 직접 펼치거나 접었으면 그 상태 (null = 자동)
   // 로그인한 교사 (mount의 options.me = { role, classes }). 없으면 예전처럼 모든 반
   let owners = null;   // [{email, role, classes}] — 선생님별 담당 반 (add_teacher_classes.sql 미실행이면 null)
@@ -109,22 +122,32 @@
           : 'bg-white border-slate-300 text-slate-500 hover:border-emerald-400'}">
         ${c}반 <span class="text-[11px] font-semibold ${on ? 'text-emerald-100' : 'text-slate-400'}">${on ? '열림' : '닫힘'}</span></button>`;
     };
+    const openList = (e.open_classes || []).slice().sort((a, b) => a - b);
+    const isOpen = openIds.has(e.id);
     return `
-      <div class="border border-slate-200 rounded-xl p-4 bg-white space-y-3">
-        <div class="flex flex-wrap items-start justify-between gap-2">
-          <div>
-            <span class="px-2 py-0.5 rounded bg-indigo-600 text-white text-xs font-bold">${e.id}회차</span>
-            <span class="ml-1 font-bold text-slate-900">${esc(e.title)}</span>
-            <p class="text-xs text-slate-500 mt-1">제한 시간 ${e.limit_minutes}분 · 문항 페이지 <span class="font-mono">calculus/${esc(e.page)}/</span>
-              ${st ? ` · 응시 ${st.started}명 (제출 ${st.submitted}명)` : ''}</p>
-          </div>
+      <details class="exam-box border ${openList.length ? 'border-emerald-300' : 'border-slate-200'} rounded-xl bg-white" data-exam="${e.id}" ${isOpen ? 'open' : ''}>
+        <summary class="cursor-pointer select-none list-none px-4 py-3 flex flex-wrap items-center gap-2 hover:bg-slate-50 rounded-xl">
+          <i class="fa-solid fa-chevron-right text-slate-400 text-xs w-3 transition-transform ${isOpen ? 'rotate-90' : ''}"></i>
+          <span class="px-2 py-0.5 rounded bg-indigo-600 text-white text-xs font-bold">${e.id}회차</span>
+          <span class="font-bold text-slate-900">${esc(e.title)}</span>
+          ${openList.length
+            ? `<span class="px-2 py-0.5 rounded-full bg-emerald-600 text-white text-[11px] font-bold">${openList.join('·')}반 열림</span>`
+            : '<span class="px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 text-[11px] font-semibold">닫힘</span>'}
+          ${st ? `<span class="text-xs text-slate-500">응시 ${st.started} · 제출 ${st.submitted}</span>` : ''}
+          ${mine.length ? `<span class="text-xs text-sky-700">결석생 ${mine.length}명</span>` : ''}
+          <span class="flex-1"></span>
+          ${opts.examId ? '' : `<a href="${esc(href)}" class="px-3 py-1 text-xs font-bold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white">
+            <i class="fa-solid fa-chalkboard-user mr-1"></i>모니터링·채점</a>`}
+        </summary>
+      <div class="px-4 pb-4 pt-1 space-y-3 border-t border-slate-100">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <p class="text-xs text-slate-500">제한 시간 ${e.limit_minutes}분 · 문항 페이지 <span class="font-mono">calculus/${esc(e.page)}/</span>
+            ${st ? ` · 응시 ${st.started}명 (제출 ${st.submitted}명)` : ''}</p>
           <div class="flex items-center gap-2">
             ${isAdmin() ? `<button type="button" data-act="edit" data-exam="${e.id}" class="px-2.5 py-1 text-xs font-semibold rounded-lg border bg-white hover:bg-slate-50 text-slate-600">
               <i class="fa-solid fa-pen mr-1"></i>이름·시간·폴더 수정</button>` : ''}
             ${isAdmin() && !opts.examId ? `<button type="button" data-act="del" data-exam="${e.id}" title="응시한 학생이 없는 회차만 삭제할 수 있습니다" class="px-2.5 py-1 text-xs font-semibold rounded-lg border border-red-200 bg-white hover:bg-red-50 text-red-600">
               <i class="fa-solid fa-trash mr-1"></i>삭제</button>` : ''}
-            ${opts.examId ? '' : `<a href="${esc(href)}" class="px-3 py-1 text-xs font-bold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white">
-              <i class="fa-solid fa-chalkboard-user mr-1"></i>이 회차 모니터링·채점</a>`}
           </div>
         </div>
 
@@ -157,7 +180,8 @@
             <button class="px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold"><i class="fa-solid fa-user-plus mr-1"></i>허용</button>
           </form>
         </div>
-      </div>`;
+      </div>
+      </details>`;
   }
 
   function newExamForm() {
@@ -456,6 +480,13 @@
         root.addEventListener('submit', onSubmit);
         root.addEventListener('toggle', ev => {
           if (ev.target.classList && ev.target.classList.contains('owner-box')) ownerOpen = ev.target.open;
+          if (ev.target.classList && ev.target.classList.contains('exam-box')) {
+            const id = Number(ev.target.dataset.exam);
+            if (ev.target.open) openIds.add(id); else openIds.delete(id);
+            saveOpenIds();
+            const ic = ev.target.querySelector('summary .fa-chevron-right');
+            if (ic) ic.classList.toggle('rotate-90', ev.target.open);
+          }
         }, true);
         root.addEventListener('change', ev => {
           const sel = ev.target.closest('select.owner-sel');

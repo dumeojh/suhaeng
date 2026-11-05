@@ -6,6 +6,14 @@
  *  · 답안과 명렬표는 지우지 않습니다. (표시만 따로 저장)
  * ===================================================================== */
 (function () {
+  // lib/tailwind.css에 없는 디자인 보충 (외부 tailwind가 막혀도 모양이 깨지지 않게)
+  (function () {
+    if (document.getElementById('calc-extra-css')) return;
+    const st = document.createElement('style');
+    st.id = 'calc-extra-css';
+    st.textContent = `.flex-1{flex:1 1 0%}.bg-slate-600{background-color:#475569}.border-slate-100{border-color:#f1f5f9}.decoration-slate-400{text-decoration-color:#94a3b8}.hover\\:bg-rose-50:hover{background-color:#fff1f2}.hover\\:bg-slate-100:hover{background-color:#f1f5f9}.hover\\:bg-slate-900:hover{background-color:#0f172a}.list-none{list-style-type:none}summary.list-none::-webkit-details-marker{display:none}.max-h-\\[92vh\\]{max-height:92vh}.max-w-2xl{max-width:42rem}.ml-0\\.5{margin-left:.125rem}.no-underline{text-decoration-line:none}.p-5{padding:1.25rem}.pt-1{padding-top:.25rem}@media (min-width:640px){.sm\\:grid-cols-\\[7rem_1fr\\]{grid-template-columns:7rem 1fr}}.text-indigo-400{color:#818cf8}.transition-transform{transition-property:transform;transition-duration:150ms}.rotate-90{transform:rotate(90deg)}.w-8{width:2rem}.z-\\[90\\]{z-index:90}.bg-slate-900\\/50{background-color:rgb(15 23 42/.5)}`;
+    (document.head || document.documentElement).appendChild(st);
+  })();
   const normName = s => String(s ?? '').replace(/\s/g, '');
   const idOf = (g, c, n, name) => `${Number(g)}_${Number(c)}_${Number(n)}_${normName(name)}`;
   const esc = s => String(s ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
