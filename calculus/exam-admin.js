@@ -397,6 +397,10 @@
       const n = await responseCount(id);
       if (n === null) { alert('응시 기록을 확인하지 못해 삭제하지 않았습니다. 잠시 뒤 다시 시도하세요.'); return; }
       if (n > 0) { alert(`${id}회차에는 응시 기록이 ${n}건 있어 삭제할 수 없습니다.\n(답안을 지키기 위해 응시한 학생이 없는 회차만 삭제할 수 있습니다)`); return; }
+      // 감춘 답안(휴지통)이 남아 있으면 회차를 지우지 않음 → 나중에 되살릴 수 있게
+      const tr = await sb.rpc('calc_trash_list', { p_exam: id });
+      const trN = tr.error ? 0 : (Array.isArray(tr.data) ? tr.data : []).reduce((t, b) => t + (Number((b && b.count) ?? (b && b.calc_trash_list && b.calc_trash_list.count)) || 0), 0);
+      if (trN > 0) { alert(`${id}회차에는 감춘 답안이 ${trN}건 남아 있어 삭제할 수 없습니다.\n(교사 화면의 [감춘 답안 되살리기]에서 되살리거나 완전 삭제한 뒤 다시 시도하세요)`); return; }
       if (!confirm(`${id}회차 "${e.title}"를 삭제할까요?\n· 이 회차의 결석생 개별 허용 목록도 함께 지워집니다.\n· 깃허브의 문항 폴더(calculus/${e.page}/) 파일은 그대로 남습니다.`)) return;
       const { error } = await sb.from('calc_exams').delete().eq('id', id);
       if (error) alert('삭제 실패: ' + (/foreign key|violates/i.test(String(error.message)) ? '이 회차에 응시 기록이 있어 삭제할 수 없습니다.' : error.message));

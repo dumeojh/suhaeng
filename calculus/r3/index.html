@@ -896,6 +896,7 @@
       const sync = document.getElementById('teacher-sync');
       sync.innerText = '불러오는 중...';
       if (roster === null) await loadRoster();
+      else if (forceAll && window.LeaveStatus) await LeaveStatus.load(sb);   // [새로고침]: 다른 선생님이 바꾼 전출·자퇴 표시도 반영
       // 이 회차의 답안만 불러옴 (다른 회차와 섞이지 않게)
       // 담당 교사는 자기 반 답안만 불러옴 (관리자는 모든 반)
       const scoped = q => {

@@ -1,12 +1,13 @@
 // =====================================================================
-// 명렬표 관리 패널 (관리자 전용) — 전입생 추가 · 전출생 삭제 · 번호·이름 수정
+// 명렬표 관리 패널 (관리자 전용) — 전입생 추가 · 전출·자퇴 표시 · 번호·이름 수정
 //  · 수파베이스 public.students 표를 고칩니다 (다른 수행평가 페이지와 같이 쓰는 명렬표)
 //  · 사용: RosterAdmin.mount(요소, 수파베이스클라이언트)
 //  · 수파베이스에 add_roster_admin.sql이 실행되어 있어야 합니다.
+//  · 전출·자퇴 표시: add_student_leave.sql / 번호 수정 때 답안 함께 옮기기: add_roster_link.sql
 // =====================================================================
 (function () {
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  let sb = null, root = null, rows = [], sel = { grade: null, cls: null }, query = '', busy = false;
+  let sb = null, root = null, rows = [], leave = {}, leaveOk = true, sel = { grade: null, cls: null }, query = '', busy = false;
 
   const ERR = {
     NOT_ADMIN: '관리자 계정만 명렬표를 고칠 수 있습니다.',
@@ -32,12 +33,20 @@
       return;
     }
     rows = Array.isArray(data) ? data : [];
+    // 전출·자퇴 표시 (add_student_leave.sql 미실행이면 표시 기능만 숨김)
+    const lv = await sb.rpc('calc_leave_list');
+    leaveOk = !lv.error;
+    leave = {};
+    (Array.isArray(lv.data) ? lv.data : []).forEach(x => { const v = x && x.grade !== undefined ? x : x && x.calc_leave_list; if (v) leave[lid(v.grade, v.class, v.num, v.name)] = v; });
     const grades = gradeList();
     if (!grades.includes(sel.grade)) sel.grade = grades[0] ?? 2;
     const classes = classList();
     if (sel.cls !== 'all' && !classes.includes(sel.cls)) sel.cls = classes[0] ?? 'all';
     render();
   }
+
+  const lid = (g, c, n, name) => `${Number(g)}_${Number(c)}_${Number(n)}_${String(name ?? '').replace(/\s/g, '')}`;
+  const leaveOf = r => leave[lid(r.grade, r.class, r.num, r.name)] || null;
 
   const gradeList = () => [...new Set(rows.filter(r => r.grade).map(r => Number(r.grade)))].sort((a, b) => a - b);
   const classList = () => [...new Set(rows.filter(r => Number(r.grade) === sel.grade && r.class).map(r => Number(r.class)))].sort((a, b) => a - b);
@@ -53,7 +62,7 @@
   function card(inner) {
     return `<details class="bg-white p-4 rounded-xl shadow-sm border border-slate-200" ${root.dataset.open ? 'open' : ''}>
       <summary class="cursor-pointer font-bold text-slate-800"><i class="fa-solid fa-address-book text-indigo-600 mr-1.5"></i>명렬표 관리 (관리자)
-        <span class="font-normal text-xs text-slate-500">— 전입생 추가 · 전출생 삭제 · 번호·이름 수정</span></summary>
+        <span class="font-normal text-xs text-slate-500">— 전입생 추가 · 전출·자퇴 표시 · 번호·이름 수정</span></summary>
       <div class="mt-3 space-y-3">${inner}</div></details>`;
   }
 
@@ -67,7 +76,8 @@
       <p class="text-[11px] text-slate-500 leading-relaxed"><i class="fa-solid fa-circle-info text-indigo-500 mr-1"></i>
         이 명렬표는 <b>다른 수행평가 페이지와 같이 쓰는 명렬표(students)</b>입니다. 고치면 학생 로그인 확인과 교사 화면의 미접속 명단에 바로 반영됩니다.
         (교사 화면은 새로고침해야 보입니다)<br>
-        답안은 '학년·반·번호·이름'으로 묶여 있으므로, <b class="text-rose-600">시험을 이미 시작한 학생의 번호·이름은 그 회차가 끝난 뒤에</b> 고치세요.</p>
+        번호·이름을 고치면 <b>이미 낸 답안도 새 번호로 함께 옮겨집니다.</b> 다만 <b class="text-rose-600">시험 중인 학생은 그 회차가 끝난 뒤에</b> 고치세요.<br>
+        전출·자퇴 학생은 <b>[전출·자퇴]</b>로 표시하세요. 명렬표와 답안은 그대로 두고 교사 화면의 목록·인원 수에서만 빠집니다.</p>
 
       <form data-act="add" class="flex flex-wrap items-end gap-1.5 p-3 rounded-lg bg-emerald-50 border border-emerald-200">
         <span class="text-xs font-bold text-emerald-800 mr-1 self-center"><i class="fa-solid fa-user-plus mr-1"></i>전입생 추가</span>
@@ -90,18 +100,22 @@
       <div class="overflow-x-auto max-h-[28rem] overflow-y-auto border rounded-lg">
         <table class="w-full text-left text-xs border-collapse">
           <thead class="sticky top-0 bg-slate-100 text-slate-600"><tr>
-            <th class="p-2">학년</th><th class="p-2">반</th><th class="p-2">번호</th><th class="p-2">이름</th><th class="p-2">학번</th>
+            <th class="p-2">학년</th><th class="p-2">반</th><th class="p-2">번호</th><th class="p-2">이름</th><th class="p-2">학번</th><th class="p-2">상태</th>
             <th class="p-2">미적분Ⅰ 응시 기록</th><th class="p-2 text-right">관리</th></tr></thead>
           <tbody class="divide-y divide-slate-100">
-            ${list.length ? list.map((r, i) => `<tr class="hover:bg-slate-50">
+            ${list.length ? list.map((r, i) => { const lv = leaveOf(r); return `<tr class="${lv ? 'bg-slate-50 text-slate-400' : 'hover:bg-slate-50'}">
               <td class="p-2">${esc(r.grade)}</td><td class="p-2">${esc(r.class)}</td><td class="p-2 font-bold">${esc(r.num)}</td>
               <td class="p-2 font-bold text-slate-800">${esc(r.name)}</td><td class="p-2 font-mono text-slate-500">${esc(r.code)}</td>
+              <td class="p-2">${lv ? `<span class="px-1.5 py-0.5 rounded bg-slate-600 text-white font-bold" title="${esc(lv.memo || '')}">${esc(lv.status)}${lv.date ? ' ' + esc(String(lv.date).slice(5, 10).replace('-', '/')) : ''}</span>` : ''}</td>
               <td class="p-2">${r.subs ? `<span class="px-1.5 py-0.5 rounded bg-sky-100 text-sky-700 font-bold">${Number(r.subs)}건</span>` : '<span class="text-slate-300">없음</span>'}</td>
               <td class="p-2 text-right whitespace-nowrap">
                 <button type="button" data-act="edit" data-i="${i}" class="px-2 py-1 rounded border bg-white hover:bg-slate-50 text-slate-600 font-semibold"><i class="fa-solid fa-pen mr-0.5"></i>번호·이름 수정</button>
-                <button type="button" data-act="del" data-i="${i}" class="px-2 py-1 rounded border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold"><i class="fa-solid fa-user-minus mr-0.5"></i>전출 삭제</button>
-              </td></tr>`).join('')
-        : `<tr><td colspan="7" class="p-4 text-center text-slate-400">${query ? '검색 결과가 없습니다.' : '학생이 없습니다.'}</td></tr>`}
+                ${!leaveOk ? '' : lv
+        ? `<button type="button" data-act="unleave" data-i="${i}" class="px-2 py-1 rounded border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold"><i class="fa-solid fa-rotate-left mr-0.5"></i>표시 해제</button>`
+        : `<button type="button" data-act="leave" data-i="${i}" class="px-2 py-1 rounded border border-slate-300 bg-white hover:bg-slate-100 text-slate-700 font-semibold"><i class="fa-solid fa-user-slash mr-0.5"></i>전출·자퇴</button>`}
+                <button type="button" data-act="del" data-i="${i}" title="잘못 넣은 학생을 명렬표에서 지움 (답안은 남음)" class="px-1.5 py-1 rounded text-rose-600 hover:bg-rose-50 font-semibold"><i class="fa-solid fa-trash-can"></i></button>
+              </td></tr>`; }).join('')
+        : `<tr><td colspan="8" class="p-4 text-center text-slate-400">${query ? '검색 결과가 없습니다.' : '학생이 없습니다.'}</td></tr>`}
           </tbody></table></div>
       <p class="text-[11px] text-slate-500">${query ? `검색 결과 ${list.length}명` : `${sel.grade}학년 ${sel.cls === 'all' ? '전체' : sel.cls + '반'} ${list.length}명`} · 명렬표 전체 ${rows.length}명
         ${bad.length ? ` · <b class="text-amber-700">학번 형식을 읽을 수 없는 줄 ${bad.length}개</b> (${bad.slice(0, 5).map(r => esc(`${r.code || '빈칸'} ${r.name}`)).join(', ')}${bad.length > 5 ? ' …' : ''}) — 수파베이스 Table Editor에서 확인하세요.` : ''}</p>`);
@@ -141,22 +155,58 @@
     if (!r) return;
     const label = `${r.grade}학년 ${r.class}반 ${r.num}번 ${r.name}`;
     if (act === 'del') {
-      if (!confirm(`[전출 삭제] ${label} (학번 ${r.code})\n\n명렬표에서 삭제하면 이 학생은 로그인할 수 없고 미접속 명단에서도 빠집니다.` +
+      if (!confirm(`[명렬표에서 삭제] ${label} (학번 ${r.code})\n\n잘못 넣은 학생을 지울 때 쓰세요. 전출·자퇴 학생은 [전출·자퇴]로 표시하는 것이 좋습니다.\n\n명렬표에서 삭제하면 이 학생은 로그인할 수 없고 미접속 명단에서도 빠집니다.` +
         (r.subs ? `\n※ 미적분Ⅰ 응시 기록 ${r.subs}건은 지워지지 않고 교사 화면에 남습니다.` : '') +
         '\n※ 다른 수행평가 페이지의 명렬표에서도 함께 빠집니다.\n\n삭제할까요?')) return;
       return call('calc_student_remove', { p_code: String(r.code), p_name: r.name }, `${label} 학생을 명렬표에서 삭제했습니다.`);
     }
+    if (act === 'leave') {
+      const st = prompt(`[전출·자퇴 표시] ${label}\n\n구분을 입력하세요: 전출 / 자퇴 / 기타\n(명렬표와 답안은 그대로 두고, 교사 화면의 목록·인원 수에서만 빠집니다)`, '전출');
+      if (st === null) return;
+      const status = st.trim();
+      if (!['전출', '자퇴', '기타'].includes(status)) { alert('전출, 자퇴, 기타 중 하나를 입력하세요.'); return; }
+      const memo = prompt('메모 (선택, 예: ○○고로 전출) — 없으면 비워 두고 [확인]', '');
+      if (memo === null) return;
+      return call('calc_leave_set', { p_grade: Number(r.grade), p_class: Number(r.class), p_num: Number(r.num), p_name: r.name,
+        p_status: status, p_date: new Date().toLocaleDateString('sv-SE'), p_memo: memo.trim() || null }, `${label} 학생을 '${status}'(으)로 표시했습니다.`);
+    }
+    if (act === 'unleave') {
+      const lv = leaveOf(r);
+      if (!confirm(`${label} 학생의 '${lv ? lv.status : ''}' 표시를 해제할까요?\n(교사 화면 목록에 다시 나옵니다)`)) return;
+      return call('calc_leave_set', { p_grade: Number(r.grade), p_class: Number(r.class), p_num: Number(r.num), p_name: r.name, p_status: null },
+        `${label} 학생의 표시를 해제했습니다.`);
+    }
     if (act === 'edit') {
       const input = prompt(`[번호·이름 수정] ${label}\n\n새 '학년 반 번호 이름'을 띄어 써서 입력하세요.\n(예: ${r.grade} ${r.class} ${r.num} ${r.name})` +
-        (r.subs ? `\n\n※ 이 학생은 응시 기록이 ${r.subs}건 있습니다. 시험 중에 바꾸면 새 번호로 들어올 때 답안을 이어 쓸 수 없습니다.` : ''),
+        (r.subs ? `\n\n※ 이 학생의 응시 기록 ${r.subs}건도 새 번호로 함께 옮깁니다. (시험 중이면 끝난 뒤에 고치세요)` : ''),
         `${r.grade} ${r.class} ${r.num} ${r.name}`);
       if (input === null) return;
       const m = input.trim().match(/^(\d+)\s+(\d+)\s+(\d+)\s+(.+)$/);
       if (!m) { alert('형식이 맞지 않습니다. 예: 2 3 15 홍길동'); return; }
       const [g, c, n, name] = [Number(m[1]), Number(m[2]), Number(m[3]), m[4].trim()];
       if (g === Number(r.grade) && c === Number(r.class) && n === Number(r.num) && name === r.name) return;
-      return call('calc_student_update', { p_code: String(r.code), p_name: r.name, p_grade: g, p_class: c, p_num: n, p_new_name: name },
-        `${label} → ${g}학년 ${c}반 ${n}번 ${name}(으)로 고쳤습니다.`);
+      if (busy) return;
+      busy = true;
+      try {
+        const { error } = await sb.rpc('calc_student_update', { p_code: String(r.code), p_name: r.name, p_grade: g, p_class: c, p_num: n, p_new_name: name });
+        if (error) { alert(errText(error)); return; }
+        let note = '';
+        // 이미 낸 답안·비밀번호·전출 표시도 새 번호로 (add_roster_link.sql)
+        const mv = await sb.rpc('calc_student_move_answers', {
+          p_old_grade: Number(r.grade), p_old_class: Number(r.class), p_old_num: Number(r.num), p_old_name: r.name,
+          p_new_grade: g, p_new_class: c, p_new_num: n, p_new_name: name });
+        if (mv.error) {
+          note = /calc_student_move_answers|PGRST202/.test(String(mv.error.message)) || mv.error.code === 'PGRST202'
+            ? (r.subs ? '\n\n※ 답안은 옮기지 못했습니다. 수파베이스에서 add_roster_link.sql을 실행한 뒤 같은 수정을 한 번 더 하세요.\n(예전 번호로 되돌렸다가 다시 바꾸면 됩니다)' : '')
+            : '\n\n※ 답안을 옮기는 중 오류: ' + mv.error.message;
+        } else {
+          const d = mv.data || {}, sk = Array.isArray(d.skipped_exams) ? d.skipped_exams : [];
+          if (d.moved) note += `\n응시 기록 ${d.moved}건도 새 번호로 옮겼습니다.`;
+          if (sk.length) note += `\n※ ${sk.join('·')}회차는 새 번호로 이미 답안이 있어 옮기지 않았습니다. (교사 화면에서 확인하세요)`;
+        }
+        alert(`${label} → ${g}학년 ${c}반 ${n}번 ${name}(으)로 고쳤습니다.` + note);
+      } finally { busy = false; await load(); }
+      return;
     }
   }
 
