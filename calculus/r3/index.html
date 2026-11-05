@@ -898,10 +898,18 @@
     function resetAnswerCache() { answerCache = {}; }
 
     // 불러오기는 한 번에 하나씩 (동시에 두 번 시작되면 같은 답안을 두 번 받게 되므로 차례로 실행)
-    let teacherLoadChain = Promise.resolve();
+    //  · 네트워크가 멈춰도 20초가 지나면 다음 갱신이 진행됨 (화면이 영영 멈추지 않게)
+    //  · 자동 갱신이 이미 기다리고 있으면 또 쌓지 않음 (느린 와이파이에서 요청이 밀리지 않게)
+    const LOAD_TIMEOUT_MS = 20000;
+    let teacherLoadChain = Promise.resolve(), teacherQueued = null;
     function loadTeacherRows(forceAll) {
-      const run = teacherLoadChain.then(() => loadTeacherRowsNow(forceAll));
-      teacherLoadChain = run.catch(() => { });
+      if (!forceAll && teacherQueued) return teacherQueued;
+      const run = teacherLoadChain.then(() => {
+        if (!forceAll) teacherQueued = null;
+        return Promise.race([loadTeacherRowsNow(forceAll), new Promise(r => setTimeout(r, LOAD_TIMEOUT_MS))]);
+      });
+      if (!forceAll) teacherQueued = run;
+      teacherLoadChain = run.catch(e => console.error('교사 화면 불러오기 오류', e));
       return run;
     }
     async function loadTeacherRowsNow(forceAll) {
